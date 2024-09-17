@@ -8,17 +8,16 @@ import std/[os, sequtils, strutils, terminal]
 
 import bbansi/[styles, utils]
 
-# TODO:
-# - improve terminal/output detection (is output a tty?)
-# - add compiletimeSwitch to disable color?
-# - add env variable to force color
 proc checkColorSupport(): bool =
-  if os.getEnv("NO_COLOR") != "":
-    return true
   when defined(bbansiNoColor):
     return true
-  if not isatty(stdout):
-    return true
+  else:
+    if os.getEnv("HWYLTERM_FORCE_COLOR") != "":
+      return false
+    if os.getEnv("NO_COLOR") != "":
+      return true
+    if not isatty(stdout):
+      return true
 
 let noColor = checkColorSupport()
 
@@ -64,7 +63,8 @@ template closeStyle(bbs: var BbString, pattern: string) =
   let style = pattern[1 ..^ 1].strip()
   if style in bbs.spans[^1].styles:
     bbs.endSpan
-    let newStyle = bbs.spans[^1].styles.filterIt(it != style) # use sets instead
+    if bbs.spans.len == 0: return
+    let newStyle = bbs.spans[^1].styles.filterIt(it != style) # use sets instead?
     bbs.newSpan newStyle
 
 template closeFinalSpan(bbs: var BbString) =
@@ -90,6 +90,7 @@ proc bb*(s: string): BbString =
     inc i
 
   result.raw = s
+
   if not s.startswith('[') or s.startswith("[["):
     result.spans.add BbSpan()
 
@@ -169,10 +170,14 @@ proc `&`*(x: BbString, y: BbString): Bbstring =
   # there is probably a more efficient way to do this
   bb(x.raw & y.raw)
 
+proc bbEscape*(s: string): string {.inline.} = 
+  s.replace("[", "[[")
+
 proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
   for x in args:
     stdout.write(x.bb)
   stdout.write('\n')
+
   stdout.flushFile
 
 when isMainModule:

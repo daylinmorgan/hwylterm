@@ -7,6 +7,7 @@ template bbCheck(input: string, output: string): untyped =
 
 suite "basic":
   test "simple":
+    bbCheck "[red][/red]", ""
     bbCheck "[red]red text", "\e[31mred text\e[0m"
     bbCheck "[red]Red Text", "\e[31mRed Text\e[0m"
     bbCheck "[yellow]Yellow Text", "\e[33mYellow Text\e[0m"
@@ -49,3 +50,6 @@ suite "basic":
     check "[red]Red[/red]".bb == bb("Red", "red")
     check "[b][yellow]not yellow[/][/b]".bb == bb("[yellow]not yellow[/]", "b")
 
+  test "escape":
+    check bbEscape("[info] brackets") == "[[info] brackets"
+    bbCheck bbEscape("[info] brackets"), "[info] brackets"

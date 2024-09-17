@@ -1,24 +1,5 @@
 import std/[os, locks, sequtils, terminal]
-import "."/bbansi
-
-type
-  SpinnerKind* = enum
-    Dots
-
-  Spinner* = object
-    interval*: int
-    frames*: seq[string]
-
-proc makeSpinner*(interval: int, frames: seq[string]): Spinner =
-  Spinner(interval: interval, frames: frames)
-
-const Spinners*: array[SpinnerKind, Spinner] = [
-  # Dots
-  Spinner(
-    interval: 80,
-    frames: @["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-  )
-]
+import "."/[bbansi, spin/spinners]
 
 type
   Spinny = ref object
@@ -48,7 +29,7 @@ proc newSpinny*(text: string, s: Spinner): Spinny =
   Spinny(
     text: text,
     running: true,
-    frames: mapIt(s.frames, $bb(it, style)),
+    frames: mapIt(s.frames, $bb(bbEscape(it), style)),
     customSymbol: false,
     interval: s.interval,
     style: "bold blue",
@@ -136,3 +117,19 @@ template withSpinner*(msg: string = "", body: untyped): untyped =
 
 template withSpinner*(body: untyped): untyped =
   withSpinner("", body)
+
+template with*(kind: SpinnerKind, msg: string, body: untyped): untyped = 
+  var spinner {.inject.} = newSpinny(msg, kind)
+  if isatty(stdout): # don't spin if it's not a tty
+    start spinner
+
+  body
+
+  if isatty(stdout):
+    stop spinner
+
+when isMainModule:
+  for kind, _ in Spinners:
+    with(kind, $kind):
+      sleep 1 * 1000
+
