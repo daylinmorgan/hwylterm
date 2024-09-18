@@ -1,6 +1,7 @@
 import std/tables
 export tables
 
+
 const
   bbReset* = "\e[0m"
   bbStyles* = {

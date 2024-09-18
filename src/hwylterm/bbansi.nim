@@ -177,7 +177,6 @@ proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
   for x in args:
     stdout.write(x.bb)
   stdout.write('\n')
-
   stdout.flushFile
 
 when isMainModule:
