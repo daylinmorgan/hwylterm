@@ -1,8 +1,27 @@
-import std/[strutils]
+import std/[os, strutils, terminal]
+import ./styles
 
-import styles
+type
+  BbMode* = enum
+    On, NoColor, Off
+
+proc checkColorSupport(): BbMode =
+  when defined(bbansiOff):
+    return Off
+  when defined(bbansiNoColor):
+    return NoColor
+  else:
+    if os.getEnv("HWYLTERM_FORCE_COLOR") != "":
+      return On
+    if os.getEnv("NO_COLOR") != "":
+      return NoColor
+    if not isatty(stdout):
+      return Off
+
+let bbMode* = checkColorSupport()
 
 proc toAnsiCode*(s: string): string =
+  if bbMode == Off: return
   var
     codes: seq[string]
     styles: seq[string]
@@ -16,12 +35,14 @@ proc toAnsiCode*(s: string): string =
   for style in styles:
     if style in bbStyles:
       codes.add bbStyles[style]
-    elif style in bbColors:
+    elif style in bbColors and bbMode == On:
       codes.add "3" & bbColors[style]
-  if bgStyle in bbColors:
+  if bgStyle in bbColors and bbMode == On:
     codes.add "4" & bbColors[bgStyle]
 
   if codes.len > 0:
     result.add "\e["
     result.add codes.join ";"
     result.add "m"
+
+

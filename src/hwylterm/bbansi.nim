@@ -4,22 +4,11 @@
   use BB style markup to add color to strings using VT100 escape codes
 ]##
 
-import std/[os, sequtils, strutils, terminal]
+import std/[os, sequtils, strutils]
 
-import bbansi/[styles, utils]
-
-proc checkColorSupport(): bool =
-  when defined(bbansiNoColor):
-    return true
-  else:
-    if os.getEnv("HWYLTERM_FORCE_COLOR") != "":
-      return false
-    if os.getEnv("NO_COLOR") != "":
-      return true
-    if not isatty(stdout):
-      return true
-
-let noColor = checkColorSupport()
+import ./bbansi/[styles, utils]
+export utils
+export bbReset
 
 type
   BbSpan* = object
@@ -152,7 +141,7 @@ func len*(bbs: BbString): int =
   bbs.plain.len
 
 proc `$`*(bbs: BbString): string =
-  if noColor:
+  if bbMode == Off:
     return bbs.plain
 
   for span in bbs.spans:
@@ -164,7 +153,7 @@ proc `$`*(bbs: BbString): string =
     result.add bbs.plain[span.slice[0] .. span.slice[1]]
 
     if codes != "":
-      result.add bbReset
+      result.add toAnsiCode("reset")
 
 proc `&`*(x: BbString, y: BbString): Bbstring =
   # there is probably a more efficient way to do this

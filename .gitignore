@@ -1,3 +1,6 @@
 tests/*
 !tests/*.nim
 !tests/*.nims
+nimble.develop
+nimble.paths
+nimbledeps

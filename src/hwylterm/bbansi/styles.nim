@@ -5,6 +5,7 @@ export tables
 const
   bbReset* = "\e[0m"
   bbStyles* = {
+    "reset": "0",
     "bold": "1",
     "b": "1",
     "faint": "2",
