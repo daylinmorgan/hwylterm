@@ -35,21 +35,23 @@ proc helpAttrOff(): Table[string,string] =
     "args"     : resetCode,
   }.toTable()
 
+
 proc hwylCli*(
   clcfg: var ClCfg,
   styles: CligenStyle = CligenStyle(),
   useMulti: string = "${doc}[bold]Usage[/]:\n  $command {SUBCMD} [[sub-command options & parameters]\n\n[bold]subcommands[/]:\n$subcmds",
-  useHdr: string = "[bold]usage[/]:\n  "
+  useHdr: string = "[bold]usage[/]:\n  ",
+  use: string = "$command $args\n${doc}[bold]Options[/]:\n$options"
 ) =
 
   if clCfg.useMulti == "":
     clCfg.useMulti = $bb(useMulti)
-
   if clCfg.helpAttr.len == 0:
     clCfg.helpAttr = styles.helpAttr()
     clCfg.helpAttrOff = helpAttrOff()
-
-  # clCfg.use does nothing?
+  # this currently has no effect
+  if clCfg.use == "":
+    clCfg.use = $bb(use)
   if clCfg.useHdr == "":
     clCfg.useHdr = $bb(useHdr)
 
