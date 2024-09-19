@@ -12,7 +12,8 @@ task docs, "Deploy doc html + search index to public/ directory":
     pkgName = "hwylterm"
     srcFile = getCurrentDir() / fmt"src/{pkgName}.nim"
     gitUrl = fmt"https://github.com/daylinmorgan/{pkgName}"
-  selfExec fmt"doc --index:on --git.url:{gitUrl} --git.commit:v{version} --outdir:{deployDir} --project {srcFile}"
+  # selfExec fmt"doc --index:on --git.url:{gitUrl} --git.commit:v{version} --outdir:{deployDir} --project {srcFile}"
+  selfExec fmt"doc --index:on --git.url:{gitUrl} --git.commit:main --outdir:{deployDir} --project {srcFile}"
   withDir deployDir:
     mvFile(pkgName & ".html", "index.html")
     for file in walkDirRec(".", {pcFile}):
