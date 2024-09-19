@@ -4,3 +4,4 @@ tests/*
 nimble.develop
 nimble.paths
 nimbledeps
+public/
