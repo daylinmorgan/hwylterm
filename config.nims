@@ -12,7 +12,8 @@ task docs, "Deploy doc html + search index to public/ directory":
     deployDir = getCurrentDir() / "public"
     pkgName = "hwylterm"
     gitUrl = fmt"https://github.com/daylinmorgan/{pkgName}"
-  selfExec fmt"doc --docRoot:{getCurrentDir()}/src/ --index:on --outdir:{deployDir} src/hwylterm/cli"
+  for module in ["cli", "chooser"]:
+    selfExec fmt"doc --docRoot:{getCurrentDir()}/src/ --index:on --outdir:{deployDir} src/hwylterm/{module}"
   selfExec fmt"doc --project --index:on --git.url:{gitUrl} --git.commit:main --outdir:{deployDir} --project src/{pkgName}.nim"
   withDir deployDir:
     mvFile(pkgName & ".html", "index.html")
@@ -24,3 +25,4 @@ task docs, "Deploy doc html + search index to public/ directory":
 
 when withDir(thisDir(), system.dirExists("nimbledeps")):
   --path:"./nimbledeps/pkgs2/cligen-1.7.5-f3ffe7329c8db755677d3ca377d02ff176cec8b1"
+  --path:"./nimbledeps/pkgs2/illwill-0.4.1-9c58351502f89a16caf031cbd1992ad3fdfd3c67"

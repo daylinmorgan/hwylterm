@@ -4,8 +4,10 @@
   Adapter to add hwylterm colors to cligen output.
 ]##
 import std/[tables]
-import cligen
 import ./bbansi
+template canImport(x): bool = compiles: import x
+when not canImport(cligen): {.fatal: "hwylterm/cli requires cligen>= 1.7.5".}
+import cligen
 
 
 type
