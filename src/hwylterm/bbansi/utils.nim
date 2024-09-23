@@ -1,5 +1,6 @@
-import std/[os, strutils, terminal]
-import ./styles
+import std/[
+  enumutils, os, strutils, terminal, sequtils]
+import ./[styles, colors]
 
 type
   BbMode* = enum
@@ -20,6 +21,22 @@ proc checkColorSupport(): BbMode =
 
 let bbMode* = checkColorSupport()
 
+func normStyle(style: string): string = style.replace("_","").capitalizeAscii()
+func toCode(style: BbStyle): string = $ord(style)
+func toCode(abbr: BbStyleAbbr): string = abbr.toStyle().toCode()
+func toCode(color: ColorXterm): string = "38;5;" & $ord(color)
+func toBgCode(color: ColorXterm): string = "48;5;" & $ord(color)
+func toCode(c: ColorRgb): string = "38;2;" & $c
+func toBgCode(c: ColorRgb): string = "48:2;" & $c
+
+const ColorXTermNames = ColorXterm.items().toSeq().mapIt(($it).toLowerAscii().capitalizeAscii())
+const BbStyleNames = BbStyle.items().toSeq().mapIt(($it).toLowerAscii().capitalizeAscii())
+
+func isHex(s: string): bool =
+  (s.startswith "#") and (s.len == 7)
+
+# TODO: write seperate parseStyle procedure
+
 proc toAnsiCode*(s: string): string =
   if bbMode == Off: return
   var
@@ -33,12 +50,26 @@ proc toAnsiCode*(s: string): string =
   else:
     styles = s.splitWhitespace()
   for style in styles:
-    if style in bbStyles:
-      codes.add bbStyles[style]
-    elif style in bbColors and bbMode == On:
-      codes.add "3" & bbColors[style]
-  if bgStyle in bbColors and bbMode == On:
-    codes.add "4" & bbColors[bgStyle]
+    let normalizedStyle = style.normStyle
+    if normalizedStyle in ["B", "I", "U"]:
+      codes.add parseEnum[BbStyleAbbr](normalizedStyle).toCode()
+    elif normalizedStyle in BbStyleNames:
+      codes.add parseEnum[BbStyle](normalizedStyle).toCode()
+    elif normalizedStyle in ColorXtermNames and bbMode == On:
+      codes.add parseEnum[ColorXterm](normalizedStyle).toCode()
+    elif normalizedStyle.isHex():
+      codes.add  normalizedStyle.hexToRgb.toCode()
+    else:
+      when defined(debugBB): echo "unknown style: " & normalizedStyle
+
+  if bbMode == On and bgStyle != "":
+    let normalizedBgStyle = bgStyle.normStyle
+    if normalizedBgStyle in ColorXtermNames:
+      codes.add parseEnum[ColorXTerm](normalizedBgStyle).toBgCode()
+    elif normalizedBgStyle.isHex():
+      codes.add normalizedBgStyle.hexToRgb().toBgCode()
+    else:
+      when defined(debugBB): echo "unknown bg style: " & normalizedBgStyle
 
   if codes.len > 0:
     result.add "\e["

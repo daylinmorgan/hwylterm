@@ -8,16 +8,16 @@ template bbCheck(input: string, output: string): untyped =
 suite "basic":
   test "simple":
     bbCheck "[red][/red]", ""
-    bbCheck "[red]red text", "\e[31mred text\e[0m"
-    bbCheck "[red]Red Text", "\e[31mRed Text\e[0m"
-    bbCheck "[yellow]Yellow Text", "\e[33mYellow Text\e[0m"
-    bbCheck "[bold red]Bold Red Text", "\e[1;31mBold Red Text\e[0m"
-    bbCheck "[red]5[/]", "\e[31m5\e[0m"
-    bbCheck "[bold][red]5","\e[1;31m5\e[0m"
+    bbCheck "[red]red text", "\e[38;5;1mred text\e[0m"
+    bbCheck "[red]Red Text", "\e[38;5;1mRed Text\e[0m"
+    bbCheck "[yellow]Yellow Text", "\e[38;5;3mYellow Text\e[0m"
+    bbCheck "[bold red]Bold Red Text", "\e[1;38;5;1mBold Red Text\e[0m"
+    bbCheck "[red]5[/]", "\e[38;5;1m5\e[0m"
+    bbCheck "[bold][red]5","\e[1;38;5;1m5\e[0m"
 
   test "closing":
     bbCheck "[bold]Bold[red] Bold Red[/red] Bold Only",
-      "\e[1mBold\e[0m\e[1;31m Bold Red\e[0m\e[1m Bold Only\e[0m"
+      "\e[1mBold\e[0m\e[1;38;5;1m Bold Red\e[0m\e[1m Bold Only\e[0m"
 
   test "abbreviated":
     bbCheck "[b]Bold[/] Not Bold", "\e[1mBold\e[0m Not Bold"
@@ -30,10 +30,10 @@ suite "basic":
     bbCheck "[[red] ignored pattern", "[red] ignored pattern"
 
   test "newlines":
-    bbCheck "[red]Red Text[/]\nNext Line", "\e[31mRed Text\e[0m\nNext Line"
+    bbCheck "[red]Red Text[/]\nNext Line", "\e[38;5;1mRed Text\e[0m\nNext Line"
 
   test "on color":
-    bbCheck "[red on yellow]Red on Yellow", "\e[31;43mRed on Yellow\e[0m"
+    bbCheck "[red on yellow]Red on Yellow", "\e[38;5;1;48;5;3mRed on Yellow\e[0m"
 
   test "concat-ops":
     check "[red]RED[/]".bb & " plain string" == "[red]RED[/] plain string".bb
@@ -43,8 +43,9 @@ suite "basic":
     check "a plain string" & "[blue] a blue string".bb ==
         "a plain string[blue] a blue string".bb
 
-  test "case":
-    bbCheck "[red]no case sensitivity[/RED]", "\e[31mno case sensitivity\e[0m"
+  test "style insensitive":
+    bbCheck "[red]no case sensitivity[/RED]", "\e[38;5;1mno case sensitivity\e[0m"
+    bbCheck "[bright_red]should be BrightRed[/]", "\e[38;5;9mshould be BrightRed\e[0m"
 
   test "style full":
     check "[red]Red[/red]".bb == bb("Red", "red")
@@ -53,3 +54,11 @@ suite "basic":
   test "escape":
     check bbEscape("[info] brackets") == "[[info] brackets"
     bbCheck bbEscape("[info] brackets"), "[info] brackets"
+
+  test "fmt":
+    let x = 5
+    check $bbfmt"[red]{x}" == "\e[38;5;1m5\e[0m"
+
+  test "hex":
+    bbCheck "[#FF0000]red", "\e[38;2;255;0;0mred\e[0m"
+

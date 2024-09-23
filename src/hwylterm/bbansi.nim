@@ -4,11 +4,11 @@
   use BB style markup to add color to strings using VT100 escape codes
 ]##
 
-import std/[os, sequtils, strutils]
+import std/[os, sequtils, strformat, strutils]
 
 import ./bbansi/[styles, utils]
 export utils
-export bbReset
+# export bbReset
 
 type
   BbSpan* = object
@@ -123,6 +123,9 @@ proc `&`*(x: BbString, y: string): BbString =
   result.raw &= y
   result.plain &= y
   result.spans[^1].slice[1] = result.plain.len - 1
+
+template bbfmt*(pattern: static string): BbString =
+  bb(fmt(pattern))
 
 proc `&`*(x: string, y: BbString): BbString =
   result.raw = x & y.raw
