@@ -4,6 +4,7 @@ task test, "run tests":
   selfExec "r tests/tbbansi.nim"
 
 task develop, "install cligen for development":
+  exec "nimble install -l 'illwill@0.4.1'"
   exec "nimble install -l 'cligen@1.7.5'"
 
 task docs, "Deploy doc html + search index to public/ directory":
