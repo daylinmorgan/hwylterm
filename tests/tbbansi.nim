@@ -28,6 +28,7 @@ suite "basic":
 
   test "escaped":
     bbCheck "[[red] ignored pattern", "[red] ignored pattern"
+    bbCheck "\\[red] ignored pattern","[red] ignored pattern"
 
   test "newlines":
     bbCheck "[red]Red Text[/]\nNext Line", "\e[38;5;1mRed Text\e[0m\nNext Line"

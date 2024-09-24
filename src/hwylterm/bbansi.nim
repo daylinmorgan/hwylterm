@@ -86,7 +86,7 @@ proc bb*(s: string): BbString =
   while i < s.len:
     case s[i]
     of '\\':
-      if i < s.len and s[i + 1] == '[':
+      if i < s.len and (s[i + 1] == '[' or s[i+1] == '\\'):
         inc i
       next
     of '[':
@@ -163,7 +163,7 @@ proc `&`*(x: BbString, y: BbString): Bbstring =
   bb(x.raw & y.raw)
 
 proc bbEscape*(s: string): string {.inline.} = 
-  s.replace("[", "[[")
+  s.replace("[", "[[").replace("\\", "\\\\")
 
 proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
   for x in args:
