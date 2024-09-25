@@ -1,4 +1,8 @@
-## adapter to add hwylterm colors to cligen output
+##[
+  # Hwylterm cligen adapter
+
+  Adapter to add hwylterm colors to cligen output.
+]##
 import std/[tables]
 import cligen
 import ./bbansi
