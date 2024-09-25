@@ -176,9 +176,17 @@ when isMainModule:
   import std/[parseopt, strformat, sugar]
   const version = staticExec "git describe --tags --always --dirty=-dev"
   const longOptPad = 8
+  const flags = collect(
+    for (s, l, d) in [
+      ("h", "help", "show this help"),
+      ("v", "version", "show version"),
+      ("s", "style", "set style for string"),
+    ]:
+      fmt"  [yellow]-{s}[/]  [green]--{l.alignLeft(longOptPad)}[/] {d}"
+    ).join("\n")
   proc writeHelp() =
     let help =
-      fmt"""
+      bbfmt"""
 [bold]bbansi[/] \[[green]args...[/]] [[[faint]-h|-v[/]]
 
 [italic]usage[/]:
@@ -190,22 +198,9 @@ when isMainModule:
     |-> [italic][red]some red[/red] but all italic[/italic]
 
 flags:
-  """.bb &
-      $(
-        bb(
-          collect(
-            for (s, l, d) in [
-              ("h", "help", "show this help"),
-              ("v", "version", "show version"),
-              ("s", "style", "set style for string"),
-            ]:
-              fmt"[yellow]-{s}[/]  [green]--{l.alignLeft(longOptPad)}[/] {d}"
-          )
-          .join("\n  ")
-        )
-      )
-    echo help
-    quit(QuitSuccess)
+{flags}
+"""
+    echo help; quit 0
 
   proc testCard() =
     for style in [
@@ -228,8 +223,8 @@ flags:
     echo ")"
 
   proc writeVersion() =
-    echo fmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]".bb
-    quit(QuitSuccess)
+    echo bbfmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]"
+    quit 0
 
   var
     strArgs: seq[string]
