@@ -19,7 +19,6 @@ type
     valtype: string =  "red"
     args: string = "italic"
 
-
 proc helpAttr(styles: CligenStyle): Table[string, string] =
   {
     "cmd"      : toAnsiCode(styles.cmd),
@@ -41,13 +40,17 @@ proc helpAttrOff(): Table[string,string] =
     "args"     : resetCode,
   }.toTable()
 
+const
+  useMulti = "${doc}[bold]Usage[/]:\n  $command {SUBCMD} [[sub-command options & parameters]\n\n[bold]subcommands[/]:\n$subcmds"
+  useHdr = "[bold]Usage[/]:\n  "
+  use = "$command $args\n${doc}[bold]Options[/]:\n$options"
 
 proc hwylCli*(
   clcfg: var ClCfg,
   styles: CligenStyle = CligenStyle(),
-  useMulti: string = "${doc}[bold]Usage[/]:\n  $command {SUBCMD} [[sub-command options & parameters]\n\n[bold]subcommands[/]:\n$subcmds",
-  useHdr: string = "[bold]usage[/]:\n  ",
-  use: string = "$command $args\n${doc}[bold]Options[/]:\n$options"
+  useMulti: string = useMulti,
+  useHdr: string = useHdr,
+  use: string = use,
 ) =
 
   if clCfg.useMulti == "":
