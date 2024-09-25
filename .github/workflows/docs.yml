@@ -19,7 +19,9 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Docs
-        run: nim docs
+        run: |
+          nim develop
+          nim docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
