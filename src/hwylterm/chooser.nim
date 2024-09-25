@@ -11,11 +11,8 @@
 
 
 import std/[enumerate, os, strutils, sequtils, sets, terminal]
-
-template canImport(x): bool = compiles: import x
-when not canImport(illwill): {.fatal: "hwylterm/choose requires illwill >= 0.4.1".}
-import illwill
-
+import ./private/tryImport
+tryImport(illwill, "hwylterm/choose requires illwill >= 0.4.1")
 
 proc exitProc() {.noconv.} =
   illwillDeInit()
@@ -131,6 +128,31 @@ proc choose*[T](things: openArray[T], height: Natural = 6): seq[T] =
 
 
 when isMainModule:
+  # import std/parseopt
+  # var
+  #   posArgs: seq[string]
+  #   style: string
+  #   showDebug: bool
+  # var p = initOptParser()
+  # for kind, key, val in p.getopt():
+  #   case kind
+  #   of cmdEnd:
+  #     break
+  #   of cmdShortOption, cmdLongOption:
+  #     case key
+  #     of "help", "h":
+  #       writeHelp()
+  #   of cmdArgument:
+  #     strArgs.add key
+  # for arg in strArgs:
+  #   let styled =
+  #     if style != "":
+  #       arg.bb(style)
+  #     else:
+  #       arg.bb
+  #   echo styled
+  #   if showDebug:
+  #     echo debug(styled)
   let items = LowercaseLetters.toSeq()
   let item = choose(items)
   echo "selected: ", item
