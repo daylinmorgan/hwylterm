@@ -1,6 +1,7 @@
 import std/[parseutils, strutils]
 
 type
+  Color256* = range[0..255]
   ColorRgb* = object
     red, green, blue: int
   ColorHex* = object

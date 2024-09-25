@@ -51,6 +51,7 @@ suite "basic":
   test "style full":
     check "[red]Red[/red]".bb == bb("Red", "red")
     check "[b][yellow]not yellow[/][/b]".bb == bb("[yellow]not yellow[/]", "b")
+    check "[9]color 9[/9]".bb == bb("color 9", 9) # syntax will change to [color(9)]
 
   test "escape":
     check bbEscape("[info] brackets") == "[[info] brackets"

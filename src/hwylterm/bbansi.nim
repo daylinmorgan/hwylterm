@@ -5,10 +5,8 @@
 ]##
 
 import std/[os, sequtils, strformat, strutils]
-
-import ./bbansi/[styles, utils]
+import ./bbansi/[styles, utils, colors]
 export utils
-# export bbReset
 
 type
   BbSpan* = object
@@ -117,6 +115,9 @@ proc bb*(s: string): BbString =
 
 proc bb*(s: string, style: string): BbString =
   bb("[" & style & "]" & s & "[/" & style & "]")
+
+proc bb*(s: string, style: Color256): BbString =
+  bb(s, $style)
 
 proc `&`*(x: BbString, y: string): BbString =
   result = x

@@ -1,5 +1,6 @@
 import std/[
-  enumutils, os, strutils, terminal, sequtils]
+  enumutils, os, strutils, terminal, sequtils
+]
 import ./[styles, colors]
 
 type
@@ -28,9 +29,12 @@ func toCode(color: ColorXterm): string = "38;5;" & $ord(color)
 func toBgCode(color: ColorXterm): string = "48;5;" & $ord(color)
 func toCode(c: ColorRgb): string = "38;2;" & $c
 func toBgCode(c: ColorRgb): string = "48:2;" & $c
+func toCode(c: Color256): string = "38;5;" & $c
+func toBgCode(c: Color256): string = "48;5;" & $c
 
 const ColorXTermNames = ColorXterm.items().toSeq().mapIt(($it).toLowerAscii().capitalizeAscii())
 const BbStyleNames = BbStyle.items().toSeq().mapIt(($it).toLowerAscii().capitalizeAscii())
+const ColorDigitStrings = (1..255).toSeq().mapIt($it)
 
 func isHex(s: string): bool =
   (s.startswith "#") and (s.len == 7)
@@ -51,14 +55,20 @@ proc toAnsiCode*(s: string): string =
     styles = s.splitWhitespace()
   for style in styles:
     let normalizedStyle = style.normStyle
+
     if normalizedStyle in ["B", "I", "U"]:
       codes.add parseEnum[BbStyleAbbr](normalizedStyle).toCode()
     elif normalizedStyle in BbStyleNames:
       codes.add parseEnum[BbStyle](normalizedStyle).toCode()
-    elif normalizedStyle in ColorXtermNames and bbMode == On:
+
+    if not (bbMode == On): continue
+
+    if normalizedStyle in ColorXtermNames:
       codes.add parseEnum[ColorXterm](normalizedStyle).toCode()
     elif normalizedStyle.isHex():
       codes.add  normalizedStyle.hexToRgb.toCode()
+    elif normalizedStyle in ColorDigitStrings:
+      codes.add parseInt(normalizedStyle).toCode()
     else:
       when defined(debugBB): echo "unknown style: " & normalizedStyle
 
@@ -68,6 +78,8 @@ proc toAnsiCode*(s: string): string =
       codes.add parseEnum[ColorXTerm](normalizedBgStyle).toBgCode()
     elif normalizedBgStyle.isHex():
       codes.add normalizedBgStyle.hexToRgb().toBgCode()
+    elif normalizedBgStyle in ColorDigitStrings:
+      codes.add parseInt(normalizedBgStyle).toCode()
     else:
       when defined(debugBB): echo "unknown bg style: " & normalizedBgStyle
 
