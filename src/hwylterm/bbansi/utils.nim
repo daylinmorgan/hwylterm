@@ -39,8 +39,7 @@ const ColorDigitStrings = (1..255).toSeq().mapIt($it)
 func isHex(s: string): bool =
   (s.startswith "#") and (s.len == 7)
 
-# TODO: write seperate parseStyle procedure
-
+# TODO: write non-fallible parseStyle(s) procedure
 proc toAnsiCode*(s: string): string =
   if bbMode == Off: return
   var
