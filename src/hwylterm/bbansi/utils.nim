@@ -79,7 +79,7 @@ proc toAnsiCode*(s: string): string =
     elif normalizedBgStyle.isHex():
       codes.add normalizedBgStyle.hexToRgb().toBgCode()
     elif normalizedBgStyle in ColorDigitStrings:
-      codes.add parseInt(normalizedBgStyle).toCode()
+      codes.add parseInt(normalizedBgStyle).toBgCode()
     else:
       when defined(debugBB): echo "unknown bg style: " & normalizedBgStyle
 
