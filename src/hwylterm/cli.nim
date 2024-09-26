@@ -6,8 +6,11 @@
 
 import std/[tables]
 import ./bbansi
-import ./private/tryImport
-tryImport(cligen, "hwylterm/cli requires cligen>= 1.7.5")
+
+template tryImport*(x, body) =
+  when not (compiles do: import x): body else: import x
+tryImport cligen:
+  {.fatal: "hwylterm/cli requires cligen>=1.7.5".}
 
 
 type

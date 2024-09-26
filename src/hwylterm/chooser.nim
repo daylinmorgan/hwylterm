@@ -9,10 +9,13 @@
   ```
 ]##
 
-
 import std/[enumerate, os, strutils, sequtils, sets, terminal]
-import ./private/tryImport
-tryImport(illwill, "hwylterm/choose requires illwill >= 0.4.1")
+
+template tryImport*(x, body) =
+  when not (compiles do: import x): body else: import x
+tryImport illwill:
+  {.fatal: "hwylterm/choose requires illwill >= 0.4.1".}
+
 
 proc exitProc() {.noconv.} =
   illwillDeInit()
