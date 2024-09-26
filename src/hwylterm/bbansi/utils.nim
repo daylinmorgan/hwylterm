@@ -6,6 +6,8 @@ import ./[styles, colors]
 type
   BbMode* = enum
     On, NoColor, Off
+  ColorSystem = enum
+    TrueColor, EightBit, Standard, None
 
 proc checkColorSupport(): BbMode =
   when defined(bbansiOff):
@@ -13,14 +15,28 @@ proc checkColorSupport(): BbMode =
   when defined(bbansiNoColor):
     return NoColor
   else:
-    if os.getEnv("HWYLTERM_FORCE_COLOR") != "":
+    if getEnv("HWYLTERM_FORCE_COLOR") != "":
       return On
-    if os.getEnv("NO_COLOR") != "":
+    elif getEnv("NO_COLOR") != "":
       return NoColor
-    if not isatty(stdout):
+    elif (getEnv("TERM") in ["dumb", "unknown"]) or not isatty(stdout):
       return Off
 
+proc checkColorSystem(): ColorSystem =
+  let colorterm = getEnv("COLORTERM").strip().toLowerAscii()
+  if colorterm in ["truecolor", "24bit"]:
+    return TrueColor
+  let term = getEnv("TERM", "").strip().toLowerAscii()
+  let colors = term.split("-")[^1]
+  return
+    case colors:
+    of "kitty": EightBit
+    of "256color": EightBit
+    of "16color": Standard
+    else: Standard
+
 let bbMode* = checkColorSupport()
+let colorSystem* = checkColorSystem()
 
 func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
 func normalizeStyle(style: string): string = style.replace("_","").capitalizeAscii()
