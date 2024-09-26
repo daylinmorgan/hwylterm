@@ -1,5 +1,5 @@
 import std/[
-  enumutils, os, strutils, terminal, sequtils
+  macros, os, sequtils, strutils, terminal,
 ]
 import ./[styles, colors]
 
@@ -22,7 +22,10 @@ proc checkColorSupport(): BbMode =
 
 let bbMode* = checkColorSupport()
 
-func normStyle(style: string): string = style.replace("_","").capitalizeAscii()
+func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
+func normalizeStyle(style: string): string = style.replace("_","").capitalizeAscii()
+func isHex(s: string): bool = (s.startswith "#") and (s.len == 7)
+
 func toCode(style: BbStyle): string = $ord(style)
 func toCode(abbr: BbStyleAbbr): string = abbr.toStyle().toCode()
 func toCode(color: ColorXterm): string = "38;5;" & $ord(color)
@@ -32,12 +35,16 @@ func toBgCode(c: ColorRgb): string = "48:2;" & $c
 func toCode(c: Color256): string = "38;5;" & $c
 func toBgCode(c: Color256): string = "48;5;" & $c
 
-const ColorXTermNames = ColorXterm.items().toSeq().mapIt(($it).toLowerAscii().capitalizeAscii())
-const BbStyleNames = BbStyle.items().toSeq().mapIt(($it).toLowerAscii().capitalizeAscii())
-const ColorDigitStrings = (1..255).toSeq().mapIt($it)
+macro enumNames(a: typed): untyped =
+  ## unexported macro copied from std/enumutils
+  result = newNimNode(nnkBracket)
+  for ai in a.getType[1][1..^1]:
+    assert ai.kind == nnkSym
+    result.add newLit ai.strVal
 
-func isHex(s: string): bool =
-  (s.startswith "#") and (s.len == 7)
+const ColorXTermNames = enumNames(ColorXterm).mapIt(firstCapital(it))
+const BbStyleNames = enumNames(BbStyle).mapIt(firstCapital(it))
+const ColorDigitStrings = (1..255).toSeq().mapIt($it)
 
 # TODO: write non-fallible parseStyle(s) procedure
 proc toAnsiCode*(s: string): string =
@@ -53,7 +60,7 @@ proc toAnsiCode*(s: string): string =
   else:
     styles = s.splitWhitespace()
   for style in styles:
-    let normalizedStyle = style.normStyle
+    let normalizedStyle = normalizeStyle(style)
 
     if normalizedStyle in ["B", "I", "U"]:
       codes.add parseEnum[BbStyleAbbr](normalizedStyle).toCode()
@@ -72,7 +79,7 @@ proc toAnsiCode*(s: string): string =
       when defined(debugBB): echo "unknown style: " & normalizedStyle
 
   if bbMode == On and bgStyle != "":
-    let normalizedBgStyle = bgStyle.normStyle
+    let normalizedBgStyle = normalizeStyle(bgStyle)
     if normalizedBgStyle in ColorXtermNames:
       codes.add parseEnum[ColorXTerm](normalizedBgStyle).toBgCode()
     elif normalizedBgStyle.isHex():
