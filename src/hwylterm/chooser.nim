@@ -10,6 +10,7 @@
 ]##
 
 import std/[enumerate, os, strutils, sequtils, sets, terminal]
+import ./bbansi
 
 template tryImport*(x, body) =
   when not (compiles do: import x): body else: import x
@@ -35,7 +36,7 @@ type
 func newState[T](things: openArray[T], height: Natural): State =
   result.max = len(things) - 1
   result.height = height
-  result.high = height
+  result.high = min(result.max,height)
 
 func up(s: var State) =
   if s.pos > 0: dec s.pos
@@ -53,28 +54,28 @@ func down(s: var State) =
       inc s.high
 
 func pressed(s: var State, k: Key) = s.lastKey = k
-
 func select(s: var State ) =
   s.selections =
     symmetricDifference(s.selections, toHashSet([s.pos]))
 
-proc clip(s: string, length: int): string =
+func clip(s: string, length: int): string =
   if s.len > length: s[0..length]
   else: s
 
-# proc addHelp(s: var screen) =
+func prefix(state: State, i: int): string =
+  result.add (
+      if (i + state.low) == state.pos: ">"
+      else: " "
+  )
+  result.add (
+      if (i + state.low) in state.selections: ">"
+      else: " "
+  )
 
 func addThingsWindow[T](state: var State, things: openArray[T]) =
   var window: string
   for i, t in enumerate(things[state.low..state.high]):
-    window.add (
-      if (i + state.low) == state.pos: ">"
-      else: " "
-    )
-    window.add (
-      if (i + state.low) in state.selections: ">"
-      else: " "
-    )
+    window.add prefix(state, i)
     window.add $t
     window.add "\n"
   state.buffer.add window
@@ -95,7 +96,7 @@ proc draw(s: var State) =
   flushFile stdout
   s.buffer = ""
 
-proc getSelections[T](state: State, things: openArray[T]): seq[T] =
+func getSelections[T](state: State, things: openArray[T]): seq[T] =
   if state.selections.len == 0:
     result.add things[state.pos]
   for i in state.selections:
@@ -131,32 +132,58 @@ proc choose*[T](things: openArray[T], height: Natural = 6): seq[T] =
 
 
 when isMainModule:
-  # import std/parseopt
-  # var
-  #   posArgs: seq[string]
-  #   style: string
-  #   showDebug: bool
-  # var p = initOptParser()
-  # for kind, key, val in p.getopt():
-  #   case kind
-  #   of cmdEnd:
-  #     break
-  #   of cmdShortOption, cmdLongOption:
-  #     case key
-  #     of "help", "h":
-  #       writeHelp()
-  #   of cmdArgument:
-  #     strArgs.add key
-  # for arg in strArgs:
-  #   let styled =
-  #     if style != "":
-  #       arg.bb(style)
-  #     else:
-  #       arg.bb
-  #   echo styled
-  #   if showDebug:
-  #     echo debug(styled)
-  let items = LowercaseLetters.toSeq()
+  import std/[parseopt, strformat]
+  func styleFlag(s, l, d: string): string =
+      fmt"  [yellow]-{s}[/]  [green]--{l.alignLeft(10)}[/] {d}"
+  proc writeHelp() =
+    const flags = [
+      styleFlag("h", "help", "show this help"),
+      styleFlag("s", "seperator", "seperator to split items"),
+    ].join("\n")
+    echo bbfmt"""
+[bold]hwylchoose[/] \[[green]args...[/]] \[[faint]-h[/]]
+
+[italic]usage[/]:
+  hwylchoose a b c d
+  hwylchoose a,b,c,d -s,
+  hwylchoose a,b,c,d --seperator ","
+
+flags:
+{flags}
+"""
+
+  var
+    posArgs: seq[string]
+    sep: string
+  var p = initOptParser(
+    shortNoVal = {'h'}, longNoVal = @["help", "demo"]
+  )
+  for kind, key, val in p.getopt():
+    case kind
+    of cmdEnd:
+      break
+    of cmdShortOption, cmdLongOption:
+      case key
+      of "help", "h":
+        writeHelp(); quit 0
+      of "demo":
+        posArgs &= LowercaseLetters.toSeq().mapIt($it)
+      of "seperator","s":
+        if val == "":
+          echo bb"[red]ERROR[/]: expected value for --seperator"
+          quit QuitFailure
+        sep = val
+      else:
+        echo bb"[yellow]warning[/]: unexpected option/value -> ", key, ", ", val
+    of cmdArgument:
+      posArgs.add key
+  if posArgs.len == 0: quit "expected values to choose"
+  var items: seq[string]
+  if sep != "":
+    if posArgs.len != 1: quit "only pass one positional arg when using --sep"
+    items = posArgs[0].split(sep).mapIt(strip(it))
+  else:
+    items = posArgs
   let item = choose(items)
   echo "selected: ", item
 
