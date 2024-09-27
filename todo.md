@@ -2,11 +2,12 @@
 
 - [x] add cligen adapters to add colors with bbansi
   - [ ] add integration test check cligen
+- [ ] add generic help generator to accompany optparse
 
 ## improvements
 
 - [ ] revamp spinner api
-- [ ] add Bbstring indexing operations, that are span aware
+- [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
 
 ## features
 
