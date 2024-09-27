@@ -4,6 +4,9 @@
   use BB style markup to add color to strings using VT100 escape codes
 ]##
 
+# TODO:
+#{.push raises:[].}
+
 import std/[os, sequtils, strformat, strutils]
 import ./bbansi/[styles, utils, colors]
 export utils
