@@ -1,9 +1,9 @@
 ##[
   # Hwylterm
 
-  see also these utility modules:
+  see also these utility modules with extra dependencies:
 
-  - [cli](./hwylterm/cli.html), requires [cligen](https://github.com/c-blake/cligen)
+  - [cligen adapter](./hwylterm/cligen.html), requires [cligen](https://github.com/c-blake/cligen)
   - [chooser](./hwylterm/chooser.html), requires [illwill](https://github.com/johnnovak/illwill)
 ]##
 

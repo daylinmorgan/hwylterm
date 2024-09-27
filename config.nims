@@ -22,7 +22,9 @@ task docs, "Deploy doc html + search index to public/ directory":
     deployDir = getCurrentDir() / "public"
     pkgName = "hwylterm"
     gitFlags = fmt"--git.url:'https://github.com/daylinmorgan/{pkgName}' --git.commit:main"
-  for module in ["cli", "chooser"]:
+  when defined(clean):
+    rmDir deployDir
+  for module in ["cligen", "chooser"]:
     selfExec fmt"doc --docRoot:{getCurrentDir()}/src/ --index:on --outdir:{deployDir} src/hwylterm/{module}"
   selfExec fmt"doc --project --index:on {gitFlags} --outdir:{deployDir} --project src/{pkgName}.nim"
   docFixup(deployDir,pkgName)
