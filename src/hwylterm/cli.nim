@@ -44,7 +44,7 @@ proc helpAttrOff(): Table[string,string] =
   }.toTable()
 
 const
-  useMulti = "${doc}[bold]Usage[/]:\n  $command {SUBCMD} [[sub-command options & parameters]\n\n[bold]subcommands[/]:\n$subcmds"
+  useMulti = "${doc}[bold]Usage[/]:\n  $command {SUBCMD} [[sub-command options & parameters]\n\n[bold]Subcommands[/]:\n$subcmds"
   useHdr = "[bold]Usage[/]:\n  "
   use = "$command $args\n${doc}[bold]Options[/]:\n$options"
 
