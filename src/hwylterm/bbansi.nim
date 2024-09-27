@@ -14,9 +14,13 @@ type
     slice*: array[2, int]
 
   BbString* = object
-    raw*: string
     plain*: string
     spans*: seq[BbSpan]
+
+func shift(s: BbSpan, i: Natural): BbSpan =
+  result = s
+  inc(result.slice[0],i)
+  inc(result.slice[1],i)
 
 proc len(span: BbSpan): int =
   span.slice[1] - span.slice[0]
@@ -55,10 +59,13 @@ template closeStyle(bbs: var BbString, pattern: string) =
     bbs.newSpan newStyle
 
 template closeFinalSpan(bbs: var BbString) =
-  if bbs.spans.len >= 1 and bbs.spans[^1].slice[1] == 0:
-    bbs.endSpan
+  if bbs.spans.len >= 1:
+    if bbs.spans[^1].slice[0] == bbs.plain.len:
+      bbs.spans.delete(bbs.spans.len - 1)
+    elif bbs.spans[^1].slice[1] == 0:
+      bbs.endSpan
 
-proc bb*(s: string): BbString =
+func bb*(s: string): BbString =
   ## convert bbcode markup to ansi escape codes
   var
     pattern: string
@@ -75,8 +82,6 @@ proc bb*(s: string): BbString =
   template resetPattern() =
     pattern = ""
     inc i
-
-  result.raw = s
 
   if not s.startswith('[') or s.startswith("[["):
     result.spans.add BbSpan()
@@ -111,6 +116,7 @@ proc bb*(s: string): BbString =
     else:
       next
 
+  
   result.closeFinalSpan
 
 proc bb*(s: string, style: string): BbString =
@@ -121,25 +127,18 @@ proc bb*(s: string, style: Color256): BbString =
 
 proc `&`*(x: BbString, y: string): BbString =
   result = x
-  result.raw &= y
   result.plain &= y
-  result.spans[^1].slice[1] = result.plain.len - 1
+  result.spans.add BbSpan(styles: @[], slice: [x.plain.len, result.plain.len - 1])
 
 template bbfmt*(pattern: static string): BbString =
   bb(fmt(pattern))
 
 proc `&`*(x: string, y: BbString): BbString =
-  result.raw = x & y.raw
   result.plain = x & y.plain
   result.spans.add BbSpan(styles: @[], slice: [0, x.len - 1])
+  let i = x.len
   for span in y.spans:
-    let
-      length = x.len
-      styles = span.styles
-      slice = span.slice
-    result.spans.add BbSpan(
-      styles: styles, slice: [slice[0] + length, slice[1] + length]
-    )
+    result.spans.add span.shift(i)
 
 func len*(bbs: BbString): int =
   bbs.plain.len
@@ -159,9 +158,41 @@ proc `$`*(bbs: BbString): string =
     if codes != "":
       result.add toAnsiCode("reset")
 
+func align*(bs: BbString, count: Natural, padding = ' '): Bbstring =
+  if bs.len < count:
+    result = (padding.repeat(count - bs.len)) & bs
+  else:
+    result = bs
+
+func alignLeft*(bs: BbString, count: Natural, padding = ' '): Bbstring = 
+  if bs.len < count:
+    result = bs & (padding.repeat(count - bs.len))
+  else:
+    result = bs
+
+func slice(bs: BbString, span: BbSpan): string =
+  bs.plain[span.slice[0]..span.slice[1]]
+
+proc truncate*(bs: Bbstring, len: Natural): Bbstring =
+  if bs.len < len: return bs
+  for span in bs.spans:
+    if span.slice[0] >= len: break
+    if span.slice[1] >= len:
+      var finalSpan = span
+      finalSpan.slice[1] = len - 1
+      result.spans.add finalSpan
+      result.plain.add bs.slice(finalSpan)
+      break
+    result.spans.add span
+    result.plain.add bs.slice(span)
+
 proc `&`*(x: BbString, y: BbString): Bbstring =
-  # there is probably a more efficient way to do this
-  bb(x.raw & y.raw)
+  result.plain.add x.plain
+  result.spans.add x.spans
+  result.plain.add y.plain
+  let i = x.plain.len
+  for span in y.spans:
+    result.spans.add shift(span, i)
 
 proc bbEscape*(s: string): string {.inline.} = 
   s.replace("[", "[[").replace("\\", "\\\\")
@@ -173,7 +204,7 @@ proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
   stdout.flushFile
 
 when isMainModule:
-  import std/[parseopt, strformat, sugar]
+  import std/[parseopt, sugar]
   const version = staticExec "git describe --tags --always --dirty=-dev"
   const longOptPad = 8
   const flags = collect(
@@ -216,7 +247,6 @@ flags:
 
   proc debug(bbs: BbString): string =
     echo "bbString("
-    echo "  raw: ", bbs.raw
     echo "  plain: ", bbs.plain
     echo "  spans: ", bbs.spans
     echo "  escaped: ", escape($bbs)

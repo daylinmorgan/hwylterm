@@ -64,3 +64,19 @@ suite "basic":
   test "hex":
     bbCheck "[#FF0000]red", "\e[38;2;255;0;0mred\e[0m"
 
+suite "strutils":
+  test "&":
+    check "plain string" & bb"[red]red string" == bb"plain string[red]red string"
+
+  test "truncate":
+    let tester = bb"[red]a red[/] [blue on red]blue on red part"
+    check tester.truncate(50) == tester
+    check tester.truncate(5) == bb"[red]a red"
+    check tester.truncate(10) == bb"[red]a red[/] [blue on red]blue"
+
+  test "align":
+    check (bb"[red]red").align(10) == bb"       [red]red"
+    check (bb"[red]red").alignLeft(10) == bb"[red]red[/]       "
+
+
+
