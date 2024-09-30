@@ -2,6 +2,7 @@ import std/[os, strformat, strutils]
 
 task test, "run tests":
   selfExec "r tests/tbbansi.nim"
+  selfExec "r tests/tcli.nim"
 
 task develop, "install cligen for development":
   exec "nimble install -l 'cligen@1.7.5'"

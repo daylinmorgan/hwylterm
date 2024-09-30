@@ -2,7 +2,8 @@
 
 - [x] add cligen adapters to add colors with bbansi
   - [ ] add integration test check cligen
-- [ ] add generic help generator to accompany parseopt
+- [x] add generic help generator to accompany parseopt
+
 ## improvements
 
 - [ ] consider reducing illwill surface to only relevant IO (input) features
@@ -14,7 +15,7 @@
 - [x] make a basic choose one from list widget
 - [ ] tables/boxes?
 - [ ] confirmation proc
-- [ ]basic progress bar
+- [ ] basic progress bar
 - [ ] support for 256 and truecolors
   - [ ] support for rgb colors
   - [ ] modify 256 colors w/parser changes to be `"[color(9)]red"` instead of `[9]red`

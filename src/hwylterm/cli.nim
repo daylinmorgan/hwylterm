@@ -72,6 +72,7 @@ proc bbImpl(cli: HwylCli): string =
     result.add indent(cli.usage, 2 )
     result.add "\n"
   if cli.flags.len > 0:
+    result.add "\n"
     result.add "[" & cli.styles.hdr & "]"
     result.add "flags[/]:\n"
     for f in cli.flags:
