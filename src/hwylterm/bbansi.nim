@@ -224,33 +224,28 @@ proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
 
 # NOTE: could move to standlone modules in the tools/ directory
 when isMainModule:
-  import std/[parseopt, sugar]
+  import std/[parseopt]
+  import ./cli
+
   const version = staticExec "git describe --tags --always --dirty=-dev"
-  const longOptPad = 8
-  const flags = collect(
-    for (s, l, d) in [
-      ("h", "help", "show this help"),
-      ("v", "version", "show version"),
-      ("s", "style", "set style for string"),
-    ]:
-      fmt"  [yellow]-{s}[/]  [green]--{l.alignLeft(longOptPad)}[/] {d}"
-    ).join("\n")
+
   proc writeHelp() =
-    let help =
-      bbfmt"""
-[bold]bbansi[/] \[[green]args...[/]] [[[faint]-h|-v[/]]
-
-[italic]usage[/]:
-  bbansi "[[yellow] yellow text!"
-    |-> [yellow] yellow text![/]
-  bbansi "[[bold red] bold red text[[/] plain text..."
-    |-> [bold red] bold red text[/] plain text...
-  bbansi "[[red]some red[[/red] but all italic" --style:italic
-    |-> [italic][red]some red[/red] but all italic[/italic]
-
-flags:
-{flags}
-"""
+    let help = $newHwylCli(
+      "[bold]bbansi[/] [[[green]args...[/]] [[[faint]-h|-v[/]]",
+      """
+bbansi "[[yellow] yellow text!"
+  -> [yellow] yellow text![/]
+bbansi "[[bold red] bold red text[[/] plain text..."
+  -> [bold red] bold red text[/] plain text...
+bbansi "[[red]some red[[/red] but all italic" --style:italic
+  -> [italic][red]some red[/red] but all italic[/italic]
+""",
+      [
+        ("h", "help", "show this help"),
+        ("v", "version", "show version"),
+        ("s", "style", "set style for string"),
+      ]
+    )
     echo help; quit 0
 
   proc testCard() =
