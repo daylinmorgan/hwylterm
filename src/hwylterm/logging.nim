@@ -33,7 +33,16 @@ type
     fmtStrs: array[Level, string]
 
 
-const defaultFlushThreshold = lvlAll
+const
+  defaultFlushThreshold = when NimMajor >= 2:
+      when defined(nimV1LogFlushBehavior): lvlError else: lvlAll
+    else:
+      when defined(nimFlushAllLogs): lvlAll else: lvlError
+  ## The threshold above which log messages to file-like loggers
+  ## are automatically flushed.
+  ##
+  ## By default, only error and fatal messages are logged,
+  ## but defining ``-d:nimFlushAllLogs`` will make all levels be flushed
 
 proc genFmtStr(
   fmtPrefix, fmtSep, fmtSuffix, levelStyle: string,
