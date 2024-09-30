@@ -3,9 +3,9 @@
 - [x] add cligen adapters to add colors with bbansi
   - [ ] add integration test check cligen
 - [ ] add generic help generator to accompany parseopt
-
 ## improvements
 
+- [ ] consider reducing illwill surface to only relevant IO (input) features
 - [ ] revamp spinner api
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
 

@@ -11,12 +11,7 @@
 
 import std/[enumerate, os, strutils, sequtils, sets, terminal]
 import ./bbansi
-
-template tryImport*(x, body) =
-  when not (compiles do: import x): body else: import x
-tryImport illwill:
-  {.fatal: "hwylterm/choose requires illwill >= 0.4.1".}
-
+import ./vendor/illwill
 
 proc exitProc() {.noconv.} =
   illwillDeInit()

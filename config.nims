@@ -4,7 +4,6 @@ task test, "run tests":
   selfExec "r tests/tbbansi.nim"
 
 task develop, "install cligen for development":
-  exec "nimble install -l 'illwill@0.4.1'"
   exec "nimble install -l 'cligen@1.7.5'"
 
 proc docFixup(deployDir:string, pkgName: string) =
@@ -31,4 +30,3 @@ task docs, "Deploy doc html + search index to public/ directory":
 
 when withDir(thisDir(), system.dirExists("nimbledeps")):
   --path:"./nimbledeps/pkgs2/cligen-1.7.5-f3ffe7329c8db755677d3ca377d02ff176cec8b1"
-  --path:"./nimbledeps/pkgs2/illwill-0.4.1-9c58351502f89a16caf031cbd1992ad3fdfd3c67"
