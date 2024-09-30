@@ -19,7 +19,8 @@ func stripAnsi*(s: string): string =
       while s[i] != 'm':
         inc i
       inc i
-    result.add s[i]
+    if i < s.len:
+      result.add s[i]
     inc i
 
 type

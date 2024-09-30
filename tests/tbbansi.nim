@@ -66,6 +66,7 @@ suite "basic":
 
 suite "strutils":
   test "stripAnsi":
+    check stripAnsi($bb"[red]red!") == "red!"
     check stripAnsi("\e[1mBold String!") == "Bold String!"
 
   test "&":
