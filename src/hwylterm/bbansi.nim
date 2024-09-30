@@ -11,6 +11,17 @@ import std/[os, sequtils, strformat, strutils]
 import ./bbansi/[styles, utils, colors]
 export utils
 
+func stripAnsi*(s: string): string =
+  ## remove all ansi escape codes from a string
+  var i: int
+  while i < s.len:
+    if s[i] == '\e':
+      while s[i] != 'm':
+        inc i
+      inc i
+    result.add s[i]
+    inc i
+
 type
   BbSpan* = object
     styles*: seq[string]
@@ -206,6 +217,7 @@ proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
   stdout.write('\n')
   stdout.flushFile
 
+# NOTE: could move to standlone modules in the tools/ directory
 when isMainModule:
   import std/[parseopt, sugar]
   const version = staticExec "git describe --tags --always --dirty=-dev"

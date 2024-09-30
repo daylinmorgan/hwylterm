@@ -65,8 +65,12 @@ suite "basic":
     bbCheck "[#FF0000]red", "\e[38;2;255;0;0mred\e[0m"
 
 suite "strutils":
+  test "stripAnsi":
+    check stripAnsi("\e[1mBold String!") == "Bold String!"
+
   test "&":
     check "plain string" & bb"[red]red string" == bb"plain string[red]red string"
+    check (bb"a [b]bold string") & " and plain string" == bb"a [b]bold string[/] and plain string"
 
   test "truncate":
     let tester = bb"[red]a red[/] [blue on red]blue on red part"
