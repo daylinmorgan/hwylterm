@@ -16,10 +16,14 @@ func stripAnsi*(s: string): string =
   var i: int
   while i < s.len:
     if s[i] == '\e':
-      while s[i] != 'm':
-        inc i
       inc i
-    if i < s.len:
+      if i < s.len and s[i] == '[':
+        inc i
+        while i < s.len and not (s[i] in {'A'..'Z','a'..'z'}):
+          inc i
+      else:
+        result.add s[i-1]
+    else:
       result.add s[i]
     inc i
 
