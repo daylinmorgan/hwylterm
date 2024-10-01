@@ -2,6 +2,15 @@
   # Hwylterm cligen adapter
 
   Adapter to add hwylterm colors to cligen output.
+
+  ```nim
+  import cligen, hwylterm/cligen
+  proc fun(a: string = "b") =
+    echo a
+  hwylCLi(clCfg)
+  dispatch fun, help = {"a": "option a"}
+  ```
+
 ]##
 
 import std/[tables]
@@ -47,6 +56,19 @@ const
   useMulti = "${doc}[bold]Usage[/]:\n  $command {SUBCMD} [[sub-command options & parameters]\n\n[bold]Subcommands[/]:\n$subcmds"
   useHdr = "[bold]Usage[/]:\n  "
   use = "$command $args\n${doc}[bold]Options[/]:\n$options"
+
+
+func `//`*[A,B](p: openArray[(A,B)]): Table[A,B] =
+  p.toTable()
+func `//`*[A,B](t1: var Table[A,B], t2: Table[A,B]) =
+  for (k, v) in t2.pairs: 
+    t1[k] = v
+func `//`*[A,B](t1: Table[A,B],t2: Table[A,B]): Table[A,B] =
+  result // t1; result // t2
+func `//`*[A,B](t: Table[A,B], p: openArray[(A,B)]): Table[A,B] =
+  result // t; result // p.toTable()
+func `//`*[A,B](p: openArray[(A,B)], t: Table[A,B]): Table[A,B] =
+  result // p.toTable(); result // t;
 
 proc hwylCli*(
   clcfg: var ClCfg,
