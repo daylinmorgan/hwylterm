@@ -21,14 +21,15 @@ task docs, "Deploy doc html + search index to public/ directory":
   let
     deployDir = getCurrentDir() / "public"
     pkgName = "hwylterm"
-    gitFlags = fmt"--git.url:'https://github.com/daylinmorgan/{pkgName}' --git.commit:main"
+    gitFlags = fmt"--git.url:'https://github.com/daylinmorgan/{pkgName}' --git.commit:main --git.devel:main"
+    docCmd = fmt"doc {gitFlags} --index:on --outdir:{deployDir}"
   when defined(clean):
     echo fmt"clearing {deployDir}"
     rmDir deployDir
   for module in ["cligen", "chooser", "logging", "cli"]:
-    selfExec fmt"doc --docRoot:{getCurrentDir()}/src/ --index:on --outdir:{deployDir} src/hwylterm/{module}"
-  selfExec fmt"doc --project --index:on {gitFlags} --outdir:{deployDir} --project src/{pkgName}.nim"
-  docFixup(deployDir,pkgName)
+    selfExec fmt"{docCmd} --docRoot:{getCurrentDir()}/src/ src/hwylterm/{module}"
+  selfExec fmt"{docCmd} --project  --project src/{pkgName}.nim"
+  docFixup(deployDir, pkgName)
 
 when withDir(thisDir(), system.dirExists("nimbledeps")):
   --path:"./nimbledeps/pkgs2/cligen-1.7.5-f3ffe7329c8db755677d3ca377d02ff176cec8b1"
