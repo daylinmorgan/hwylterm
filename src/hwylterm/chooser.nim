@@ -127,11 +127,11 @@ proc choose*[T](things: openArray[T], height: Natural = 6): seq[T] =
 
 
 when isMainModule:
-  import std/[parseopt, strformat]
+  import std/[parseopt]
   import ./cli
 
   proc writeHelp() =
-    let cli = newHwylCli(
+    echo newHwylCli(
       "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]",
       """
 hwylchoose a b c d
@@ -143,7 +143,6 @@ hwylchoose a,b,c,d --seperator ","
         ("s", "seperator", "seperator to split items"),
       ]
     )
-    echo cli
 
   var
     posArgs: seq[string]
