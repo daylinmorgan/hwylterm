@@ -6,6 +6,8 @@
 
 ## improvements
 
+
+- [ ] addJoinStyle(); works like join except wraps each argument in a style
 - [ ] consider reducing illwill surface to only relevant IO (input) features
 - [ ] revamp spinner api
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
