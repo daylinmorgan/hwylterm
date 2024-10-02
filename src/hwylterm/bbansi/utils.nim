@@ -39,7 +39,7 @@ let bbMode* = checkColorSupport()
 let colorSystem* = checkColorSystem()
 
 func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
-func normalizeStyle(style: string): string = style.replace("_","").capitalizeAscii()
+func normalizeStyle(style: string): string = style.replace("_","").toLowerAscii().capitalizeAscii()
 func isHex(s: string): bool = (s.startswith "#") and (s.len == 7)
 
 func toCode(style: BbStyle): string = $ord(style)
@@ -77,7 +77,6 @@ proc toAnsiCode*(s: string): string =
     styles = s.splitWhitespace()
   for style in styles:
     let normalizedStyle = normalizeStyle(style)
-
     if normalizedStyle in ["B", "I", "U"]:
       codes.add parseEnum[BbStyleAbbr](normalizedStyle).toCode()
     elif normalizedStyle in BbStyleNames:

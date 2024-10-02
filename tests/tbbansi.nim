@@ -47,6 +47,7 @@ suite "basic":
   test "style insensitive":
     bbCheck "[red]no case sensitivity[/RED]", "\e[38;5;1mno case sensitivity\e[0m"
     bbCheck "[bright_red]should be BrightRed[/]", "\e[38;5;9mshould be BrightRed\e[0m"
+    bbCheck "[BrightRed]should be BrightRed[/]", "\e[38;5;9mshould be BrightRed\e[0m"
 
   test "style full":
     check "[red]Red[/red]".bb == bb("Red", "red")
