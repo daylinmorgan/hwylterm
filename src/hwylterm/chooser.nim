@@ -127,15 +127,14 @@ proc choose*[T](things: openArray[T], height: Natural = 6): seq[T] =
 
 
 when isMainModule:
-  import std/[parseopt]
-  import ./cli
+  import ./[cli, parseopt3]
 
   proc writeHelp() =
     echo newHwylCli(
       "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]",
       """
 hwylchoose a b c d
-hwylchoose a,b,c,d -s,
+hwylchoose a,b,c,d -s ,
 hwylchoose a,b,c,d --seperator ","
 """,
       [
@@ -152,8 +151,8 @@ hwylchoose a,b,c,d --seperator ","
   )
   for kind, key, val in p.getopt():
     case kind
-    of cmdEnd:
-      break
+    of cmdError: quit($(bb"[red]cli error[/]: " & p.message), 1)
+    of cmdEnd: assert false
     of cmdShortOption, cmdLongOption:
       case key
       of "help", "h":

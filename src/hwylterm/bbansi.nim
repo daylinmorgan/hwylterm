@@ -119,6 +119,7 @@ proc toAnsiCode*(s: string): string =
     result.add codes.join ";"
     result.add "m"
 
+
 func stripAnsi*(s: string): string =
   ## remove all ansi escape codes from a string
   var i: int
@@ -332,8 +333,7 @@ proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
 
 # NOTE: could move to standlone modules in the tools/ directory
 when isMainModule:
-  import std/[parseopt]
-  import ./cli
+  import ./[cli, parseopt3]
 
   const version = staticExec "git describe --tags --always --dirty=-dev"
 
@@ -367,6 +367,7 @@ bbansi "[[red]some red[[/red] but all italic" --style:italic
       echo color, " -> ", fmt"[{color}]****".bb
     for color in colors:
       echo "on ", color, " -> ", fmt"[on {color}]****".bb
+    quit(QuitSuccess)
 
   proc debug(bbs: BbString): string =
     echo "bbString("
@@ -383,32 +384,30 @@ bbansi "[[red]some red[[/red] but all italic" --style:italic
     strArgs: seq[string]
     style: string
     showDebug: bool
-  var p = initOptParser()
+  var p = initOptParser(
+    shortNoVal = {'h','v'},
+    longNoVal = @["help", "version", "testCard"]
+  )
   for kind, key, val in p.getopt():
     case kind
-    of cmdEnd:
-      break
+    of cmdError: quit($(bb"[red]cli error[/]: " & p.message), 1)
+    of cmdEnd: assert(false) 
     of cmdShortOption, cmdLongOption:
       case key
-      of "help", "h":
-        writeHelp()
-      of "version", "v":
-        writeVersion()
-      of "testCard":
-        testCard()
-        quit(QuitSuccess)
-      of "style", "s":
+      of "testCard"    : testCard()
+      of "help"   , "h": writeHelp()
+      of "version", "v": writeVersion()
+      of "style"  , "s":
         if val == "":
-          echo "[red]ERROR[/]: expected value for -s/--style".bb
+          bbEcho "[red]ERROR[/]: expected value for -s/--style"
           quit(QuitFailure)
         style = val
       of "debug":
         showDebug = true
       else:
-        echo bb"[yellow]warning[/]: unexpected option/value -> ", key, ", ", val
-    of cmdArgument:
-      strArgs.add key
-  if strArgs.len == 0:
+        bbEcho "[yellow]warning[/]: unexpected option/value -> ", key, ", ", val
+    of cmdArgument: strArgs.add key
+  if strArgs.len == 0: 
     writeHelp()
   for arg in strArgs:
     let styled =
