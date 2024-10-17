@@ -9,7 +9,7 @@
 
 - [ ] addJoinStyle(); works like join except wraps each argument in a style
 - [ ] consider reducing illwill surface to only relevant IO (input) features
-- [ ] revamp spinner api
+- [ ] revamp spinner api (new  threads?)
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
 - [ ] add a `commands` option for `newHwylCli` in `hwylterm/cli`
 
@@ -17,7 +17,7 @@
 
 - [x] make a basic choose one from list widget
 - [ ] tables/boxes?
-- [ ] confirmation proc
+- [x] confirmation proc
 - [ ] basic progress bar
 - [ ] support for 256 and truecolors
   - [ ] support for rgb colors
