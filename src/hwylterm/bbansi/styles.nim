@@ -1,6 +1,3 @@
-import std/tables
-export tables
-
 
 type
   BbStyleAbbr* = enum
