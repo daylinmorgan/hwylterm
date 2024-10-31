@@ -4,8 +4,7 @@
   use BB style markup to add color to strings using VT100 escape codes
 ]##
 
-# TODO:
-#{.push raises:[].}
+{.push raises:[].}
 
 import std/[
   macros, os, sequtils, strformat, strutils, terminal
@@ -72,7 +71,41 @@ const ColorXTermNames = enumNames(ColorXterm).mapIt(firstCapital(it))
 const BbStyleNames = enumNames(BbStyle).mapIt(firstCapital(it))
 const ColorDigitStrings = (1..255).toSeq().mapIt($it)
 
-# TODO: write non-fallible parseStyle(s) procedure
+
+template parseUnsafe(body: untyped): untyped =
+  try: body
+  except: discard
+
+proc parseStyle(codes: var seq[string], style: string)  =
+  var style = normalizeStyle(style)
+
+  if style in ["B", "I", "U"]:
+    parseUnsafe: codes.add parseEnum[BbStyleAbbr](style).toCode()
+  elif style in BbStyleNames:
+    parseUnsafe: codes.add parseEnum[BbStyle](style).toCode()
+
+  if not (bbMode == On): return
+
+  if style in ColorXtermNames:
+    parseUnsafe: codes.add parseEnum[ColorXterm](style).toCode()
+  elif style.isHex():
+    codes.add style.hexToRgb.toCode()
+  elif style in ColorDigitStrings:
+    parseUnsafe: codes.add parseInt(style).toCode()
+  else:
+    when defined(debugBB): echo "unknown style: " & normalizedStyle
+
+func parseBgStyle(codes: var seq[string], style: string) =
+    var style = normalizeStyle(style)
+    if style in ColorXtermNames:
+      parseUnsafe: codes.add parseEnum[ColorXTerm](style).toBgCode()
+    elif style.isHex():
+      codes.add style.hexToRgb().toBgCode()
+    elif style in ColorDigitStrings:
+      parseUnsafe: codes.add parseInt(style).toBgCode()
+    else:
+      when defined(debugBB): echo "unknown bg style: " & style
+
 proc toAnsiCode*(s: string): string =
   if bbMode == Off: return
   var
@@ -86,33 +119,10 @@ proc toAnsiCode*(s: string): string =
   else:
     styles = s.splitWhitespace()
   for style in styles:
-    let normalizedStyle = normalizeStyle(style)
-    if normalizedStyle in ["B", "I", "U"]:
-      codes.add parseEnum[BbStyleAbbr](normalizedStyle).toCode()
-    elif normalizedStyle in BbStyleNames:
-      codes.add parseEnum[BbStyle](normalizedStyle).toCode()
-
-    if not (bbMode == On): continue
-
-    if normalizedStyle in ColorXtermNames:
-      codes.add parseEnum[ColorXterm](normalizedStyle).toCode()
-    elif normalizedStyle.isHex():
-      codes.add  normalizedStyle.hexToRgb.toCode()
-    elif normalizedStyle in ColorDigitStrings:
-      codes.add parseInt(normalizedStyle).toCode()
-    else:
-      when defined(debugBB): echo "unknown style: " & normalizedStyle
+    parseStyle codes, style
 
   if bbMode == On and bgStyle != "":
-    let normalizedBgStyle = normalizeStyle(bgStyle)
-    if normalizedBgStyle in ColorXtermNames:
-      codes.add parseEnum[ColorXTerm](normalizedBgStyle).toBgCode()
-    elif normalizedBgStyle.isHex():
-      codes.add normalizedBgStyle.hexToRgb().toBgCode()
-    elif normalizedBgStyle in ColorDigitStrings:
-      codes.add parseInt(normalizedBgStyle).toBgCode()
-    else:
-      when defined(debugBB): echo "unknown bg style: " & normalizedBgStyle
+    parseBgStyle codes, bgStyle
 
   if codes.len > 0:
     result.add "\e["
@@ -325,7 +335,7 @@ proc `&`*(x: BbString, y: BbString): Bbstring =
 proc bbEscape*(s: string): string {.inline.} = 
   s.replace("[", "[[").replace("\\", "\\\\")
 
-proc bbEcho*(args: varargs[string, `$`]) {.sideEffect.} =
+proc bbEcho*(args: varargs[string, `$`]) {.raises: [IOError]} =
   for x in args:
     stdout.write(x.bb)
   stdout.write('\n')
