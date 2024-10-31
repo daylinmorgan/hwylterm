@@ -1,6 +1,9 @@
+## hwylterm/logging
+##
+## wrapper around std/logging to provide a fancy console logger
+
 import std/[logging, strutils]
 export logging
-
 import ./bbansi
 
 var
@@ -19,10 +22,10 @@ Level* = enum ## \
 ]#
 
 type
-  FancyConsoleLogger* = ref object of Logger
+  HwylConsoleLogger* = ref object of Logger
     ## A logger that writes log messages to the console.
     ##
-    ## Create a new ``FancyConsoleLogger`` with the `newFancyConsoleLogger proc
+    ## Create a new ``HwylConsoleLogger`` with the `newHwylConsoleLogger proc
     ## <#newConsoleLogger>`_.
     ##
     useStderr*: bool ## If true, writes to stderr; otherwise, writes to stdout
@@ -50,11 +53,11 @@ proc genFmtStr(
 ): string =
   var parts: seq[string]
   if fmtPrefix != "": parts.add fmtPrefix
-  parts.add $LevelNames[level].bb(levelStyle)
+  parts.add $LevelNames[level].alignLeft(6).bb(levelStyle)
   return parts.join(fmtSep) & fmtSuffix
 
 
-proc newFancyConsoleLogger*(
+proc newHwylConsoleLogger*(
   levelThreshold = lvlAll,
   fmtPrefix = "",
   fmtSep = "|",
@@ -67,8 +70,8 @@ proc newFancyConsoleLogger*(
   warnStyle = "bold yellow",
   errorStyle = "bold red",
   fatalStyle = "bold red"
-): FancyConsoleLogger =
-  ## Creates a new `FancyConsoleLogger<#ConsoleLogger>`_.
+): HwylConsoleLogger =
+  ## Creates a new `HwylConsoleLogger<#HwylConsoleLogger>`_.
   new result
   ## log needs to be gcsafe so we pregenerate the log formats when making the handler
   let fmtStrs: array[Level, string] = [
@@ -89,8 +92,8 @@ proc newFancyConsoleLogger*(
   result.fmtStrs = fmtStrs
 
 
-method log*(logger: FancyConsoleLogger, level: Level, args: varargs[string, `$`]) {.gcsafe.} =
-  ## Logs to the console with the given `FancyConsoleLogger<#ConsoleLogger>`_ only.
+method log*(logger: HwylConsoleLogger, level: Level, args: varargs[string, `$`]) {.gcsafe.} =
+  ## Logs to the console with the given `HwylConsoleLogger<#HwylConsoleLogger>`_ only.
   ##
   ## This method ignores the list of registered handlers.
   ##
