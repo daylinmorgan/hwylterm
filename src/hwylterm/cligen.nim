@@ -19,7 +19,7 @@ import ./bbansi
 template tryImport(x, body) =
   when not (compiles do: import x): body else: import x
 tryImport pkg/cligen:
-  {.fatal: "hwylterm/cli requires cligen>=1.7.5".}
+  {.fatal: "hwylterm/cligen requires cligen>=1.7.5".}
 
 
 type
