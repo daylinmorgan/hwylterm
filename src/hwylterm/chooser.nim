@@ -127,56 +127,37 @@ proc choose*[T](things: openArray[T], height: Natural = 6): seq[T] =
 
 
 when isMainModule:
-  import ./[cli, parseopt3]
-
-  proc writeHelp() =
-    echo newHwylCli(
-      "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]",
-      """
-hwylchoose a b c d
-hwylchoose a,b,c,d -s ,
-hwylchoose a,b,c,d --seperator ","
-""",
-      [
-        ("h", "help", "show this help"),
-        ("s", "seperator", "seperator to split items"),
-      ]
-    )
-
-  var
-    posArgs: seq[string]
-    sep: string
-  var p = initOptParser(
-    shortNoVal = {'h'}, longNoVal = @["help", "demo"]
-  )
-  for kind, key, val in p.getopt():
-    case kind
-    of cmdError: quit($(bb"[red]cli error[/]: " & p.message), 1)
-    of cmdEnd: assert false
-    of cmdShortOption, cmdLongOption:
-      case key
-      of "help", "h":
-        writeHelp(); quit 0
-      of "demo":
-        posArgs &= LowercaseLetters.toSeq().mapIt($it)
-      of "seperator","s":
-        if val == "":
-          echo bb"[red]ERROR[/]: expected value for --seperator"
-          quit QuitFailure
-        sep = val
+  import ./[hwylcli]
+  hwylcli:
+    name "hwylchoose"
+    settings NoArgsShowHelp
+    usage "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]"
+    description """
+    hwylchoose a b c d
+    hwylchoose a,b,c,d -s ,
+    hwylchoose a,b,c,d --seperator ","
+    hwylchoose --demo
+    """
+    hidden demo
+    flags:
+      demo:
+        T bool
+      separator:
+        help "separator to split items"
+        short "s"
+    run:
+      var items: seq[string]
+      if demo:
+        items &= LowercaseLetters.toSeq().mapIt($it)
       else:
-        echo bb"[yellow]warning[/]: unexpected option/value -> ", key, ", ", val
-    of cmdArgument:
-      posArgs.add key
-  if posArgs.len == 0: quit "expected values to choose"
-  var items: seq[string]
-  if sep != "":
-    if posArgs.len != 1: quit "only pass one positional arg when using --sep"
-    items = posArgs[0].split(sep).mapIt(strip(it))
-  else:
-    items = posArgs
-  let item = choose(items)
-  echo "selected: ", item
+        if separator != "":
+          if args.len != 1: quit "only pass one positional arg when using --separator"
+          items = args[0].split(separator).mapIt(strip(it))
+        else:
+          items = args
+
+      let item = choose(items)
+      echo "selected: ", item
 
 
 

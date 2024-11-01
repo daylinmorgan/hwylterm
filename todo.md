@@ -12,6 +12,7 @@
 - [ ] revamp spinner api (new  threads?)
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
 - [ ] add a `commands` option for `newHwylCli` in `hwylterm/cli`
+- [ ] console object with customizable options to apply formatting
 
 ## features
 

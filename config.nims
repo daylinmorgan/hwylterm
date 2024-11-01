@@ -26,7 +26,7 @@ task docs, "Deploy doc html + search index to public/ directory":
   when defined(clean):
     echo fmt"clearing {deployDir}"
     rmDir deployDir
-  for module in ["cligen", "chooser", "logging", "cli", "parseopt3"]:
+  for module in ["cligen", "chooser", "logging", "hwylcli", "parseopt3"]:
     selfExec fmt"{docCmd} --docRoot:{getCurrentDir()}/src/ src/hwylterm/{module}"
   selfExec fmt"{docCmd} --project  --project src/{pkgName}.nim"
   docFixup(deployDir, pkgName)

@@ -3,7 +3,7 @@
 
   see also these utility modules:
 
-  - [cli](./hwylterm/cli.html)
+  - [hwylcli](./hwylterm/hwylcli.html)
   - [cligen adapter](./hwylterm/cligen.html), requires [cligen](https://github.com/c-blake/cligen)
   - [chooser](./hwylterm/chooser.html)
   - [logging](./hwylterm/logging.html)

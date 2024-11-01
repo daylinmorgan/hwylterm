@@ -254,7 +254,6 @@ func bb*(s: string): BbString =
     else:
       next
 
-  
   result.closeFinalSpan
 
 proc bb*(s: string, style: string): BbString =
@@ -263,7 +262,9 @@ proc bb*(s: string, style: string): BbString =
 proc bb*(s: string, style: Color256): BbString =
   bb(s, $style)
 
-proc `&`*(x: BbString, y: string): BbString =
+proc bb*(s: BbString): BbString = s
+
+func `&`*(x: BbString, y: string): BbString =
   result = x
   result.plain &= y
   result.spans.add BbSpan(styles: @[], slice: [x.plain.len, result.plain.len - 1])
@@ -343,30 +344,9 @@ proc bbEcho*(args: varargs[string, `$`]) {.raises: [IOError]} =
 
 # NOTE: could move to standlone modules in the tools/ directory
 when isMainModule:
-  import ./[cli, parseopt3]
-
+  import ./[hwylcli]
   const version = staticExec "git describe --tags --always --dirty=-dev"
-
-  proc writeHelp() =
-    let help = $newHwylCli(
-      "[bold]bbansi[/] [[[green]args...[/]] [[[faint]-h|-v[/]]",
-      """
-bbansi "[[yellow] yellow text!"
-  -> [yellow] yellow text![/]
-bbansi "[[bold red] bold red text[[/] plain text..."
-  -> [bold red] bold red text[/] plain text...
-bbansi "[[red]some red[[/red] but all italic" --style:italic
-  -> [italic][red]some red[/red] but all italic[/italic]
-""",
-      [
-        ("h", "help", "show this help"),
-        ("v", "version", "show version"),
-        ("s", "style", "set style for string"),
-      ]
-    )
-    echo help; quit 0
-
-  proc testCard() =
+  proc showTestCard() =
     for style in [
       "bold", "faint", "italic", "underline", "blink", "reverse", "conceal", "strike"
     ]:
@@ -379,52 +359,39 @@ bbansi "[[red]some red[[/red] but all italic" --style:italic
       echo "on ", color, " -> ", fmt"[on {color}]****".bb
     quit(QuitSuccess)
 
-  proc debug(bbs: BbString): string =
+  proc debugBb(bbs: BbString): string =
     echo "bbString("
     echo "  plain: ", bbs.plain
     echo "  spans: ", bbs.spans
     echo "  escaped: ", escape($bbs)
     echo ")"
 
-  proc writeVersion() =
-    echo bbfmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]"
-    quit 0
-
-  var
-    strArgs: seq[string]
-    style: string
-    showDebug: bool
-  var p = initOptParser(
-    shortNoVal = {'h','v'},
-    longNoVal = @["help", "version", "testCard"]
-  )
-  for kind, key, val in p.getopt():
-    case kind
-    of cmdError: quit($(bb"[red]cli error[/]: " & p.message), 1)
-    of cmdEnd: assert(false) 
-    of cmdShortOption, cmdLongOption:
-      case key
-      of "testCard"    : testCard()
-      of "help"   , "h": writeHelp()
-      of "version", "v": writeVersion()
-      of "style"  , "s":
-        if val == "":
-          bbEcho "[red]ERROR[/]: expected value for -s/--style"
-          quit(QuitFailure)
-        style = val
-      of "debug":
-        showDebug = true
-      else:
-        bbEcho "[yellow]warning[/]: unexpected option/value -> ", key, ", ", val
-    of cmdArgument: strArgs.add key
-  if strArgs.len == 0: 
-    writeHelp()
-  for arg in strArgs:
-    let styled =
-      if style != "":
-        arg.bb(style)
-      else:
-        arg.bb
-    echo styled
-    if showDebug:
-      echo debug(styled)
+  hwylCli:
+    name "bbansi"
+    settings NoArgsShowHelp
+    usage "[bold]bbansi[/] [[[green]args...[/]] [[[faint]-h|-V[/]]"
+    description """
+    bbansi "[[yellow] yellow text!"
+      -> [yellow] yellow text![/]
+    bbansi "[[bold red] bold red text[[/] plain text..."
+      -> [bold red] bold red text[/] plain text...
+    bbansi "[[red]some red[[/red] but all italic" --style:italic
+      -> [italic][red]some red[/red] but all italic[/italic]
+    """
+    version bbfmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]"
+    hidden debug, testCard
+    flags:
+      debug:
+        T bool
+      testCard:
+        T bool
+      style:
+        ? "set style for string"
+        - "s"
+    run:
+      if testCard: showTestCard()
+      for arg in args:
+        let styled = arg.bb(style)
+        echo styled
+        if debug:
+          echo debugBb(styled)
