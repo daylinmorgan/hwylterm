@@ -163,7 +163,7 @@ type
     hidden*: seq[string]
     subcommands: seq[CliCfg]
     settings*: set[CliSetting]
-    run*: NimNode
+    preSub*, postSub*, pre*, post*, run*: NimNode
     desc*: NimNode
     name*: string
     subName*: string # used for help the generator
@@ -316,7 +316,6 @@ func isSubMarker(node: NimNode): bool =
 func sliceStmts(node: NimNode): seq[
   tuple[name: string, slice: Slice[int]]
 ] =
-
   if not isSubMarker(node[0]):
     error "expected a subcommand delimiting line"
 
@@ -403,8 +402,16 @@ func parseCliBody(body: NimNode, name = ""): CliCfg =
         result.styles = call[1]
       of "required":
         result.required = parseIdentLikeList(call)
+      of "preSub":
+        result.preSub = call[1]
+      of "postSub":
+        result.postSub = call[1]
       else:
         error "unknown hwylCli setting: " & name
+
+  for sub in result.subcommands.mitems:
+    sub.pre = result.preSub
+    sub.post = result.postSub
 
   result.addGlobalFlagsFrom(result)
 
@@ -673,8 +680,12 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
   let runBody = nnkStmtList.newTree()
   addRequiredFlagsCheck(cfg, runBody)
   # move to proc?
+  if cfg.pre != nil:
+    runBody.add cfg.pre
   if cfg.run != nil:
     runBody.add cfg.run
+  if cfg.post != nil:
+    runBody.add cfg.post
 
   # let runBody = cfg.run or nnkStmtList.newTree(nnkDiscardStmt.newTree(newEmptyNode()))
   
@@ -701,7 +712,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
     )
 
     runBody.add handleSubCommands.add subCommandCase
-
+  
   result.add quote do:
     # block:
       `printHelperProc`
@@ -734,6 +745,7 @@ when isMainModule:
       config:
         T seq[string]
         ? "path to config file"
+        * @["config.yml"]
     flags:
       check:
         T bool
@@ -749,10 +761,7 @@ when isMainModule:
         `long-flag` "some help"
         flagg       "some other help"
       run:
-        echo config
         echo "hello from hwylterm sub command!"
-        echo `long-flag`
-        echo flagg
       --- b
       description "the \"b\" subcommand"
       flags:
