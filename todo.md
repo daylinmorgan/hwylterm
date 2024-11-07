@@ -14,9 +14,25 @@
 - [ ] add a `commands` option for `newHwylCli` in `hwylterm/cli`
 - [ ] console object with customizable options to apply formatting
 
-### cli generatorj
+### cli generato
 
 - [ ] add support for types(metavars)/defaults/required in help output
+- [ ] abstract the `globalFlags` argument to a `flagGroups` section with a builtin `global`
+      this would allow users to "inherit" flag groups in subcommands
+      ```nim
+      flags:
+        # global flag group auto propagated down
+        --- global
+        config "path to config"
+        --- shared
+        shared:
+          `a-flag` "some shared flag"
+      -- sub
+      flags:
+        ^shared
+        unique "some unique flag"
+      ```
+
 
 
 ## features
