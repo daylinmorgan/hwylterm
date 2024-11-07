@@ -721,6 +721,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
       `runProcName`(`args`[1..^1])
 
 macro hwylCli*(body: untyped) =
+  ## generate a CLI styled by `hwylterm` and parsed by `parseopt3`
   var cfg = parseCliBody(body)
   hwylCliImpl(cfg, root = true)
 
