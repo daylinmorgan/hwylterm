@@ -692,7 +692,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
 
     subcommandCase.add nnkElse.newTree(
       quote do:
-        hwylCliError("unknown subcommand" & `args`[0])
+        hwylCliError("unknown subcommand " & `args`[0])
     )
 
     runBody.add handleSubCommands.add subCommandCase
