@@ -42,7 +42,6 @@ func newHwylCliHelp*(
   result.cmd = cmd
   result.desc = dedent(desc).strip()
   result.subcmds = subcmds.mapIt((it.name,it.desc.strip().dedent().strip().splitlines()[0]))
-  debugecho result.subcmds
   result.usage = dedent(usage).strip()
   result.flags = @flags
   result.styles = styles
@@ -148,9 +147,11 @@ type
     required*: seq[string]
     globalFlags*: seq[CliFlag]
 
-func `?`(n: NimNode) =
+{.push hint[XDeclaredButNotUsed]:off .}
+func peekNode(n: NimNode) =
   ## for debugging macros
   debugEcho treeRepr n
+{.pop.}
 
 # TODO: do i need this?
 func newCliFlag(): CliFlag =
