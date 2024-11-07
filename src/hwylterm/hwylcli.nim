@@ -41,7 +41,8 @@ func newHwylCliHelp*(
 ): HwylCliHelp =
   result.cmd = cmd
   result.desc = dedent(desc).strip()
-  result.subcmds = subcmds.mapIt((it.name,it.desc.splitlines()[0]))
+  result.subcmds = subcmds.mapIt((it.name,it.desc.strip().dedent().strip().splitlines()[0]))
+  debugecho result.subcmds
   result.usage = dedent(usage).strip()
   result.flags = @flags
   result.styles = styles
@@ -51,7 +52,7 @@ func newHwylCliHelp*(
     result.shortArgLen = max(result.shortArgLen, f.short.len)
     result.longArgLen  = max(result.longArgLen, f.long.len)
     result.descArgLen  = max(result.descArgLen, f.description.len)
-  for s in subcmds:
+  for s in result.subcmds:
     result.subcmdLen = max(result.subcmdLen, s.name.len)
     result.subcmdDescLen = max(result.subcmdDescLen, s.desc.len)
 
@@ -81,7 +82,6 @@ func flagHelp(cli: HwylCliHelp, f: HwylFlagHelp): string =
   result.add "\n"
 
 func subCmdLine(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
-  # NOTE: set some minimum for the subcmdlen?
   result.add "  "
   result.add "[" & cli.styles.cmd & "]"
   result.add subcmd.name.alignLeft(cli.subcmdLen)
@@ -114,8 +114,6 @@ proc bbImpl(cli: HwylCliHelp): string =
     result.add "[" & cli.styles.hdr & "]"
     result.add "flags[/]:\n"
     for f in cli.flags:
-      # NOTE: added to accomate dumb macro below
-      # if f != ("","",""):
       result.add flagHelp(cli,f)
 
 proc bb*(cli: HwylCliHelp): BbString = 
@@ -123,28 +121,6 @@ proc bb*(cli: HwylCliHelp): BbString =
 
 proc `$`*(cli: HwylCliHelp): string =
   result = $bb(cli)
-
-# ---------------------------
-# const supportedbaseTypes = ["string", "bool", "int"]
-# const supportedSeqTypes = ["string", "int"]
-# #
-# proc getObjectFieldTypes(x: NimNode): Table[string, string] =
-#   let impl = getType(x).getTypeImpl()
-#   for f in impl[2]:
-#     let name = f[0].strVal
-#     template bail = error "unsupported field type for: " & name
-#     case f[1].kind
-#     of nnkSym:
-#       let typeSym = f[1].strVal
-#       if typeSym notin supportedbaseTypes: bail
-#       result[name] = typeSym
-#     of nnkBracketExpr:
-#       if f[1].len > 2: bail
-#       if f[1][0].strVal notin "seq": bail
-#       let typeSym = f[1][1].strVal
-#       if typeSym notin supportedSeqTypes: bail
-#       result[name] = f[1][0].strVal & "[" & f[1][1].strVal & "]"
-#     else: bail
 
 type
   CliSetting = enum
@@ -763,14 +739,19 @@ when isMainModule:
       echo fmt"{config=}, {check=}"
     subcommands:
       --- a
-      description "the \"a\" subcommand"
+      ... "the \"a\" subcommand"
       flags:
         `long-flag` "some help"
         flagg       "some other help"
       run:
         echo "hello from hwylterm sub command!"
       --- b
-      description "the \"b\" subcommand"
+      ... """
+      some "B" command
+
+      a longer mulitline description that will be visibil in the subcommand help
+      it will automatically be "bb"'ed [bold]this is bold text[/]
+      """
       flags:
         aflag:
           T bool
