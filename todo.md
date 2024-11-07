@@ -14,6 +14,11 @@
 - [ ] add a `commands` option for `newHwylCli` in `hwylterm/cli`
 - [ ] console object with customizable options to apply formatting
 
+### cli generatorj
+
+- [ ] add support for types(metavars)/defaults/required in help output
+
+
 ## features
 
 - [x] make a basic choose one from list widget
