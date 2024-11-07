@@ -448,9 +448,15 @@ func subCmdsArray(cfg: CliCfg): NimNode =
     result.add quote do:
       (`cmd`, `desc`)
 
+proc hwylCliError(msg: string | BbString) = 
+  quit $(bb("error ", "red") & bb(msg))
 
 func defaultUsage(cfg: CliCfg): NimNode =
-  newLit("[b]" & cfg.name & "[/]" & " [[[faint]-h[/]]")
+  var s = "[b]" & cfg.name & "[/]"
+  if cfg.subcommands.len > 0:
+    s.add " [bold italic]subcmd[/]"
+  s.add " [[[faint]flags[/]]"
+  newLit(s)
 
 func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   let
@@ -476,25 +482,26 @@ func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 proc checkVarSet[T](name: string, target: T) =
   var default: T
   if target == default:
-    quit($bb("[red]error[/]: missing required flag: [b]" & name))
+    hwylCliError("missing required flag: [b]" & name)
 
 proc checkDefaultExists[T](target: T, key: string, val: string) =
   var default: T
   if target == default and val == "":
-    quit($bb("[red]error[/]: expected value for: [b]" & key))
+    hwylCliError("expected value for: [b]" & key)
 
 proc tryParseInt(key: string, val: string): int =
   try:
     result = parseInt(val)
   except:
-    quit($bb("[red]error[/]: failed to parse value for [b]" & key & "[/] as integer: [b]" & val))
+    hwylCliError(
+      "failed to parse value for [b]" & key & "[/] as integer: [b]" & val
+    )
 
 func addOrOverwrite[T](target: var seq[T], default: seq[T], val: T) =
   if target != default:
     target.add val
   else:
     target = @[val]
-
 
 func assignField(f: CliFlag): NimNode =
     let key = ident"key"
@@ -534,7 +541,7 @@ func assignField(f: CliFlag): NimNode =
 
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode = 
   var caseStmt = nnkCaseStmt.newTree(ident("key"))
-  caseStmt.add nnkOfBranch.newTree(newLit(""), quote do: quit "empty flag not supported currently")
+  caseStmt.add nnkOfBranch.newTree(newLit(""), quote do: hwylCliError("empty flag not supported currently"))
 
   if NoHelpFlag notin cfg.settings:
     caseStmt.add nnkOfBranch.newTree(
@@ -558,7 +565,7 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
     branch.add assignField(f)
     caseStmt.add branch
 
-  caseStmt.add nnkElse.newTree(quote do: quit "unknown flag: " & key)
+  caseStmt.add nnkElse.newTree(quote do: hwylCliError("unknown flag: [b]" & key))
   result = nnkStmtList.newTree(caseStmt)
 
 
@@ -659,7 +666,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
       # ,
       nnkCaseStmt.newTree(
         kind,
-        nnkOfBranch.newTree(ident("cmdError"), quote do: quit($(bb"[red]cli error[/]: " & p.message), 1)),
+        nnkOfBranch.newTree(ident("cmdError"), quote do: hwylCliError(p.message)),
         nnkOfBranch.newTree(ident("cmdEnd"), quote do: assert false),
         # TODO: add nArgs to change how cmdArgument is handled ...
         nnkOfBranch.newTree(ident("cmdArgument"), quote do: result.add `key`),
@@ -688,14 +695,14 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
     runBody.add cfg.post
 
   # let runBody = cfg.run or nnkStmtList.newTree(nnkDiscardStmt.newTree(newEmptyNode()))
-  
+
   let args = ident"args"
 
   if cfg.subcommands.len > 0:
     var handleSubCommands = nnkStmtList.newTree()
     handleSubCommands.add quote do:
       if `args`.len == 0:
-        quit "expected subcommand"
+        hwylCliError("expected subcommand")
 
     var subCommandCase = nnkCaseStmt.newTree(
       quote do: `args`[0]
@@ -708,7 +715,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
 
     subcommandCase.add nnkElse.newTree(
       quote do:
-        quit $bb"[red]error[/] unknown subcommand: " & `args`[0]
+        hwylCliError("unknown subcommand" & `args`[0])
     )
 
     runBody.add handleSubCommands.add subCommandCase
