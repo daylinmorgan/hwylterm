@@ -444,7 +444,7 @@ func subCmdsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
   for s in cfg.subcommands:
     let cmd = newLit(s.subName)
-    let desc = s.desc
+    let desc = s.desc or newLit("")
     result.add quote do:
       (`cmd`, `desc`)
 
