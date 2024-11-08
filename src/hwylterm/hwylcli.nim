@@ -392,6 +392,10 @@ func parseCliBody(body: NimNode, name = ""): CliCfg =
   if result.name == "":
     error "missing required option: name"
 
+# TODO: here an elsewhere make help/version less special 
+# and just append to "opts" at that point 
+# check for h,V in existing opts and use if available
+
 func flagsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
 
@@ -406,13 +410,14 @@ func flagsArray(cfg: CliCfg): NimNode =
     result.add quote do:
       (`short`, `long`, `help`)
 
+
   if NoHelpFlag notin cfg.settings:
     result.add quote do:
       ("h", "help", "show this help")
 
   if cfg.version != nil:
     result.add quote do:
-      ("v", "version", "print version")
+      ("V", "version", "print version")
 
 func subCmdsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
