@@ -11,9 +11,9 @@ import ./[bbansi, parseopt3]
 export parseopt3
 
 type
-  HwylFlagHelp = tuple
+  HwylFlagHelp* = tuple
     short, long, description: string
-  HwylSubCmdHelp = tuple
+  HwylSubCmdHelp* = tuple
     name, desc: string
   HwylCliStyles* = object
     hdr = "bold cyan"
@@ -22,7 +22,6 @@ type
     descFlag = ""
     cmd = "bold"
   HwylCliHelp* = object
-    cmd*: string
     usage*: string
     desc*: string
     subcmds: seq[HwylSubCmdHelp]
@@ -30,18 +29,19 @@ type
     styles*: HwylCliStyles
     subcmdLen, subcmdDescLen, shortArgLen, longArgLen, descArgLen: int
 
-
+# NOTE: do i need both strips?
+func firstLine(s: string): string =
+  s.strip().dedent().strip().splitlines()[0]
 func newHwylCliHelp*(
-  cmd = "",
   usage = "",
   desc = "",
   subcmds: openArray[HwylSubCmdHelp] = @[],
   flags: openArray[HwylFlagHelp] = @[],
   styles = HwylCliStyles()
 ): HwylCliHelp =
-  result.cmd = cmd
   result.desc = dedent(desc).strip()
-  result.subcmds = subcmds.mapIt((it.name,it.desc.strip().dedent().strip().splitlines()[0]))
+  result.subcmds = 
+    subcmds.mapIt((it.name, it.desc.firstLine))
   result.usage = dedent(usage).strip()
   result.flags = @flags
   result.styles = styles
@@ -90,16 +90,13 @@ func subCmdLine(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "\n"
 
 proc bbImpl(cli: HwylCliHelp): string =
-  if cli.cmd != "":
-    result.add cli.cmd
-    result.add "\n"
   if cli.usage != "":
-    result.add "\n"
     result.add "[" & cli.styles.hdr & "]"
     result.add "usage[/]:\n"
     result.add indent(cli.usage, 2 )
+  result.add "\n"
   if cli.desc != "":
-    result.add "\n\n"
+    result.add "\n"
     result.add cli.desc
   result.add "\n"
   if cli.subcmds.len > 0:
@@ -437,7 +434,7 @@ func defaultUsage(cfg: CliCfg): NimNode =
 
 func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   let
-    name = newLit(cfg.name)
+    # name = newLit(cfg.name)
     desc = cfg.desc or newLit("")
     usage  = cfg.usage or defaultUsage(cfg)
     helpFlags = cfg.flagsArray()
@@ -447,7 +444,6 @@ func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   result = quote do:
     proc `printHelpName`() =
       echo newHwylCliHelp(
-        cmd = `name`,
         desc = `desc`,
         usage = `usage`,
         subcmds = `subcmds`,
