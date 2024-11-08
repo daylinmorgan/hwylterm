@@ -17,6 +17,7 @@
 ### cli generato
 
 - [ ] add support for types(metavars)/defaults/required in help output
+- [ ] add support for enum (parse string)
 - [ ] abstract the `globalFlags` argument to a `flagGroups` section with a builtin `global`
       this would allow users to "inherit" flag groups in subcommands
       ```nim

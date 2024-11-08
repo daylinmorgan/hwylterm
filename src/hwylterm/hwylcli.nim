@@ -697,7 +697,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
     )
 
     runBody.add handleSubCommands.add subCommandCase
-  
+
   result.add quote do:
     # block:
       `printHelperProc`
@@ -723,19 +723,21 @@ macro hwylCli*(body: untyped) =
 
 when isMainModule:
   import std/strformat
+
   hwylCli:
     name "hwylterm"
     ... "a description of hwylterm"
-    globalFlags:
-      config:
-        T seq[string]
-        ? "path to config file"
-        * @["config.yml"]
     flags:
       check:
         T bool
         ? "load config and exit"
         - c
+      # --- other
+      config:
+        T seq[string]
+        ? "path to config file"
+        * @["config.yml"]
+      # ^ other 
     run:
       echo "hello from the main command"
       echo fmt"{config=}, {check=}"
@@ -743,6 +745,7 @@ when isMainModule:
       --- a
       ... "the \"a\" subcommand"
       flags:
+        # ^ other
         `long-flag` "some help"
         flagg       "some other help"
       run:
