@@ -121,6 +121,12 @@ proc `$`*(cli: HwylCliHelp): string =
 type
   CliSetting = enum
     NoHelpFlag, NoArgsShowHelp
+  BuiltinFlag = object
+    name*: string
+    short*: char
+    long*: string
+    help*: NimNode
+    node: NimNode
   CliFlag = object
     name*: string
     ident*: string
@@ -141,13 +147,17 @@ type
     subName*: string # used for help the generator
     version*, usage*: NimNode
     flags*: seq[CliFlag]
+    builtinFlags*: seq[BuiltinFlag]
     required*: seq[string]
     globalFlags*: seq[CliFlag]
 
 {.push hint[XDeclaredButNotUsed]:off .}
-func peekNode(n: NimNode) =
+# some debug procs I use to wrap my ahead aroung the magic of *macro*
+func `<<<`(n: NimNode) =
   ## for debugging macros
   debugEcho treeRepr n
+func `<<<`(s: string) =
+  debugEcho s
 {.pop.}
 
 # TODO: do i need this?
@@ -243,11 +253,20 @@ func parseCliFlag(n: NimNode): CliFlag =
   if result.typeSym == "":
     result.typeSym = "string"
 
-
+# TODO: handle flag groups here
+# cfg.flagGroups = Table[string, seq[CliFlag]]?
 func parseCliFlags(flags: NimNode): seq[CliFlag] =
+  # <<< flags
   expectKind flags, nnkStmtList
   for f in flags:
-    result.add parseCliFlag(f)
+    case f.kind
+    of nnkCall, nnkCommand:
+      result.add parseCliFlag(f)
+    # of nnkPrefix:
+    #   <<< "reached Prefix!"
+    #   <<< f
+    else: error "unexpected node kind parsing flags"
+
 
 func parseCliSetting(s: string): CliSetting =
   try: parseEnum[CliSetting](s)
@@ -342,6 +361,38 @@ func parseHiddenFlags(cfg: var CliCfg, node: NimNode) =
       cfg.hidden.add n.strVal
   else: assert false
 
+func addBuiltinFlags(cfg: var CliCfg) =
+  # duplicated with below :/
+  let shorts = cfg.flags.mapIt(it.short).toHashSet()
+
+  let 
+    name = cfg.name.replace(" ", "")
+    printHelpName = ident("print" & name & "Help")
+ 
+  if NoHelpFlag notin cfg.settings:
+    let helpNode = quote do:
+      `printHelpName`(); quit 0
+    cfg.builtinFlags.add BuiltinFlag(
+      name: "help",
+      long: "help",
+      help: newLit("show this help"),
+      short: if 'h' notin shorts: 'h' else: '\x00',
+      node: helpNode
+    )
+
+  if cfg.version != nil:
+    let version = cfg.version
+    let versionNode = quote do:
+      echo `version`; quit 0
+
+    cfg.builtinFlags.add BuiltinFlag(
+      name:"version",
+      long: "version",
+      help: newLit("print version"),
+      short: if 'V' notin shorts: 'V' else: '\x00',
+      node: versionNode
+    )
+
 func parseCliBody(body: NimNode, name = ""): CliCfg =
   result.name = name
   for call in body:
@@ -392,32 +443,25 @@ func parseCliBody(body: NimNode, name = ""): CliCfg =
   if result.name == "":
     error "missing required option: name"
 
-# TODO: here an elsewhere make help/version less special 
-# and just append to "opts" at that point 
-# check for h,V in existing opts and use if available
+  result.addBuiltinFlags()
+
+func flagToTuple(f: CliFlag | BuiltinFlag): NimNode =
+  let
+    short =
+      if f.short != '\x00': newLit($f.short)
+      else: newLit("")
+    long = newLit(f.long)
+    help = f.help
+  quote do:
+    (`short`, `long`, `help`)
 
 func flagsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
-
   for f in cfg.flags:
     if f.name in cfg.hidden: continue
-    let
-      help = f.help
-      long = newLit(f.long)
-      short =
-        if f.short != '\x00': newLit($f.short)
-        else: newLit("")
-    result.add quote do:
-      (`short`, `long`, `help`)
-
-
-  if NoHelpFlag notin cfg.settings:
-    result.add quote do:
-      ("h", "help", "show this help")
-
-  if cfg.version != nil:
-    result.add quote do:
-      ("V", "version", "print version")
+    result.add f.flagToTuple()
+  for f in cfg.builtinFlags:
+    result.add f.flagToTuple()
 
 func subCmdsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
@@ -439,7 +483,6 @@ func defaultUsage(cfg: CliCfg): NimNode =
 
 func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   let
-    # name = newLit(cfg.name)
     desc = cfg.desc or newLit("")
     usage  = cfg.usage or defaultUsage(cfg)
     helpFlags = cfg.flagsArray()
@@ -521,19 +564,13 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
   var caseStmt = nnkCaseStmt.newTree(ident("key"))
   caseStmt.add nnkOfBranch.newTree(newLit(""), quote do: hwylCliError("empty flag not supported currently"))
 
-  if NoHelpFlag notin cfg.settings:
-    caseStmt.add nnkOfBranch.newTree(
-      newLit("h"), newLit("help"),
-      quote do:
-        `printHelpName`(); quit 0
-    )
+  for f in cfg.builtinFlags:
+    var branch = nnkOfBranch.newTree()
+    if f.long != "": branch.add(newLit(f.long))
+    if f.short != '\x00': branch.add(newLit($f.short))
+    branch.add f.node
+    caseStmt.add branch
 
-  if cfg.version != nil:
-    caseStmt.add nnkOfBranch.newTree(
-        newLit("V"), newLit("version"),
-        quote do:
-          echo `version`; quit 0
-    )
 
   # add flags
   for f in cfg.flags:
@@ -546,26 +583,16 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
   caseStmt.add nnkElse.newTree(quote do: hwylCliError("unknown flag: [b]" & key))
   result = nnkStmtList.newTree(caseStmt)
 
-
 func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
-  var long = nnkBracket.newTree()
-  var short = nnkCurly.newTree()
-
-  if NoHelpFlag notin cfg.settings:
-    long.add newLit("help")
-    short.add newLit('h')
-
-  if cfg.version != nil:
-    long.add newLit("version")
-    short.add newLit('V')
-
-  for f in cfg.flags:
-    if f.typeSym == "bool":
-      if f.long != "":
-        long.add newLit(f.long)
-      if f.short != '\x00':
-        short.add newLit(f.short)
-
+  let boolFlags = cfg.flags.filterIt(it.typeSym == "bool")
+  let long =
+    nnkBracket.newTree(
+      (boolFlags.mapIt(it.long) & cfg.builtinFlags.mapIt(it.long)).filterIt(it != "").mapIt(newLit(it))
+    )
+  let short =
+    nnkCurly.newTree(
+      (boolFlags.mapIt(it.short) & cfg.builtinFlags.mapIt(it.short)).filterIt(it != '\x00').mapIt(newLit(it))
+    )
   result = (nnkPrefix.newTree(ident"@",long), short)
 
 func setFlagVars(cfg: CliCfg): NimNode =
@@ -605,8 +632,6 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
   let
     printHelperProc = generateCliHelperProc(cfg, printHelpName)
     flagVars = setFlagVars(cfg)
-
-  # result.add setFlagVars(cfg)
 
   var parserBody = nnkStmtList.newTree()
   let
@@ -726,18 +751,16 @@ when isMainModule:
 
   hwylCli:
     name "hwylterm"
+    version "0.1.0"
     ... "a description of hwylterm"
     flags:
       check:
         T bool
         ? "load config and exit"
-        - c
-      # --- other
       config:
         T seq[string]
         ? "path to config file"
         * @["config.yml"]
-      # ^ other 
     run:
       echo "hello from the main command"
       echo fmt"{config=}, {check=}"
