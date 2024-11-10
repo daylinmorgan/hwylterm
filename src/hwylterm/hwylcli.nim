@@ -8,7 +8,7 @@ import std/[
   sugar
 ]
 import ./[bbansi, parseopt3]
-export parseopt3
+export parseopt3, sets
 
 type
   HwylFlagHelp* = tuple
@@ -129,9 +129,10 @@ type
     node: NimNode
   CliFlag = object
     name*: string
-    ident*: string
+    ident*: NimNode
     default*: NimNode
     typeSym*: string
+    typeNode*: NimNode
     short*: char
     long*: string
     help*: NimNode
@@ -164,8 +165,14 @@ func `<<<`(s: string) =
 func newCliFlag(): CliFlag =
   result.help = newLit("")
 
-template badNode = 
-  error "unexpected node kind: " & $node.kind
+func bad(n: NimNode, argument: string = "") =
+
+  var msg = "unexpected node kind: " & $n.kind
+  if argument != "":
+    msg &= " for argument: " & argument
+
+  # error "unexpected node kind: " & $n.kind
+  error msg
 
 func typeSymFromNode(node: NimNode): string = 
   case node.kind
@@ -173,7 +180,7 @@ func typeSymFromNode(node: NimNode): string =
     result = node.strVal
   of nnkBracketExpr:
     result = node[0].strVal & "[" & node[1].strVal & "]"
-  else: badNode
+  else: bad node
 
 func getOptTypeSym(node: NimNode): string =
   case node.kind:
@@ -212,8 +219,10 @@ func parseOptOpts(opt: var CliFlag, optOpts: NimNode) =
       of "*", "default":
         opt.default = getOptOptNode(optOpt)
       of "i", "ident":
-        opt.ident = getOptOptNode(optOpt).strVal
+        opt.ident = getOptOptNode(optOpt).strVal.ident
       of "T":
+        opt.typeNode = optOpt[1]
+        # TODO: remove this...
         opt.typeSym = getOptTypeSym(optOpt)
       else:
         error "unexpected option setting: " & optOpt[0].strVal
@@ -248,8 +257,10 @@ func parseCliFlag(n: NimNode): CliFlag =
   else:
     parseOptOpts(result, n[1])
 
-  if result.ident == "":
-    result.ident = result.name
+  if result.ident == nil:
+    result.ident = result.name.ident
+  if result.typeNode == nil:
+    result.typeNode = ident"string"
   if result.typeSym == "":
     result.typeSym = "string"
 
@@ -499,66 +510,32 @@ func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
         styles = `styles`,
       )
 
-# NOTE: is there a better way to do this?
-proc checkVarSet[T](name: string, target: T) =
-  var default: T
-  if target == default:
-    hwylCliError("missing required flag: [b]" & name)
+proc parse*(p: OptParser, key: string, val: string, target: var bool) =
+  target = true
 
-proc checkDefaultExists[T](target: T, key: string, val: string) =
-  var default: T
-  if target == default and val == "":
-    hwylCliError("expected value for: [b]" & key)
+proc parse*(p: OptParser, key: string, val: string, target: var string) =
+  target = val
 
-proc tryParseInt(key: string, val: string): int =
+proc parse*(p: OptParser, key: string, val: string, target: var int) =
   try:
-    result = parseInt(val)
+    target = parseInt(val)
   except:
     hwylCliError(
       "failed to parse value for [b]" & key & "[/] as integer: [b]" & val
     )
 
-func addOrOverwrite[T](target: var seq[T], default: seq[T], val: T) =
-  if target != default:
-    target.add val
-  else:
-    target = @[val]
+proc parse*(p: OptParser, key: string, val: string, target: var float) =
+  try:
+    target = parseFloat(val)
+  except:
+    hwylCliError(
+      "failed to parse value for [b]" & key & "[/] as float: [b]" & val
+    )
 
-func assignField(f: CliFlag): NimNode =
-    let key = ident"key"
-    let varName = ident(f.ident)
-
-    case f.typeSym
-    of "string":
-      let value = ident"val"
-      result = quote do:
-        checkDefaultExists(`varName`, `key`, `value`)
-        `varName` = `value`
-
-    of "bool":
-      let value = ident"true"
-      result = quote do:
-        `varName` = `value`
-
-    of "int":
-      let value = ident"val"
-      result = quote do:
-        checkDefaultExists(`varName`, `key`, `value`)
-        `varName` = tryParseInt(`key`, `value`)
-
-    of "seq[string]":
-      let value = ident"val"
-      let default = f.default or (quote do: @[])
-      result = quote do:
-        `varName`.addOrOverwrite(`default`, `value`)
-
-    of "seq[int]":
-      let value = ident"val"
-      let default = f.default or (quote do: @[])
-      result = quote do:
-        `varName`.addOrOverwrite(`default`, tryParseInt(`value`))
-
-    else: error "unable to generate assignment for fion, type: " & f.name & "," & f.typeSym
+proc parse[T](p: OptParser, key: string, val: string, target: var seq[T]) =
+  var parsed: T
+  parse(p, key, val, parsed)
+  target.add parsed
 
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode = 
   var caseStmt = nnkCaseStmt.newTree(ident("key"))
@@ -571,20 +548,28 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
     branch.add f.node
     caseStmt.add branch
 
-
   # add flags
   for f in cfg.flags:
     var branch = nnkOfBranch.newTree()
     if f.long != "": branch.add(newLit(f.long))
     if f.short != '\x00': branch.add(newLit($f.short))
-    branch.add assignField(f)
+    let varName = f.ident
+    let name = newLit(f.name)
+    branch.add quote do:
+      flagSet.incl `name`
+      parse(p, key, val, `varName`)
+
     caseStmt.add branch
 
   caseStmt.add nnkElse.newTree(quote do: hwylCliError("unknown flag: [b]" & key))
+
   result = nnkStmtList.newTree(caseStmt)
 
+func isBool(f: CliFlag): bool =
+  f.typeNode == ident"bool"
+
 func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
-  let boolFlags = cfg.flags.filterIt(it.typeSym == "bool")
+  let boolFlags = cfg.flags.filterIt(it.isBool)
   let long =
     nnkBracket.newTree(
       (boolFlags.mapIt(it.long) & cfg.builtinFlags.mapIt(it.long)).filterIt(it != "").mapIt(newLit(it))
@@ -596,53 +581,76 @@ func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
   result = (nnkPrefix.newTree(ident"@",long), short)
 
 func setFlagVars(cfg: CliCfg): NimNode =
-  result = nnkVarSection.newTree()
-  # TODO: generalize this better... 
+  result = nnkVarSection.newTree().add(
+    cfg.flags.mapIt(
+      nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
+    )
+  )
+
+func literalFlags(f: CliFlag): NimNode = 
+  var flags: seq[string]
+  if f.short != '\x00': flags.add "[b]" &  "-" & $f.short & "[/]"
+  if f.long != "": flags.add "[b]" & "--" & f.long & "[/]"
+  result = newLit(flags.join("|"))
+
+func addPostParseCheck(cfg: CliCfg, body: NimNode) =
+  ## generate block to set defaults and check for required flags
+  let flagSet = ident"flagSet"
+  var required, default: seq[CliFlag]
 
   for f in cfg.flags:
-    let
-      t =
-        if f.typeSym == "seq[string]": nnkBracketExpr.newTree(newIdentNode("seq"),newIdentNode("string"))
-        elif f.typeSym == "seq[int]" : nnkBracketExpr.newTree(newIdentNode("seq"),newIdentNode("string"))
-        else: ident(f.typeSym)
-      val =
-        if f.default == nil: newEmptyNode() # use default here
-        else: f.default
+    if f.name in cfg.required and f.default == nil:
+      required.add f
+    elif f.default != nil:
+      default.add f
 
-    result.add nnkIdentDefs.newTree(ident(f.ident), t, val)
-
-func addRequiredFlagsCheck(cfg: CliCfg, body: NimNode) =
-  let requirdFlags = cfg.flags.filterIt(it.name in cfg.required and it.default == nil)
-  for f in requirdFlags:
+  for f in required:
+    let flagLit = f.literalFlags
     let name = newLit(f.name)
-    let flag = ident(f.ident)
     body.add quote do:
-      checkVarSet(`name`, `flag`)
+      if `name` notin `flagSet`:
+        hwylCliError("expected a value for flag: " & `flagLit`)
+
+  for f in default:
+    let
+      name = newLit(f.name)
+      target = f.ident
+      default = f.default
+    body.add quote do:
+      if `name` notin `flagSet`:
+        `target` = `default`
 
 func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
-
   let
     version = cfg.version or newLit("")
     name = cfg.name.replace(" ", "")
     printHelpName = ident("print" & name & "Help")
     parserProcName = ident("parse" & name)
-
-  result = newTree(nnkStmtList)
-
-  let
+    args = ident"args"
+    optParser = ident("p")
+    cmdLine = ident"cmdLine"
+    flagSet = ident"flagSet"
+    kind = ident"kind"
+    key = ident"key"
+    val = ident"val"
+    (longNoVal, shortNoVal) = cfg.getNoVals()
     printHelperProc = generateCliHelperProc(cfg, printHelpName)
     flagVars = setFlagVars(cfg)
 
-  var parserBody = nnkStmtList.newTree()
-  let
-    optParser = ident("p")
-    cmdLine = ident"cmdLine"
-    (longNoVal, shortNoVal) = cfg.getNoVals()
+  result = newTree(nnkStmtList)
 
-  var stopWords = nnkBracket.newTree(newLit("--"))
+  var
+    parserBody = nnkStmtList.newTree()
+    stopWords = nnkBracket.newTree(newLit("--"))
+
   for w in cfg.stopWords:
     stopWords.add newLit(w)
+
   stopWords = nnkPrefix.newTree(ident"@", stopWords)
+
+  # should this a CritBitTree?
+  parserBody.add quote do:
+    var `flagSet`: HashSet[string]
 
   parserBody.add(
     quote do:
@@ -653,11 +661,6 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
         stopWords = `stopWords`
       )
   )
-
-  let
-    kind = ident"kind"
-    key = ident"key"
-    val = ident"val"
 
   parserBody.add nnkForStmt.newTree(
     kind, key, val,
@@ -672,7 +675,10 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
         nnkOfBranch.newTree(ident("cmdError"), quote do: hwylCliError(p.message)),
         nnkOfBranch.newTree(ident("cmdEnd"), quote do: assert false),
         # TODO: add nArgs to change how cmdArgument is handled ...
-        nnkOfBranch.newTree(ident("cmdArgument"), quote do: result.add `key`),
+        nnkOfBranch.newTree(ident("cmdArgument"), 
+          quote do:
+            result.add `key`
+        ),
         nnkOfBranch.newTree(
           ident("cmdShortOption"), ident("cmdLongOption"),
           shortLongCaseStmt(cfg, printHelpName, version)
@@ -688,7 +694,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
 
   let runProcName = ident("run" & name)
   let runBody = nnkStmtList.newTree()
-  addRequiredFlagsCheck(cfg, runBody)
+  addPostParseCheck(cfg, parserBody)
   # move to proc?
   if cfg.pre != nil:
     runBody.add cfg.pre
@@ -696,10 +702,6 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
     runBody.add cfg.run
   if cfg.post != nil:
     runBody.add cfg.post
-
-  # let runBody = cfg.run or nnkStmtList.newTree(nnkDiscardStmt.newTree(newEmptyNode()))
-
-  let args = ident"args"
 
   if cfg.subcommands.len > 0:
     var handleSubCommands = nnkStmtList.newTree()
@@ -745,50 +747,4 @@ macro hwylCli*(body: untyped) =
   ## generate a CLI styled by `hwylterm` and parsed by `parseopt3`
   var cfg = parseCliBody(body)
   hwylCliImpl(cfg, root = true)
-
-when isMainModule:
-  import std/strformat
-
-  hwylCli:
-    name "hwylterm"
-    version "0.1.0"
-    ... "a description of hwylterm"
-    flags:
-      check:
-        T bool
-        ? "load config and exit"
-      config:
-        T seq[string]
-        ? "path to config file"
-        * @["config.yml"]
-    run:
-      echo "hello from the main command"
-      echo fmt"{config=}, {check=}"
-    subcommands:
-      --- a
-      ... "the \"a\" subcommand"
-      flags:
-        # ^ other
-        `long-flag` "some help"
-        flagg       "some other help"
-      run:
-        echo "hello from hwylterm sub command!"
-      --- b
-      ... """
-      some "B" command
-
-      a longer mulitline description that will be visibil in the subcommand help
-      it will automatically be "bb"'ed [bold]this is bold text[/]
-      """
-      flags:
-        aflag:
-          T bool
-          ? "some help"
-        bflag:
-          ? "some other flag?"
-          * "wow"
-      run:
-        echo "hello from hwylterm sub `b` command"
-        echo aflag, bflag
-
 
