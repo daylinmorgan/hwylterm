@@ -1,6 +1,10 @@
 import std/strformat
 import hwylterm/hwylcli
 
+type
+  Color = enum
+    red, blue, green
+
 hwylCli:
   name "example"
   V "0.1.0"
@@ -20,14 +24,18 @@ hwylCli:
   subcommands:
     --- one
     ... "the first subcommand"
-    required flag
     flags:
-      `long-flag` "some help"
-      flag:
-        ? "some other help"
+      color:
+        T Color
+        ? "a color (red, green, blue)"
+      verbose:
+        T Count
+        ? "a count flag"
+        - v
     run:
       echo "hello from `example one` command!"
-      echo "long-flag and flag are: " & `long-flag` & "," & `flag` & " by default strings"
+      echo fmt"{color=}"
+      echo fmt"{verbose=}"
 
     --- two
     ... """

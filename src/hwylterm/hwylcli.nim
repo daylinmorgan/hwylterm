@@ -121,6 +121,9 @@ proc `$`*(cli: HwylCliHelp): string =
 # ----------------------------------------
 
 type
+  Count* = object
+    val*: int
+
   CliSetting = enum
     NoHelpFlag, NoArgsShowHelp
   BuiltinFlag = object
@@ -453,6 +456,7 @@ func parseCliBody(body: NimNode, name = ""): CliCfg =
   if result.name == "":
     error "missing required option: name"
 
+  # TODO: validate "required" flags exist here
   result.addBuiltinFlags()
 
 func flagToTuple(f: CliFlag | BuiltinFlag): NimNode =
@@ -523,6 +527,22 @@ proc parse*(p: OptParser, key: string, val: string, target: var int) =
       "failed to parse value for [b]" & key & "[/] as integer: [b]" & val
     )
 
+macro enumNames(a: typed): untyped =
+  ## unexported macro copied from std/enumutils
+  result = newNimNode(nnkBracket)
+  for ai in a.getType[1][1..^1]:
+    assert ai.kind == nnkSym
+    result.add newLit ai.strVal
+
+proc parse*[E: enum](p: OptParser, key: string, val: string, target: var E) =
+  try:
+    target = parseEnum[E](val)
+  except:
+    let choices = enumNames(E).join(",")
+    hwylCliError(
+      "failed to parse value for [b]" & key & "[/] as enum: [b]" & val & "[/], expected one of: " & choices
+    )
+
 proc parse*(p: OptParser, key: string, val: string, target: var float) =
   try:
     target = parseFloat(val)
@@ -531,10 +551,13 @@ proc parse*(p: OptParser, key: string, val: string, target: var float) =
       "failed to parse value for [b]" & key & "[/] as float: [b]" & val
     )
 
-proc parse[T](p: OptParser, key: string, val: string, target: var seq[T]) =
+proc parse*[T](p: OptParser, key: string, val: string, target: var seq[T]) =
   var parsed: T
   parse(p, key, val, parsed)
   target.add parsed
+
+proc parse*(p: OptParser, key: string, val: string, target: var Count) =
+  inc target.val
 
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode = 
   var caseStmt = nnkCaseStmt.newTree(ident("key"))
@@ -567,15 +590,18 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
 func isBool(f: CliFlag): bool =
   f.typeNode == ident"bool"
 
+func isCount(f: CliFlag): bool = 
+  f.typeNode == ident"Count"
+
 func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
-  let boolFlags = cfg.flags.filterIt(it.isBool)
+  let flagFlags = cfg.flags.filterIt(it.isBool or it.isCount)
   let long =
     nnkBracket.newTree(
-      (boolFlags.mapIt(it.long) & cfg.builtinFlags.mapIt(it.long)).filterIt(it != "").mapIt(newLit(it))
+      (flagFlags.mapIt(it.long) & cfg.builtinFlags.mapIt(it.long)).filterIt(it != "").mapIt(newLit(it))
     )
   let short =
     nnkCurly.newTree(
-      (boolFlags.mapIt(it.short) & cfg.builtinFlags.mapIt(it.short)).filterIt(it != '\x00').mapIt(newLit(it))
+      (flagFlags.mapIt(it.short) & cfg.builtinFlags.mapIt(it.short)).filterIt(it != '\x00').mapIt(newLit(it))
     )
   result = (nnkPrefix.newTree(ident"@",long), short)
 
@@ -586,7 +612,7 @@ func setFlagVars(cfg: CliCfg): NimNode =
     )
   )
 
-func literalFlags(f: CliFlag): NimNode = 
+func literalFlags(f: CliFlag): NimNode =
   var flags: seq[string]
   if f.short != '\x00': flags.add "[b]" &  "-" & $f.short & "[/]"
   if f.long != "": flags.add "[b]" & "--" & f.long & "[/]"
