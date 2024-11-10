@@ -64,7 +64,6 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
     result.add "[/]"
   else:
     result.add " ".repeat(1 + cli.shortArgLen)
-
   result.add " "
   if f.long != "":
     result.add "[" & cli.styles.flagLong & "]"
@@ -101,9 +100,9 @@ func render*(cli: HwylCliHelp): string =
   if cli.desc != "":
     result.add "\n"
     result.add cli.desc
+    result.add "\n"
   result.add "\n"
   if cli.subcmds.len > 0:
-    result.add "\n"
     result.add "[" & cli.styles.header & "]"
     result.add "subcommands[/]:\n"
     for s in cli.subcmds:
