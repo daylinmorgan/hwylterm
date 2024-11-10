@@ -137,6 +137,7 @@ type
     long*: string
     help*: NimNode
     node: NimNode
+
   CliFlag = object
     name*: string
     ident*: NimNode
@@ -145,6 +146,7 @@ type
     short*: char
     long*: string
     help*: NimNode
+
   CliCfg = object
     stopWords*: seq[string]
     styles: NimNode
@@ -163,12 +165,11 @@ type
     inheritFlags*: seq[string]
     root*: bool
 
-{.push hint[XDeclaredButNotUsed]:off .}
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
-func `<<<`(n: NimNode) =
+func `<<<`(n: NimNode) {.used.} =
   ## for debugging macros
   debugEcho treeRepr n
-func `<<<`(s: string) =
+func `<<<`(s: string) {.used.} =
   debugEcho s
 
 func bad(n: NimNode, argument: string = "") =
