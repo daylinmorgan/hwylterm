@@ -408,7 +408,7 @@ func addBuiltinFlags(cfg: var CliCfg) =
 
 func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
-  result.root = true
+  result.root = root
   for call in body:
     if call.kind  notin [nnkCall, nnkCommand, nnkPrefix]:
       error "unexpected node kind: " & $call.kind

@@ -45,6 +45,7 @@ hwylCli:
       ^[config]
     run:
       echo "hello from `example one` command!"
+      echo args
       echo fmt"{color=}"
       echo fmt"{verbose=}"
       echo fmt"{config=}"
