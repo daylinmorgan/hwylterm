@@ -130,7 +130,7 @@ when isMainModule:
   import ./[hwylcli]
   hwylcli:
     name "hwylchoose"
-    settings NoArgsShowHelp
+    settings ShowHelp
     usage "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]"
     description """
     hwylchoose a b c d
