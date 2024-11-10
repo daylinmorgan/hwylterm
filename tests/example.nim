@@ -1,29 +1,39 @@
-import std/strformat
-import hwylterm/hwylcli
+import std/[strformat, strutils]
+import hwylterm, hwylterm/hwylcli
+
 
 type
   Color = enum
     red, blue, green
+
 
 hwylCli:
   name "example"
   V "0.1.0"
   ... "a description of hwylterm"
   flags:
+    [global]
     yes:
       T bool
       ? "set flag to yes"
-    [global]
-    config:
+    [config]
+    confiG:
       T seq[string]
       ? "path to config file"
       * @["config.yml"]
+  preSub:
+    echo "this is run after subcommand parsing but before its run block"
   run:
     echo "this is always run prior to subcommand parsing"
-    echo fmt"{yes=}, {config=}"
   subcommands:
-    --- one
-    ... "the first subcommand"
+    --- "onelonger"
+    ... """
+    the first subcommand
+
+    this command features both an enum flag and a Count flag
+    it also inherits the `[[config]` flag group
+    """
+
     flags:
       color:
         T Color
@@ -32,30 +42,33 @@ hwylCli:
         T Count
         ? "a count flag"
         - v
+      ^[config]
     run:
       echo "hello from `example one` command!"
       echo fmt"{color=}"
       echo fmt"{verbose=}"
+      echo fmt"{config=}"
 
-    --- two
+    --- "two-longer"
     ... """
     some second subcommand
 
     a longer mulitline description that will be visible in the subcommand help
-    it will automatically be "bb"'ed [bold]this is bold text[/]
+    and it will automatically be "bb"'ed [bold]this is bold text[/]
+
+
+
     """
     flags:
-      aflag:
+      a:
         T bool
         ? "some help"
-      bflag:
+      b:
         T seq[float]
         ? "multiple floats"
-      c:
-        ? "this should be a single flag"
-      h "overwrite the short h from help"
+      h "this will override the builtin 'h' for help"
     run:
       echo "hello from `example b` command"
-      echo fmt"{aflag=}, {bflag=}"
+      echo fmt"{a=}, {b=}"
 
 

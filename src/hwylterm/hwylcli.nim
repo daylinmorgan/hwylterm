@@ -8,7 +8,7 @@ import std/[
   sugar
 ]
 import ./[bbansi, parseopt3]
-export parseopt3, sets
+export parseopt3, sets, bbansi
 
 type
   HwylFlagHelp* = tuple
@@ -16,22 +16,23 @@ type
   HwylSubCmdHelp* = tuple
     name, desc: string
   HwylCliStyles* = object
-    hdr = "bold cyan"
-    shortFlag = "yellow"
-    longFlag = "magenta"
-    descFlag = ""
-    cmd = "bold"
+    header* = "bold cyan"
+    flagShort* = "yellow"
+    flagLong* = "magenta"
+    flagDesc* = ""
+    cmd* = "bold"
   HwylCliHelp* = object
     usage*: string
     desc*: string
-    subcmds: seq[HwylSubCmdHelp]
+    subcmds*: seq[HwylSubCmdHelp]
     flags*: seq[HwylFlagHelp]
     styles*: HwylCliStyles
-    subcmdLen, subcmdDescLen, shortArgLen, longArgLen, descArgLen: int
+    subcmdLen*, subcmdDescLen*, shortArgLen*, longArgLen*, descArgLen*: int
 
 # NOTE: do i need both strips?
 func firstLine(s: string): string =
   s.strip().dedent().strip().splitlines()[0]
+
 func newHwylCliHelp*(
   usage = "",
   desc = "",
@@ -40,7 +41,7 @@ func newHwylCliHelp*(
   styles = HwylCliStyles()
 ): HwylCliHelp =
   result.desc = dedent(desc).strip()
-  result.subcmds = 
+  result.subcmds =
     subcmds.mapIt((it.name, it.desc.firstLine))
   result.usage = dedent(usage).strip()
   result.flags = @flags
@@ -55,10 +56,10 @@ func newHwylCliHelp*(
     result.subcmdLen = max(result.subcmdLen, s.name.len)
     result.subcmdDescLen = max(result.subcmdDescLen, s.desc.len)
 
-func flagHelp(cli: HwylCliHelp, f: HwylFlagHelp): string =
+func render*(cli: HwylCliHelp, f: HwylFlagHelp): string = 
   result.add "  "
   if f.short != "":
-    result.add "[" & cli.styles.shortFlag & "]"
+    result.add "[" & cli.styles.flagShort & "]"
     result.add "-" & f.short.alignLeft(cli.shortArgLen)
     result.add "[/]"
   else:
@@ -66,7 +67,7 @@ func flagHelp(cli: HwylCliHelp, f: HwylFlagHelp): string =
 
   result.add " "
   if f.long != "":
-    result.add "[" & cli.styles.longFlag & "]"
+    result.add "[" & cli.styles.flagLong & "]"
     result.add "--" & f.long.alignLeft(cli.longArgLen)
     result.add "[/]"
   else:
@@ -75,12 +76,12 @@ func flagHelp(cli: HwylCliHelp, f: HwylFlagHelp): string =
   result.add " "
 
   if f.description != "":
-    result.add "[" & cli.styles.descFlag & "]"
+    result.add "[" & cli.styles.flagDesc & "]"
     result.add f.description
     result.add "[/]"
   result.add "\n"
 
-func subCmdLine(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
+func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
   result.add "[" & cli.styles.cmd & "]"
   result.add subcmd.name.alignLeft(cli.subcmdLen)
@@ -89,9 +90,11 @@ func subCmdLine(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add subcmd.desc.alignLeft(cli.subcmdDescLen)
   result.add "\n"
 
-proc bbImpl(cli: HwylCliHelp): string =
+
+# TODO: split this into separate procs to make overriding more fluid
+func render*(cli: HwylCliHelp): string =
   if cli.usage != "":
-    result.add "[" & cli.styles.hdr & "]"
+    result.add "[" & cli.styles.header & "]"
     result.add "usage[/]:\n"
     result.add indent(cli.usage, 2 )
   result.add "\n"
@@ -101,22 +104,19 @@ proc bbImpl(cli: HwylCliHelp): string =
   result.add "\n"
   if cli.subcmds.len > 0:
     result.add "\n"
-    result.add "[" & cli.styles.hdr & "]"
+    result.add "[" & cli.styles.header & "]"
     result.add "subcommands[/]:\n"
     for s in cli.subcmds:
-      result.add cli.subcmdLine(s)
+      result.add cli.render(s)
   if cli.flags.len > 0:
     result.add "\n"
-    result.add "[" & cli.styles.hdr & "]"
+    result.add "[" & cli.styles.header & "]"
     result.add "flags[/]:\n"
     for f in cli.flags:
-      result.add flagHelp(cli,f)
+      result.add render(cli,f)
 
 proc bb*(cli: HwylCliHelp): BbString = 
-  result = bb(bbImpl(cli))
-
-proc `$`*(cli: HwylCliHelp): string =
-  result = $bb(cli)
+  result = bb(render(cli))
 
 # ----------------------------------------
 
@@ -125,7 +125,7 @@ type
     val*: int
 
   CliSetting = enum
-    NoHelpFlag, NoArgsShowHelp
+    NoHelpFlag, ShowHelp, NoNormalize
   BuiltinFlag = object
     name*: string
     short*: char
@@ -156,6 +156,7 @@ type
     flagGroups: Table[string, seq[CliFlag]]
     required*: seq[string]
     inheritFlags*: seq[string]
+    root*: bool
 
 {.push hint[XDeclaredButNotUsed]:off .}
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
@@ -263,14 +264,7 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
         error "unexpected node in flags: " &  $n.kind
       expectKind n[1], nnkBracket
       cfg.inheritFlags.add n[1][0].strVal
-    # of nnkPrefix:
-    #   if n[0].strVal != "---":
-    #     bad(n[0], "flag group prefix")
-    #   group = n[1].strVal
-    #   continue
     else:  bad(n, "flag")
-
-  debugEcho cfg.flagGroups.keys().toSeq()
 
 func parseCliSetting(s: string): CliSetting =
   try: parseEnum[CliSetting](s)
@@ -303,7 +297,7 @@ func parseIdentLikeList(node: NimNode): seq[string] =
       result.add n.strVal
   else: assert false
 
-func parseCliBody(body: NimNode, name: string = ""): CliCfg
+func parseCliBody(body: NimNode, name: string = "", root: bool= false): CliCfg
 
 func isSubMarker(node: NimNode): bool =
   if node.kind == nnkPrefix:
@@ -408,8 +402,9 @@ func addBuiltinFlags(cfg: var CliCfg) =
       node: versionNode
     )
 
-func parseCliBody(body: NimNode, name = ""): CliCfg =
+func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
+  result.root = true
   for call in body:
     if call.kind  notin [nnkCall, nnkCommand, nnkPrefix]:
       error "unexpected node kind: " & $call.kind
@@ -485,7 +480,7 @@ func subCmdsArray(cfg: CliCfg): NimNode =
     result.add quote do:
       (`cmd`, `desc`)
 
-proc hwylCliError(msg: string | BbString) = 
+proc hwylCliError*(msg: string | BbString) = 
   quit $(bb("error ", "red") & bb(msg))
 
 func defaultUsage(cfg: CliCfg): NimNode =
@@ -505,13 +500,13 @@ func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 
   result = quote do:
     proc `printHelpName`() =
-      echo newHwylCliHelp(
+      echo bb(render(newHwylCliHelp(
         desc = `desc`,
         usage = `usage`,
         subcmds = `subcmds`,
         flags = `helpFlags`,
         styles = `styles`,
-      )
+      )))
 
 proc parse*(p: OptParser, key: string, val: string, target: var bool) =
   target = true
@@ -557,10 +552,21 @@ proc parse*[T](p: OptParser, key: string, val: string, target: var seq[T]) =
   target.add parsed
 
 proc parse*(p: OptParser, key: string, val: string, target: var Count) =
-  inc target.val
+  # if value set to that otherwise increment
+  if val != "":
+    var num: int
+    parse(p, key, val, num)
+    target.val = num
+  else:
+    inc target.val
 
-func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode = 
-  var caseStmt = nnkCaseStmt.newTree(ident("key"))
+func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
+  var caseStmt = nnkCaseStmt.newTree()
+  if NoNormalize notin cfg.settings:
+    caseStmt.add nnkCall.newTree(ident"optionNormalize", ident"key")
+  else:
+    caseStmt.add ident"key"
+
   caseStmt.add nnkOfBranch.newTree(newLit(""), quote do: hwylCliError("empty flag not supported currently"))
 
   for f in cfg.builtinFlags:
@@ -573,7 +579,11 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
   # add flags
   for f in cfg.flags:
     var branch = nnkOfBranch.newTree()
-    if f.long != "": branch.add(newLit(f.long))
+    if f.long != "": 
+      branch.add newLit(
+        if NoNormalize notin cfg.settings: optionNormalize(f.long)
+        else: f.long
+      )
     if f.short != '\x00': branch.add(newLit($f.short))
     let varName = f.ident
     let name = newLit(f.name)
@@ -645,7 +655,7 @@ func addPostParseCheck(cfg: CliCfg, body: NimNode) =
       if `name` notin `flagSet`:
         `target` = `default`
 
-func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
+func hwylCliImpl(cfg: CliCfg): NimNode =
   let
     version = cfg.version or newLit("")
     name = cfg.name.replace(" ", "")
@@ -683,10 +693,11 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
         @`cmdLine`,
         longNoVal = `longNoVal`,
         shortNoVal = `shortNoVal`,
-        stopWords = `stopWords`
+        stopWords = `stopWords`,
+        opChars = {','}
       )
   )
-
+  # TODO: first key needs to be normalized
   parserBody.add nnkForStmt.newTree(
     kind, key, val,
     nnkCall.newTree(nnkDotExpr.newTree(optParser,ident("getopt"))),
@@ -700,7 +711,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
         nnkOfBranch.newTree(ident("cmdError"), quote do: hwylCliError(p.message)),
         nnkOfBranch.newTree(ident("cmdEnd"), quote do: assert false),
         # TODO: add nArgs to change how cmdArgument is handled ...
-        nnkOfBranch.newTree(ident("cmdArgument"), 
+        nnkOfBranch.newTree(ident("cmdArgument"),
           quote do:
             result.add `key`
         ),
@@ -712,7 +723,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
     )
   )
 
-  if NoArgsShowHelp in cfg.settings:
+  if ShowHelp in cfg.settings:
     parserBody.add quote do:
       if commandLineParams().len == 0:
         `printHelpName`(); quit 1
@@ -734,18 +745,21 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
       if `args`.len == 0:
         hwylCliError("expected subcommand")
 
-    var subCommandCase = nnkCaseStmt.newTree(
-      quote do: `args`[0]
-    )
+    var subCommandCase = nnkCaseStmt.newTree()
+    if NoNormalize notin cfg.settings:
+      subCommandCase.add(quote do: optionNormalize(`args`[0]))
+    else:
+      subCommandCase.add(quote do: `args`[0])
+
     for sub in cfg.subcommands:
       subCommandCase.add nnkOfBranch.newTree(
-        newLit(sub.subName),
+        newLit(optionNormalize(sub.subName)),
         hwylCliImpl(sub)
       )
 
     subcommandCase.add nnkElse.newTree(
       quote do:
-        hwylCliError("unknown subcommand " & `args`[0])
+        hwylCliError("unknown subcommand: [b]" & `args`[0])
     )
 
     runBody.add handleSubCommands.add subCommandCase
@@ -761,7 +775,7 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
         let `args` = `parserProcName`(`cmdLine`)
         `runBody`
 
-  if root:
+  if cfg.root:
     result.add quote do:
       `runProcName`()
   else:
@@ -770,6 +784,6 @@ func hwylCliImpl(cfg: CliCfg, root = false): NimNode =
 
 macro hwylCli*(body: untyped) =
   ## generate a CLI styled by `hwylterm` and parsed by `parseopt3`
-  var cfg = parseCliBody(body)
-  hwylCliImpl(cfg, root = true)
+  var cfg = parseCliBody(body, root = true)
+  hwylCliImpl(cfg)
 
