@@ -118,6 +118,8 @@ proc bb*(cli: HwylCliHelp): BbString =
 proc `$`*(cli: HwylCliHelp): string =
   result = $bb(cli)
 
+# ----------------------------------------
+
 type
   CliSetting = enum
     NoHelpFlag, NoArgsShowHelp
@@ -131,7 +133,6 @@ type
     name*: string
     ident*: NimNode
     default*: NimNode
-    typeSym*: string
     typeNode*: NimNode
     short*: char
     long*: string
@@ -149,8 +150,9 @@ type
     version*, usage*: NimNode
     flags*: seq[CliFlag]
     builtinFlags*: seq[BuiltinFlag]
+    flagGroups: Table[string, seq[CliFlag]]
     required*: seq[string]
-    globalFlags*: seq[CliFlag]
+    inheritFlags*: seq[string]
 
 {.push hint[XDeclaredButNotUsed]:off .}
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
@@ -159,75 +161,49 @@ func `<<<`(n: NimNode) =
   debugEcho treeRepr n
 func `<<<`(s: string) =
   debugEcho s
-{.pop.}
-
-# TODO: do i need this?
-func newCliFlag(): CliFlag =
-  result.help = newLit("")
 
 func bad(n: NimNode, argument: string = "") =
-
   var msg = "unexpected node kind: " & $n.kind
   if argument != "":
     msg &= " for argument: " & argument
-
-  # error "unexpected node kind: " & $n.kind
   error msg
+{.pop.}
 
-func typeSymFromNode(node: NimNode): string = 
+func getFlagParamNode(node: NimNode): NimNode = 
   case node.kind
-  of nnkIdent, nnkStrLit:
-    result = node.strVal
-  of nnkBracketExpr:
-    result = node[0].strVal & "[" & node[1].strVal & "]"
-  else: bad node
-
-func getOptTypeSym(node: NimNode): string =
-  case node.kind:
-  of nnkCommand:
-    result = typeSymFromNode(node[1]) # [0] is T
-  of nnkCall:
-    result = typeSymFromNode(node[1][0]) # [1] is stmtlist [0] is the type
-  else: error "unexpected node kind: " & $node.kind
-
-func getOptOptNode(optOptValue: NimNode): NimNode = 
-  case optOptValue.kind
   of nnkStrLit:
-    result = optOptValue
+    result = node
   of nnkStmtList:
-    result = optOptValue[0]
+    result = node[0]
   of nnkCommand:
-    result = optOptValue[1]
+    result = node[1]
   of nnkPrefix: # NOTE: should i double check prefix value?
-    result = optOptValue[1]
-  else: error "unexpected node kind: " & $optOptValue.kind
+    result = node[1]
+  else: bad(node, "flag param")
 
-# TODO: don't use the confusing name optOpts here and above
-func parseOptOpts(opt: var CliFlag, optOpts: NimNode) =
-  expectKind optOpts, nnkStmtList
-  for optOpt in optOpts:
-    case optOpt.kind
+func parseFlagParams(f: var CliFlag, node: NimNode) =
+  expectKind node, nnkStmtList
+  for n in node:
+    case n.kind
     of nnkCall, nnkCommand, nnkPrefix:
-      case optOpt[0].strVal
+      case n[0].strVal
       of "help","?":
-        opt.help = getOptOptNode(optOpt[1])
+        f.help = getFlagParamNode(n[1])
       of "short", "-":
-        let val = getOptOptNode(optOpt).strVal
+        let val = getFlagParamNode(n).strVal
         if val.len > 1:
           error "short flag must be a char"
-        opt.short = val[0].char
+        f.short = val[0].char
       of "*", "default":
-        opt.default = getOptOptNode(optOpt)
+        f.default = getFlagParamNode(n)
       of "i", "ident":
-        opt.ident = getOptOptNode(optOpt).strVal.ident
+        f.ident = getFlagParamNode(n).strVal.ident
       of "T":
-        opt.typeNode = optOpt[1]
-        # TODO: remove this...
-        opt.typeSym = getOptTypeSym(optOpt)
+        f.typeNode = n[1]
       else:
-        error "unexpected option setting: " & optOpt[0].strVal
+        error "unexpected setting: " & n[0].strVal
     else:
-      error "unexpected option node type: " & $optOpt.kind
+      bad(n, "flag params")
 
 func startFlag(f: var CliFlag, n: NimNode) =
   f.name =
@@ -235,6 +211,8 @@ func startFlag(f: var CliFlag, n: NimNode) =
     of nnkIdent, nnkStrLit: n[0].strVal
     of nnkAccQuoted: collect(for c in n[0]: c.strVal).join("")
     else: error "unexpected node kind for option"
+
+  f.help = newLit("") # by default no string
 
   # assume a single character is a short flag
   if f.name.len == 1:
@@ -244,10 +222,8 @@ func startFlag(f: var CliFlag, n: NimNode) =
 
 func parseCliFlag(n: NimNode): CliFlag =
   if n.kind notin [nnkCommand, nnkCall]:
-    error "unexpected node kind: " & $n.kind
+    bad(n, "flags")
 
-  # deduplicate these...
-  result = newCliFlag()
   startFlag(result, n)
   # option "some help desc"
   if n.kind  == nnkCommand:
@@ -255,29 +231,43 @@ func parseCliFlag(n: NimNode): CliFlag =
   # option:
   #   help "some help description"
   else:
-    parseOptOpts(result, n[1])
+    parseFlagParams(result, n[1])
 
   if result.ident == nil:
     result.ident = result.name.ident
   if result.typeNode == nil:
     result.typeNode = ident"string"
-  if result.typeSym == "":
-    result.typeSym = "string"
 
-# TODO: handle flag groups here
-# cfg.flagGroups = Table[string, seq[CliFlag]]?
-func parseCliFlags(flags: NimNode): seq[CliFlag] =
-  # <<< flags
-  expectKind flags, nnkStmtList
-  for f in flags:
-    case f.kind
+# TODO: change how this works?
+func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
+  var group: string
+  expectKind node, nnkStmtList
+  for n in node:
+    var flag: CliFlag
+    case n.kind
     of nnkCall, nnkCommand:
-      result.add parseCliFlag(f)
+      flag = parseCliFlag(n)
+      if group == "":
+        cfg.flags.add flag
+      else:
+        if group notin cfg.flagGroups: cfg.flagGroups[group] = @[flag]
+        else: cfg.flagGroups[group].add flag
+    of nnkBracket:
+      group = n[0].strVal
+      continue
+    of nnkPrefix:
+      if n[0].kind != nnkIdent and n[0].strVal != "^":
+        error "unexpected node in flags: " &  $n.kind
+      expectKind n[1], nnkBracket
+      cfg.inheritFlags.add n[1][0].strVal
     # of nnkPrefix:
-    #   <<< "reached Prefix!"
-    #   <<< f
-    else: error "unexpected node kind parsing flags"
+    #   if n[0].strVal != "---":
+    #     bad(n[0], "flag group prefix")
+    #   group = n[1].strVal
+    #   continue
+    else:  bad(n, "flag")
 
+  debugEcho cfg.flagGroups.keys().toSeq()
 
 func parseCliSetting(s: string): CliSetting =
   try: parseEnum[CliSetting](s)
@@ -337,13 +327,25 @@ func sliceStmts(node: NimNode): seq[
       start = i + 1
 
 
-func addGlobalFlagsFrom(child: var CliCfg, parent: CliCfg) =
+func addInheritedFlags(child: var CliCfg, parent: CliCfg, self = false) =
   let names = child.flags.mapIt(it.name)
-  for f in parent.globalFlags:
-    if f.name in names:
-      error "global flag " & f.name & " conflicts with command flag"
-    child.flags.add f
+  var groups: seq[string]
+  if not self:
+    groups.add child.inheritFlags
 
+  # autoinherit the "global" flags
+  if "global" in parent.flagGroups:
+    groups.add "global"
+
+  for g in groups:
+    if g notin parent.flagGroups:
+      debugEcho parent.flagGroups.keys().toSeq()
+      error "expected flag group: " & g & " to exist in parent command"
+    for f in parent.flagGroups[g]:
+      if f.name in names:
+        error "global flag " & f.name & " conflicts with command flag"
+      child.flags.add f
+ 
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   expectKind node[1], nnkStmtList
   for (name, s) in sliceStmts(node[1]):
@@ -352,8 +354,7 @@ func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
       nnkStmtList.newTree(node[1][s]), cfg.name & " " & name
     )
     subCfg.subName = name
-    subCfg.addGlobalFlagsFrom(cfg)
-
+    subCfg.addInheritedFlags(cfg)
     cfg.subcommands.add  subCfg
 
 func parseHiddenFlags(cfg: var CliCfg, node: NimNode) =
@@ -420,10 +421,8 @@ func parseCliBody(body: NimNode, name = ""): CliCfg =
         result.usage = call[1]
       of "description", "...":
         result.desc = call[1]
-      of "globalFlags":
-        result.globalFlags = parseCliFlags(call[1])
       of "flags":
-        result.flags = parseCliFlags(call[1])
+        parseCliFlags(result, call[1])
       of "settings":
         parseCliSettings(result, call)
       of "stopWords":
@@ -449,7 +448,7 @@ func parseCliBody(body: NimNode, name = ""): CliCfg =
     sub.pre = result.preSub
     sub.post = result.postSub
 
-  result.addGlobalFlagsFrom(result)
+  result.addInheritedFlags(result, self = true)
 
   if result.name == "":
     error "missing required option: name"

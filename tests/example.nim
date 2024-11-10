@@ -9,6 +9,7 @@ hwylCli:
     yes:
       T bool
       ? "set flag to yes"
+    [global]
     config:
       T seq[string]
       ? "path to config file"
@@ -24,7 +25,6 @@ hwylCli:
       `long-flag` "some help"
       flag:
         ? "some other help"
-        
     run:
       echo "hello from `example one` command!"
       echo "long-flag and flag are: " & `long-flag` & "," & `flag` & " by default strings"
@@ -43,6 +43,9 @@ hwylCli:
       bflag:
         T seq[float]
         ? "multiple floats"
+      c:
+        ? "this should be a single flag"
+      h "overwrite the short h from help"
     run:
       echo "hello from `example b` command"
       echo fmt"{aflag=}, {bflag=}"
