@@ -776,7 +776,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         `parserBody`
 
       proc `runProcName`(`cmdLine`: openArray[string] = commandLineParams()) =
-        let `args` = `parserProcName`(`cmdLine`)
+        let `args` {.used.} = `parserProcName`(`cmdLine`)
         `runBody`
 
   if cfg.root:
