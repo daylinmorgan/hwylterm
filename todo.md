@@ -17,6 +17,7 @@
 ### cli generator
 
 - [ ] add support for types(metavars)/defaults/required in help output
+- [ ] add nargs to CliCfg
 
 
 ## features
