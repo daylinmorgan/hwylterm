@@ -121,11 +121,16 @@ proc bb*(cli: HwylCliHelp): BbString =
 # ----------------------------------------
 
 type
-  Count* = object
+  Count* = object ## Count type for an incrementing flag
     val*: int
 
-  CliSetting = enum
-    NoHelpFlag, ShowHelp, NoNormalize
+type
+  # ----
+  CliSetting* = enum
+    NoHelpFlag, ## Remove the builtin help flag
+    ShowHelp,   ## If cmdline empty show help
+    NoNormalize ## Don't normalize flags and commands
+
   BuiltinFlag = object
     name*: string
     short*: char
@@ -480,7 +485,7 @@ func subCmdsArray(cfg: CliCfg): NimNode =
     result.add quote do:
       (`cmd`, `desc`)
 
-proc hwylCliError*(msg: string | BbString) = 
+proc hwylCliError*(msg: string | BbString) =
   quit $(bb("error ", "red") & bb(msg))
 
 func defaultUsage(cfg: CliCfg): NimNode =
