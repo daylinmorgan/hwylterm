@@ -177,7 +177,6 @@ func bad(n: NimNode, argument: string = "") =
   if argument != "":
     msg &= " for argument: " & argument
   error msg
-{.pop.}
 
 func getFlagParamNode(node: NimNode): NimNode = 
   case node.kind
