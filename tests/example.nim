@@ -26,7 +26,7 @@ hwylCli:
   run:
     echo "this is always run prior to subcommand parsing"
   subcommands:
-    --- "onelonger"
+    [onelonger]
     ... """
     the first subcommand
 
@@ -50,7 +50,7 @@ hwylCli:
       echo fmt"{verbose=}"
       echo fmt"{config=}"
 
-    --- "two-longer"
+    ["two-longer"]
     ... """
     some second subcommand
 
@@ -58,8 +58,8 @@ hwylCli:
     and it will automatically be "bb"'ed [bold]this is bold text[/]
     """
     flags:
-      a:
-        T bool
+      auto:
+        - a
         ? "some help"
       b:
         T seq[float]
@@ -67,5 +67,5 @@ hwylCli:
       h "this will override the builtin 'h' for help"
     run:
       echo "hello from `example b` command"
-      echo fmt"{a=}, {b=}"
+      echo fmt"{auto=}, {b=}"
 

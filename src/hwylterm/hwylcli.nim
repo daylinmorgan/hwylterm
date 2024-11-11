@@ -305,18 +305,21 @@ func parseIdentLikeList(node: NimNode): seq[string] =
 func parseCliBody(body: NimNode, name: string = "", root: bool= false): CliCfg
 
 func isSubMarker(node: NimNode): bool =
-  if node.kind == nnkPrefix:
-    if eqIdent(node[0], "---"):
-      result = true
+  if node.kind != nnkBracket: return false
+  if node.len != 1: return false
+  if node[0].kind notin [nnkIdent, nnkStrLit]:
+    return false
+  result = true
 
 func sliceStmts(node: NimNode): seq[
   tuple[name: string, slice: Slice[int]]
 ] =
+
   if not isSubMarker(node[0]):
     error "expected a subcommand delimiting line"
 
   var
-    name: string = node[0][1].strVal
+    name: string = node[0][0].strVal
     start = 1
   let nodeLen = node.len()
 
@@ -325,7 +328,7 @@ func sliceStmts(node: NimNode): seq[
       result.add (name, start..i)
     elif isSubMarker(node[i]):
       result.add (name, start..(i - 1))
-      name = node[i][1].strVal
+      name = node[i][0].strVal
       start = i + 1
 
 
