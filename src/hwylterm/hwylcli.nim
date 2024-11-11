@@ -61,14 +61,14 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
   if f.short != "":
     result.add "[" & cli.styles.flagShort & "]"
     result.add "-" & f.short.alignLeft(cli.shortArgLen)
-    result.add "[/]"
+    result.add "[/" & cli.styles.flagShort & "]"
   else:
     result.add " ".repeat(1 + cli.shortArgLen)
   result.add " "
   if f.long != "":
     result.add "[" & cli.styles.flagLong & "]"
     result.add "--" & f.long.alignLeft(cli.longArgLen)
-    result.add "[/]"
+    result.add "[/" & cli.styles.flagLong & "]"
   else:
     result.add " ".repeat(2 + cli.longArgLen)
 
@@ -77,7 +77,7 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
   if f.description != "":
     result.add "[" & cli.styles.flagDesc & "]"
     result.add f.description
-    result.add "[/]"
+    result.add "[/" & cli.styles.flagDesc & "]"
   result.add "\n"
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
@@ -101,8 +101,8 @@ func render*(cli: HwylCliHelp): string =
     result.add "\n"
     result.add cli.desc
     result.add "\n"
-  result.add "\n"
   if cli.subcmds.len > 0:
+    result.add "\n"
     result.add "[" & cli.styles.header & "]"
     result.add "subcommands[/]:\n"
     for s in cli.subcmds:
