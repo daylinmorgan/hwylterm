@@ -245,7 +245,7 @@ func parseCliFlag(n: NimNode): CliFlag =
   if result.ident == nil:
     result.ident = result.name.ident
   if result.typeNode == nil:
-    result.typeNode = ident"string"
+    result.typeNode = ident"bool"
 
 # TODO: change how this works?
 func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
