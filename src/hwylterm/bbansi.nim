@@ -381,11 +381,10 @@ when isMainModule:
     version bbfmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]"
     hidden debug, testCard
     flags:
-      debug:
-        T bool
-      testCard:
-        T bool
+      debug "show debug"
+      testCard "show test card"
       style:
+        T string
         ? "set style for string"
         - "s"
     run:

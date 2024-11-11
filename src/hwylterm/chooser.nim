@@ -140,9 +140,9 @@ when isMainModule:
     """
     hidden demo
     flags:
-      demo:
-        T bool
+      demo "show demo"
       separator:
+        T string
         help "separator to split items"
         short "s"
     run:
