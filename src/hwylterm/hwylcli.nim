@@ -693,7 +693,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
 
   # should this a CritBitTree?
   parserBody.add quote do:
-    var `flagSet`: HashSet[string]
+    var `flagSet` {.used.}: HashSet[string]
 
   parserBody.add(
     quote do:
