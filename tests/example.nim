@@ -56,9 +56,6 @@ hwylCli:
 
     a longer mulitline description that will be visible in the subcommand help
     and it will automatically be "bb"'ed [bold]this is bold text[/]
-
-
-
     """
     flags:
       a:
@@ -71,5 +68,4 @@ hwylCli:
     run:
       echo "hello from `example b` command"
       echo fmt"{a=}, {b=}"
-
 

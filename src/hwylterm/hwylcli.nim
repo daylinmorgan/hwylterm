@@ -126,9 +126,10 @@ type
 type
   # ----
   CliSetting* = enum
-    NoHelpFlag, ## Remove the builtin help flag
-    ShowHelp,   ## If cmdline empty show help
-    NoNormalize ## Don't normalize flags and commands
+    GenerateOnly, ## Don't attach root `runProc()` node
+    NoHelpFlag,   ## Remove the builtin help flag
+    ShowHelp,     ## If cmdline empty show help
+    NoNormalize   ## Don't normalize flags and commands
 
   BuiltinFlag = object
     name*: string
@@ -779,9 +780,11 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         let `args` {.used.} = `parserProcName`(`cmdLine`)
         `runBody`
 
+  # if cfg.root and (GenerateOnly notin cfg.settings):
   if cfg.root:
-    result.add quote do:
-      `runProcName`()
+    if GenerateOnly notin cfg.settings:
+      result.add quote do:
+        `runProcName`()
   else:
     result.add quote do:
       `runProcName`(`args`[1..^1])
