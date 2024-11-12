@@ -124,8 +124,8 @@ type
     val*: int
 
 type
-  # ----
   CliSetting* = enum
+    # Propagate,  ## Include parent command settings in subcommand
     GenerateOnly, ## Don't attach root `runProc()` node
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
