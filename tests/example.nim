@@ -16,8 +16,10 @@ hwylCli:
     yes:
       T bool
       ? "set flag to yes"
-    [config]
-    confiG:
+    [shared]
+    something:
+      ? "some flag only needed in one subcommand"
+    config:
       T seq[string]
       ? "path to config file"
       * @["config.yml"]
@@ -31,7 +33,7 @@ hwylCli:
     the first subcommand
 
     this command features both an enum flag and a Count flag
-    it also inherits the `[[config]` flag group
+    it also inherits the `[[shared]` flag group
     """
 
     flags:
@@ -42,7 +44,7 @@ hwylCli:
         T Count
         ? "a count flag"
         - v
-      ^[config]
+      ^[shared]
     run:
       echo "hello from `example one` command!"
       echo args
@@ -58,6 +60,7 @@ hwylCli:
     and it will automatically be "bb"'ed [bold]this is bold text[/]
     """
     flags:
+      ^something
       auto:
         - a
         ? "some help"

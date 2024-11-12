@@ -146,6 +146,12 @@ type
     short*: char
     long*: string
     help*: NimNode
+    group*: string
+
+  Inherit = object
+    settings: set[CliSetting]
+    flags: seq[string]
+    groups: seq[string]
 
   CliCfg = object
     stopWords*: seq[string]
@@ -160,9 +166,9 @@ type
     version*, usage*: NimNode
     flags*: seq[CliFlag]
     builtinFlags*: seq[BuiltinFlag]
-    flagGroups: Table[string, seq[CliFlag]]
+    flagDefs*: seq[CliFlag]
     required*: seq[string]
-    inheritFlags*: seq[string]
+    inherit*: Inherit
     root*: bool
 
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
@@ -252,24 +258,35 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
   expectKind node, nnkStmtList
   for n in node:
+    <<< n
     var flag: CliFlag
     case n.kind
     of nnkCall, nnkCommand:
       flag = parseCliFlag(n)
-      if group == "":
-        cfg.flags.add flag
-      else:
-        if group notin cfg.flagGroups: cfg.flagGroups[group] = @[flag]
-        else: cfg.flagGroups[group].add flag
+      flag.group = group
+      cfg.flagDefs.add flag
     of nnkBracket:
       group = n[0].strVal
       continue
     of nnkPrefix:
-      if n[0].kind != nnkIdent and n[0].strVal != "^":
-        error "unexpected node in flags: " &  $n.kind
-      expectKind n[1], nnkBracket
-      cfg.inheritFlags.add n[1][0].strVal
-    else:  bad(n, "flag")
+      if
+        n[0].kind != nnkIdent or
+        n[0].strVal != "^" or
+        n.len != 2 or
+        n[1].kind notin [nnkBracket, nnkIdent, nnkStrLit]:
+        error "unexpected node in flags: " & $n.kind
+
+      case n[1].kind
+      of nnkBracket:
+        cfg.inherit.groups.add n[1][0].strVal
+        # cfg.inheritFlags.add n[1][0].strVal
+      of nnkIdent, nnkStrLit:
+        cfg.inherit.flags.add n[1].strval
+      else: bad(n, "flag")
+
+    else: bad(n, "flag")
+
+  cfg.flags = cfg.flagDefs.filterIt(it.group in ["", "global"])
 
 func parseCliSetting(s: string): CliSetting =
   try: parseEnum[CliSetting](s)
@@ -332,25 +349,41 @@ func sliceStmts(node: NimNode): seq[
       start = i + 1
 
 
-func addInheritedFlags(child: var CliCfg, parent: CliCfg, self = false) =
-  let names = child.flags.mapIt(it.name)
-  var groups: seq[string]
-  if not self:
-    groups.add child.inheritFlags
+func inheritFrom(child: var CliCfg, parent: CliCfg) =
+  ## inherit settings from parent command
+  var
+    pflags: Table[string, CliFlag]
+    pgroups: Table[string, seq[CliFlag]]
+    flags: seq[string]
+    groups: seq[string]
 
-  # autoinherit the "global" flags
-  if "global" in parent.flagGroups:
+  flags &= child.inherit.flags
+  groups &= child.inherit.groups
+
+  for f in parent.flagDefs:
+    pflags[f.name] = f
+    if f.group in pgroups:
+      pgroups[f.group].add f
+    else:
+      pgroups[f.group] = @[f]
+ 
+  if "global" in pgroups:
     groups.add "global"
 
+  for f in flags:
+    if f notin pflags:
+      error "expected parent command to define flag: " & f
+    else:
+      child.flags.add pflags[f]
+
   for g in groups:
-    if g notin parent.flagGroups:
-      debugEcho parent.flagGroups.keys().toSeq()
-      error "expected flag group: " & g & " to exist in parent command"
-    for f in parent.flagGroups[g]:
-      if f.name in names:
-        error "global flag " & f.name & " conflicts with command flag"
-      child.flags.add f
- 
+    if g notin pgroups:
+      error "expected parent command to define flag group " & g
+    else:
+      child.flags &= pgroups[g]
+
+
+
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   expectKind node[1], nnkStmtList
   for (name, s) in sliceStmts(node[1]):
@@ -359,7 +392,7 @@ func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
       nnkStmtList.newTree(node[1][s]), cfg.name & " " & name
     )
     subCfg.subName = name
-    subCfg.addInheritedFlags(cfg)
+    subCfg.inheritFrom(cfg)
     cfg.subcommands.add  subCfg
 
 func parseHiddenFlags(cfg: var CliCfg, node: NimNode) =
@@ -453,8 +486,6 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   for sub in result.subcommands.mitems:
     sub.pre = result.preSub
     sub.post = result.postSub
-
-  result.addInheritedFlags(result, self = true)
 
   if result.name == "":
     error "missing required option: name"
