@@ -154,6 +154,8 @@ type
     groups: seq[string]
 
   CliCfg = object
+    name*: string
+    alias*: HashSet[string]
     stopWords*: seq[string]
     styles: NimNode
     hidden*: seq[string]
@@ -161,7 +163,6 @@ type
     settings*: set[CliSetting]
     preSub*, postSub*, pre*, post*, run*: NimNode
     desc*: NimNode
-    name*: string
     subName*: string # used for help the generator
     version*, usage*: NimNode
     flags*: seq[CliFlag]
@@ -171,12 +172,17 @@ type
     inherit*: Inherit
     root*: bool
 
-# some debug procs I use to wrap my ahead aroung the magic of *macro*
-func `<<<`(n: NimNode) {.used.} =
-  ## for debugging macros
-  debugEcho treeRepr n
-func `<<<`(s: string) {.used.} =
+template `<<<`(s: string) {.used.} =
+  let pos = instantiationInfo()
+  debugEcho "$1:$2" % [pos.filename, $pos.line]
   debugEcho s
+  debugEcho "^^^^^^^^^^^^^^^^^^^^^"
+
+# some debug procs I use to wrap my ahead aroung the magic of *macro*
+template `<<<`(n: NimNode) {.used.} =
+  ## for debugging macros
+  <<< astToStr n
+  <<< treeRepr n
 
 func bad(n: NimNode, argument: string = "") =
   var msg = "unexpected node kind: " & $n.kind
@@ -258,7 +264,6 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
   expectKind node, nnkStmtList
   for n in node:
-    <<< n
     var flag: CliFlag
     case n.kind
     of nnkCall, nnkCommand:
@@ -443,9 +448,23 @@ func addBuiltinFlags(cfg: var CliCfg) =
       node: versionNode
     )
 
+
+func pasrseCliAlias(cfg: var CliCfg, node: NimNode) =
+  # node[0] is "alias"
+  for n in node[1..^1]:
+    case n.kind
+    of nnkIdent, nnkStrLit:
+      cfg.alias.incl n.strVal
+    of nnkAccQuoted:
+      let s = n.mapIt(it.strVal).join("")
+      cfg.alias.incl s
+    else: bad(n, "alias")
+   
+
 func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
   result.root = root
+  # TDOO: change call to n or node?
   for call in body:
     if call.kind  notin [nnkCall, nnkCommand, nnkPrefix]:
       error "unexpected node kind: " & $call.kind
@@ -454,6 +473,9 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
       of "name":
         expectKind call[1], nnkStrLit
         result.name = call[1].strVal
+      of "alias":
+        if root: error "alias not supported for root command"
+        pasrseCliAlias(result, call)
       of "version", "V":
         result.version = call[1]
       of "usage", "?":
@@ -694,6 +716,38 @@ func addPostParseCheck(cfg: CliCfg, body: NimNode) =
       if `name` notin `flagSet`:
         `target` = `default`
 
+func hwylCliImpl(cfg: CliCfg): NimNode
+
+func genSubcommandHandler(cfg: CliCfg): NimNode =
+  let args = ident"args"
+  result = nnkStmtList.newTree()
+  result.add quote do:
+    if `args`.len == 0:
+      hwylCliError("expected subcommand")
+
+  var subCommandCase = nnkCaseStmt.newTree()
+  if NoNormalize notin cfg.settings:
+    subCommandCase.add(quote do: optionNormalize(`args`[0]))
+  else:
+    subCommandCase.add(quote do: `args`[0])
+
+  for sub in cfg.subcommands:
+    var branch = nnkOfBranch.newTree()
+    branch.add newLit(optionNormalize(sub.subName))
+    for a in sub.alias:
+      branch.add newLit(optionNormalize(a))
+    branch.add hwylCliImpl(sub)
+    subcommandCase.add branch
+
+  subcommandCase.add nnkElse.newTree(
+    quote do:
+      hwylCliError("unknown subcommand: [b]" & `args`[0])
+  )
+
+  result.add subCommandCase
+
+
+
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
     version = cfg.version or newLit("")
@@ -779,29 +833,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     runBody.add cfg.post
 
   if cfg.subcommands.len > 0:
-    var handleSubCommands = nnkStmtList.newTree()
-    handleSubCommands.add quote do:
-      if `args`.len == 0:
-        hwylCliError("expected subcommand")
-
-    var subCommandCase = nnkCaseStmt.newTree()
-    if NoNormalize notin cfg.settings:
-      subCommandCase.add(quote do: optionNormalize(`args`[0]))
-    else:
-      subCommandCase.add(quote do: `args`[0])
-
-    for sub in cfg.subcommands:
-      subCommandCase.add nnkOfBranch.newTree(
-        newLit(optionNormalize(sub.subName)),
-        hwylCliImpl(sub)
-      )
-
-    subcommandCase.add nnkElse.newTree(
-      quote do:
-        hwylCliError("unknown subcommand: [b]" & `args`[0])
-    )
-
-    runBody.add handleSubCommands.add subCommandCase
+    runBody.add genSubcommandHandler(cfg)
 
   result.add quote do:
     # block:
@@ -814,7 +846,6 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         let `args` {.used.} = `parserProcName`(`cmdLine`)
         `runBody`
 
-  # if cfg.root and (GenerateOnly notin cfg.settings):
   if cfg.root:
     if GenerateOnly notin cfg.settings:
       result.add quote do:

@@ -36,6 +36,7 @@ hwylCli:
     it also inherits the `[[shared]` flag group
     """
 
+    alias o,"one", `one-l`
     flags:
       color:
         T Color
