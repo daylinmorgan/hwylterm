@@ -18,6 +18,8 @@
 
 - [ ] add support for types(metavars)/defaults/required in help output
 - [ ] add nargs to CliCfg
+- [ ] add support for inheriting a single flag from parent (even from a "group")
+- [ ] add support to either (lengthen commands) or provide an alias for a subcommand
 
 
 ## features
