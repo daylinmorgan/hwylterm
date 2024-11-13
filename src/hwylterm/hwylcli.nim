@@ -569,13 +569,21 @@ func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
         styles = `styles`,
       )))
 
+proc preParseCheck(key: string, val: string) =
+  if val == "":
+    hwylCliError(
+      "expected value for flag: [b]" & key
+    )
+
 proc parse*(p: OptParser, key: string, val: string, target: var bool) =
   target = true
 
 proc parse*(p: OptParser, key: string, val: string, target: var string) =
+  preParseCheck(key, val)
   target = val
 
 proc parse*(p: OptParser, key: string, val: string, target: var int) =
+  preParseCheck(key, val)
   try:
     target = parseInt(val)
   except:
@@ -591,15 +599,17 @@ macro enumNames(a: typed): untyped =
     result.add newLit ai.strVal
 
 proc parse*[E: enum](p: OptParser, key: string, val: string, target: var E) =
+  preParseCheck(key, val)
   try:
     target = parseEnum[E](val)
   except:
     let choices = enumNames(E).join(",")
     hwylCliError(
-      "failed to parse value for [b]" & key & "[/] as enum: [b]" & val & "[/], expected one of: " & choices
+      "failed to parse value for [b]" & key & "[/] as enum: [b]" & val & "[/] expected one of: " & choices
     )
 
 proc parse*(p: OptParser, key: string, val: string, target: var float) =
+  preParseCheck(key, val)
   try:
     target = parseFloat(val)
   except:
@@ -608,6 +618,7 @@ proc parse*(p: OptParser, key: string, val: string, target: var float) =
     )
 
 proc parse*[T](p: OptParser, key: string, val: string, target: var seq[T]) =
+  preParseCheck(key, val)
   var parsed: T
   parse(p, key, val, parsed)
   target.add parsed
