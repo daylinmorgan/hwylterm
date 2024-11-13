@@ -13,6 +13,9 @@ hwylCli:
   ... "a description of hwylterm"
   flags:
     [global]
+    color:
+        T Color
+        ? "a color (red, green, blue)"
     yes:
       T bool
       ? "set flag to yes"
@@ -25,10 +28,12 @@ hwylCli:
       * @["config.yml"]
   preSub:
     echo "this is run after subcommand parsing but before its run block"
+    echo fmt"{yes=}, {color=}"
   run:
     echo "this is always run prior to subcommand parsing"
+    echo fmt"{yes=}, {color=}"
   subcommands:
-    [onelonger]
+    [one]
     ... """
     the first subcommand
 
@@ -36,11 +41,8 @@ hwylCli:
     it also inherits the `[[shared]` flag group
     """
 
-    alias o,"one", `one-l`
+    alias o
     flags:
-      color:
-        T Color
-        ? "a color (red, green, blue)"
       verbose:
         T Count
         ? "a count flag"
@@ -50,10 +52,10 @@ hwylCli:
       [subsub]
       ... "another level down subcommand"
       flags:
-        ^color
+        ^config
       run:
         echo fmt"{color=}"
-        
+
     run:
       echo "hello from `example one` command!"
       echo args
@@ -61,7 +63,7 @@ hwylCli:
       echo fmt"{verbose=}"
       echo fmt"{config=}"
 
-    ["two-longer"]
+    [two]
     ... """
     some second subcommand
 

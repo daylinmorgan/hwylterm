@@ -154,6 +154,7 @@ type
     long*: string
     help*: NimNode
     group*: string
+    inherited*: bool
 
   Inherit = object
     settings: set[CliSetting]
@@ -188,8 +189,24 @@ template `<<<`(s: string) {.used.} =
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
 template `<<<`(n: NimNode) {.used.} =
   ## for debugging macros
-  <<< astToStr n
   <<< treeRepr n
+
+
+func `<<<`(f: CliFlag) {.used.}=
+  var s: string
+  let fields = [
+    ("name", f.name),
+    ("long", f.long),
+    ("short", $f.short),
+    ("typeNode", f.typeNode.lispRepr),
+    ("group", f.group)
+  ]
+  s.add "CliFlag(\n"
+  for (k,v) in fields:
+    s.add "$1 = $2\n" % [k,v]
+  s.add ")"
+  <<< s
+
 
 func bad(n: NimNode, argument: string = "") =
   var msg = "unexpected node kind: " & $n.kind
@@ -384,15 +401,19 @@ func inheritFrom(child: var CliCfg, parent: CliCfg) =
 
   for f in flags:
     if f notin pflags:
-      error "expected parent command to define flag: " & f
+      error "expected parent command to have flag: " & f
     else:
       child.flags.add pflags[f]
+      # so subcommands can continue the inheritance
+      child.flagDefs.add pflags[f]
 
   for g in groups:
     if g notin pgroups:
-      error "expected parent command to define flag group " & g
+      error "expected parent command to have flag group " & g
     else:
-      child.flags &= pgroups[g]
+      child.flags.add pgroups[g]
+      # so subcommands can continue the inheritance
+      child.flagDefs.add pgroups[g]
 
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   expectKind node[1], nnkStmtList
@@ -401,7 +422,6 @@ func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
       nnkStmtList.newTree(node[1][s]), cfg.name & " " & name
     )
     subCfg.subName = name
-    subCfg.inheritFrom(cfg)
     cfg.stopWords.add name
     cfg.stopWords.add subCfg.alias.toSeq()
     cfg.subcommands.add subCfg
@@ -465,7 +485,14 @@ func pasrseCliAlias(cfg: var CliCfg, node: NimNode) =
       let s = n.mapIt(it.strVal).join("")
       cfg.alias.incl s
     else: bad(n, "alias")
-   
+
+func propagate(c: var CliCfg) =
+  for child in c.subcommands.mitems:
+    child.pre = c.preSub
+    child.post = c.postSub
+    child.inheritFrom(c)
+    propagate(child)
+
 
 func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
@@ -510,16 +537,19 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         result.postSub = call[1]
       else:
         error "unknown hwylCli setting: " & name
-
-  for sub in result.subcommands.mitems:
-    sub.pre = result.preSub
-    sub.post = result.postSub
+  #
+  # for sub in result.subcommands.mitems:
+  #   # sub.inheritFrom(result)
+  #   sub.pre = result.preSub
+    # sub.post = result.postSub
 
   if result.name == "":
     error "missing required option: name"
 
   # TODO: validate "required" flags exist here
   result.addBuiltinFlags()
+  if root:
+    propagate(result)
 
 func flagToTuple(f: CliFlag | BuiltinFlag): NimNode =
   let
@@ -695,11 +725,15 @@ func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
   result = (nnkPrefix.newTree(ident"@",long), short)
 
 func setFlagVars(cfg: CliCfg): NimNode =
-  result = nnkVarSection.newTree().add(
-    cfg.flags.mapIt(
-      nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
-    )
-  )
+  ## generate all variables not covered in global module
+  result = nnkVarSection.newTree()
+  let flags =
+    if cfg.root: cfg.flags
+    else: cfg.flags.filterIt(it.group != "global")
+
+  result.add flags.mapIt(
+          nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
+        )
 
 func literalFlags(f: CliFlag): NimNode =
   var flags: seq[string]
