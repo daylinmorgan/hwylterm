@@ -18,8 +18,9 @@
 
 - [ ] add support for types(metavars)/defaults/required in help output
 - [ ] add nargs to CliCfg
-- [ ] add support for inheriting a single flag from parent (even from a "group")
-- [ ] add support to either (lengthen commands) or provide an alias for a subcommand
+- [x] add support for inheriting a single flag from parent (even from a "group")
+- [x] add support to either (lengthen commands) or provide an alias for a subcommand
+- [ ] add command aliases to hwylcli help with switch
 
 
 ## features
