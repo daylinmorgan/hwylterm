@@ -10,7 +10,6 @@ type
 hwylCli:
   name "example"
   V "0.1.0"
-  ... "a description of hwylterm"
   flags:
     [global]
     color:

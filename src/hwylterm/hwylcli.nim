@@ -25,8 +25,7 @@ type
     cmd* = "bold"
     settings*: set[HwylCliStyleSetting] = {Aliases}
   HwylCliHelp* = object
-    usage*: string
-    desc*: string
+    header*, footer*, description*, usage*: string
     subcmds*: seq[HwylSubCmdHelp]
     flags*: seq[HwylFlagHelp]
     styles*: HwylCliStyles
@@ -37,13 +36,15 @@ func firstLine(s: string): string =
   s.strip().dedent().strip().splitlines()[0]
 
 func newHwylCliHelp*(
+  header = "",
   usage = "",
-  desc = "",
+  footer = "",
+  description = "",
   subcmds: openArray[HwylSubCmdHelp] = @[],
   flags: openArray[HwylFlagHelp] = @[],
   styles = HwylCliStyles()
 ): HwylCliHelp =
-  result.desc = dedent(desc).strip()
+  result.description = dedent(description).strip()
   if Aliases in styles.settings:
     result.subcmds =
       subcmds.mapIt((it.name & " " & it.aliases, it.aliases, it.desc.firstLine))
@@ -99,14 +100,17 @@ func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
 
 # TODO: split this into separate procs to make overriding more fluid
 func render*(cli: HwylCliHelp): string =
+  if cli.header != "":
+    result.add cli.header
+    result.add "\n"
   if cli.usage != "":
     result.add "[" & cli.styles.header & "]"
     result.add "usage[/]:\n"
     result.add indent(cli.usage, 2 )
   result.add "\n"
-  if cli.desc != "":
+  if cli.description != "":
     result.add "\n"
-    result.add cli.desc
+    result.add cli.description
     result.add "\n"
   if cli.subcmds.len > 0:
     result.add "\n"
@@ -120,6 +124,8 @@ func render*(cli: HwylCliHelp): string =
     result.add "flags[/]:\n"
     for f in cli.flags:
       result.add render(cli,f)
+  if cli.footer != "":
+    result.add cli.footer
 
 proc bb*(cli: HwylCliHelp): BbString = 
   result = bb(render(cli))
@@ -161,18 +167,20 @@ type
     flags: seq[string]
     groups: seq[string]
 
+  CliHelp = object
+    header*, footer*, description*, usage*, styles*: NimNode
+
   CliCfg = object
     name*: string
     alias*: HashSet[string]
     stopWords*: seq[string]
-    styles: NimNode
+    help: CliHelp
     hidden*: seq[string]
     subcommands: seq[CliCfg]
     settings*: set[CliSetting]
     preSub*, postSub*, pre*, post*, run*: NimNode
-    desc*: NimNode
     subName*: string # used for help the generator
-    version*, usage*: NimNode
+    version*: NimNode
     flags*: seq[CliFlag]
     builtinFlags*: seq[BuiltinFlag]
     flagDefs*: seq[CliFlag]
@@ -494,6 +502,63 @@ func propagate(c: var CliCfg) =
     propagate(child)
 
 
+
+func parseCliHelp(c: var CliCfg, node: NimNode) =
+  ## some possible DSL inputs:
+  ##
+  ## ```
+  ## help:
+  ##  header NimNode -> string
+  ##  usage NimNode -> string
+  ##  description NimNode -> string
+  ##  footer NimNode -> string
+  ##  styles NimNode -> HwylCliStyles()
+  ## ```
+  ##
+  ## ```
+  ## help NimNode
+  ## ```
+  ##
+  ## ```
+  ## ... NimNode
+  ## `
+
+  expectLen node, 2
+  var help: CliHelp = c.help
+  case node.kind:
+  # help NimNode or ... NimNode
+  of nnkPrefix, nnkCommand:
+    help.description = node[1]
+  # help:
+  #   description NimNode
+  #   usage: NimNode
+  of nnkCall:
+    if node[1].kind != nnkStmtList:
+      error "expected list of arguments for help"
+
+    for n in node[1]:
+      expectLen n, 2
+      let id = n[0].strVal
+      var val: NimNode
+      case n.kind
+      of nnkCommand:
+        val =n[1]
+      of nnKCall:
+        val = n[1][0]
+      else: bad(n, id)
+
+      case id:
+      of "usage": help.usage = val
+      of "description": help.description = val
+      of "header": help.header = val
+      of "footer": help.footer = val
+      of "styles": help.styles = val
+      else: error "unknown help option: " & id
+
+  else: bad(node, "help")
+
+  c.help = help
+
 func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
   result.root = root
@@ -512,9 +577,9 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
       of "version", "V":
         result.version = call[1]
       of "usage", "?":
-        result.usage = call[1]
-      of "description", "...":
-        result.desc = call[1]
+        result.help.usage = call[1]
+      of "...", "help":
+        parseCliHelp(result, call)
       of "flags":
         parseCliFlags(result, call[1])
       of "settings":
@@ -527,8 +592,6 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         parseHiddenFlags(result, call)
       of "run":
         result.run = call[1]
-      of "styles":
-        result.styles = call[1]
       of "required":
         result.required = parseIdentLikeList(call)
       of "preSub":
@@ -537,17 +600,13 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         result.postSub = call[1]
       else:
         error "unknown hwylCli setting: " & name
-  #
-  # for sub in result.subcommands.mitems:
-  #   # sub.inheritFrom(result)
-  #   sub.pre = result.preSub
-    # sub.post = result.postSub
 
   if result.name == "":
     error "missing required option: name"
 
   # TODO: validate "required" flags exist here
   result.addBuiltinFlags()
+
   if root:
     propagate(result)
 
@@ -574,7 +633,7 @@ func subCmdsArray(cfg: CliCfg): NimNode =
   for s in cfg.subcommands:
     let cmd = newLit(s.subName)
     let aliases = newLit(s.alias.mapIt("($1)" % [it]).join(" "))
-    let desc = s.desc or newLit("")
+    let desc = s.help.description or newLit("")
     result.add quote do:
       (`cmd`, `aliases`, `desc`)
 
@@ -588,19 +647,23 @@ func defaultUsage(cfg: CliCfg): NimNode =
   s.add " [[[faint]flags[/]]"
   newLit(s)
 
-func generateCliHelperProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
+func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   let
-    desc = cfg.desc or newLit("")
-    usage  = cfg.usage or defaultUsage(cfg)
+    description = cfg.help.description or newLit""
+    header = cfg.help.header or newLit""
+    footer = cfg.help.footer or newLit""
+    usage  = cfg.help.usage or defaultUsage(cfg)
     helpFlags = cfg.flagsArray()
     subcmds = cfg.subCmdsArray()
-    styles = cfg.styles or (quote do: HwylCliStyles())
-
+    styles = cfg.help.styles or (quote do: HwylCliStyles())
+  <<< usage
   result = quote do:
     proc `printHelpName`() =
       echo bb(render(newHwylCliHelp(
-        desc = `desc`,
+        header = `header`,
+        footer = `footer`,
         usage = `usage`,
+        description = `description`,
         subcmds = `subcmds`,
         flags = `helpFlags`,
         styles = `styles`,
@@ -814,7 +877,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     key = ident"key"
     val = ident"val"
     (longNoVal, shortNoVal) = cfg.getNoVals()
-    printHelperProc = generateCliHelperProc(cfg, printHelpName)
+    printHelpProc = generateCliHelpProc(cfg, printHelpName)
     flagVars = setFlagVars(cfg)
 
   result = newTree(nnkStmtList)
@@ -889,7 +952,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
 
   result.add quote do:
     # block:
-      `printHelperProc`
+      `printHelpProc`
       `flagVars`
       proc `parserProcName`(`cmdLine`: openArray[string] = commandLineParams()): seq[string] =
         `parserBody`
