@@ -21,6 +21,7 @@
 - [x] add support for inheriting a single flag from parent (even from a "group")
 - [x] add support to either (lengthen commands) or provide an alias for a subcommand
 - [x] add command aliases to hwylcli help with switch
+- [ ] don't recreate "global"" variables in var section
 
 
 ## features
