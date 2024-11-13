@@ -14,13 +14,16 @@ type
   HwylFlagHelp* = tuple
     short, long, description: string
   HwylSubCmdHelp* = tuple
-    name, desc: string
+    name, aliases, desc: string
+  HwylCliStyleSetting = enum
+    Aliases
   HwylCliStyles* = object
     header* = "bold cyan"
     flagShort* = "yellow"
     flagLong* = "magenta"
     flagDesc* = ""
     cmd* = "bold"
+    settings*: set[HwylCliStyleSetting] = {Aliases}
   HwylCliHelp* = object
     usage*: string
     desc*: string
@@ -41,8 +44,12 @@ func newHwylCliHelp*(
   styles = HwylCliStyles()
 ): HwylCliHelp =
   result.desc = dedent(desc).strip()
-  result.subcmds =
-    subcmds.mapIt((it.name, it.desc.firstLine))
+  if Aliases in styles.settings:
+    result.subcmds =
+      subcmds.mapIt((it.name & " " & it.aliases, it.aliases, it.desc.firstLine))
+  else:
+    result.subcmds =
+      subcmds.mapIt((it.name, it.aliases, it.desc.firstLine))
   result.usage = dedent(usage).strip()
   result.flags = @flags
   result.styles = styles
@@ -537,9 +544,10 @@ func subCmdsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
   for s in cfg.subcommands:
     let cmd = newLit(s.subName)
+    let aliases = newLit(s.alias.mapIt("($1)" % [it]).join(" "))
     let desc = s.desc or newLit("")
     result.add quote do:
-      (`cmd`, `desc`)
+      (`cmd`, `aliases`, `desc`)
 
 proc hwylCliError*(msg: string | BbString) =
   quit $(bb("error ", "red") & bb(msg))

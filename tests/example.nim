@@ -46,6 +46,14 @@ hwylCli:
         ? "a count flag"
         - v
       ^[shared]
+    subcommands:
+      [subsub]
+      ... "another level down subcommand"
+      flags:
+        ^color
+      run:
+        echo fmt"{color=}"
+        
     run:
       echo "hello from `example one` command!"
       echo args
