@@ -394,18 +394,17 @@ func inheritFrom(child: var CliCfg, parent: CliCfg) =
     else:
       child.flags &= pgroups[g]
 
-
-
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   expectKind node[1], nnkStmtList
   for (name, s) in sliceStmts(node[1]):
-    cfg.stopWords.add name
     var subCfg = parseCliBody(
       nnkStmtList.newTree(node[1][s]), cfg.name & " " & name
     )
     subCfg.subName = name
     subCfg.inheritFrom(cfg)
-    cfg.subcommands.add  subCfg
+    cfg.stopWords.add name
+    cfg.stopWords.add subCfg.alias.toSeq()
+    cfg.subcommands.add subCfg
 
 func parseHiddenFlags(cfg: var CliCfg, node: NimNode) =
   template check =
