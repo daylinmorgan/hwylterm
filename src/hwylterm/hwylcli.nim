@@ -111,7 +111,7 @@ func render*(cli: HwylCliHelp): string =
     part.add indent(cli.usage, 2 )
     parts.add part
   if cli.description != "":
-    parts.add cli.description & "\n"
+    parts.add cli.description
   if cli.subcmds.len > 0:
     var part: string
     part.add "[" & cli.styles.header & "]"
