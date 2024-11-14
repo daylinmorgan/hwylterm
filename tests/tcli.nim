@@ -3,7 +3,7 @@ import std/[
 ]
 
 
-import hwylterm, hwylterm/cli
+import hwylterm, hwylterm/hwylcli
 
 suite "cli":
   test "cli":
@@ -13,5 +13,9 @@ suite "cli":
   [yellow]-h[/] [magenta]--help   [/] []show this help[/]
   [yellow]-V[/] [magenta]--version[/] []print version[/]
 """
-    let cli =  newHwylCli("[b]test-program[/] [[args...]",flags = [("h","help","show this help",),("V","version","print version")])
-    check $cli == $bb(expected)
+    let cli =
+      newHwylCliHelp(
+        header = "[b]test-program[/] [[args...]",
+        flags = [("h","help","show this help",),("V","version","print version")]
+      )
+    check $bb(cli) == $bb(expected)

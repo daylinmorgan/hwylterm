@@ -44,6 +44,8 @@ func newHwylCliHelp*(
   flags: openArray[HwylFlagHelp] = @[],
   styles = HwylCliStyles()
 ): HwylCliHelp =
+  result.header = dedent(header).strip()
+  result.footer = dedent(footer).strip()
   result.description = dedent(description).strip()
   if Aliases in styles.settings:
     result.subcmds =
@@ -102,29 +104,28 @@ func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
 func render*(cli: HwylCliHelp): string =
   if cli.header != "":
     result.add cli.header
-    result.add "\n"
   if cli.usage != "":
+    result.add "\n\n"
     result.add "[" & cli.styles.header & "]"
     result.add "usage[/]:\n"
     result.add indent(cli.usage, 2 )
-  result.add "\n"
   if cli.description != "":
-    result.add "\n"
+    result.add "\n\n"
     result.add cli.description
-    result.add "\n"
   if cli.subcmds.len > 0:
-    result.add "\n"
+    result.add "\n\n"
     result.add "[" & cli.styles.header & "]"
     result.add "subcommands[/]:\n"
     for s in cli.subcmds:
       result.add cli.render(s)
   if cli.flags.len > 0:
-    result.add "\n"
+    result.add "\n\n"
     result.add "[" & cli.styles.header & "]"
     result.add "flags[/]:\n"
     for f in cli.flags:
       result.add render(cli,f)
   if cli.footer != "":
+    result.add "\n"
     result.add cli.footer
 
 proc bb*(cli: HwylCliHelp): BbString = 
@@ -655,7 +656,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
     helpFlags = cfg.flagsArray()
     subcmds = cfg.subCmdsArray()
     styles = cfg.help.styles or (quote do: HwylCliStyles())
-  <<< usage
+
   result = quote do:
     proc `printHelpName`() =
       echo bb(render(newHwylCliHelp(
