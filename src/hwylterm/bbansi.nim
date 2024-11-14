@@ -149,6 +149,7 @@ func stripAnsi*(s: string): string =
 type
   BbSpan* = object
     styles*: seq[string]
+    # TODO: use actual slice?
     slice*: array[2, int]
 
   BbString* = object
@@ -160,16 +161,23 @@ func shift(s: BbSpan, i: Natural): BbSpan =
   inc(result.slice[0],i)
   inc(result.slice[1],i)
 
-proc len(span: BbSpan): int =
+proc size(span: BbSpan): int =
   span.slice[1] - span.slice[0]
 
+# TODO: make sure we don't get non-existent spans?
 template endSpan(bbs: var BbString) =
   if bbs.spans.len == 0:
     return
-  if bbs.plain.len >= 1:
-    bbs.spans[^1].slice[1] = bbs.plain.len - 1
-  if bbs.spans[^1].len == 0 and bbs.plain.len == 0:
+
+  if bbs.plain.len == bbs.spans[^1].slice[0]:
     bbs.spans.delete(bbs.spans.len - 1)
+
+  elif bbs.plain.len >= 1:
+    bbs.spans[^1].slice[1] = bbs.plain.len - 1
+  
+  # I think this is covered by the first condition now?
+  # if bbs.spans[^1].size == 0 and bbs.plain.len == 0:
+  #   bbs.spans.delete(bbs.spans.len - 1)
 
 proc newSpan(bbs: var BbString, styles: seq[string] = @[]) =
   bbs.spans.add BbSpan(styles: styles, slice: [bbs.plain.len, 0])
@@ -312,7 +320,7 @@ func alignLeft*(bs: BbString, count: Natural, padding = ' '): Bbstring =
 func slice(bs: BbString, span: BbSpan): string =
   bs.plain[span.slice[0]..span.slice[1]]
 
-proc truncate*(bs: Bbstring, len: Natural): Bbstring =
+func truncate*(bs: Bbstring, len: Natural): Bbstring =
   if bs.len < len: return bs
   for span in bs.spans:
     if span.slice[0] >= len: break
@@ -325,7 +333,7 @@ proc truncate*(bs: Bbstring, len: Natural): Bbstring =
     result.spans.add span
     result.plain.add bs.slice(span)
 
-proc `&`*(x: BbString, y: BbString): Bbstring =
+func `&`*(x: BbString, y: BbString): Bbstring =
   result.plain.add x.plain
   result.spans.add x.spans
   result.plain.add y.plain
@@ -333,7 +341,13 @@ proc `&`*(x: BbString, y: BbString): Bbstring =
   for span in y.spans:
     result.spans.add shift(span, i)
 
-proc bbEscape*(s: string): string {.inline.} = 
+func add*(x: var Bbstring, y :Bbstring) =
+  let i = x.plain.len
+  x.plain.add y.plain
+  for span in y.spans:
+    x.spans.add shift(span, i)
+
+func bbEscape*(s: string): string {.inline.} =
   s.replace("[", "[[").replace("\\", "\\\\")
 
 proc bbEcho*(args: varargs[string, `$`]) {.raises: [IOError]} =

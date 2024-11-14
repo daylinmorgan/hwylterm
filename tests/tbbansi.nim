@@ -43,6 +43,13 @@ suite "basic":
         "[blue]Blue[/] [red]Red[/]".bb
     check "a plain string" & "[blue] a blue string".bb ==
         "a plain string[blue] a blue string".bb
+    var s = bb("[red]red")
+    s.add bb("[blue]blue")
+    check escape($s) == escape($bb("[red]red[/][blue]blue[/]"))
+
+  test "spans":
+    check bb("[red]red[/][blue]blue[/]").spans.len == 2
+    check bb("[red]red[/red][blue]blue[/]").spans.len == 2
 
   test "style insensitive":
     bbCheck "[red]no case sensitivity[/RED]", "\e[38;5;1mno case sensitivity\e[0m"
