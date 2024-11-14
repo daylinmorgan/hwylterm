@@ -33,7 +33,8 @@ hwylCli:
     echo fmt"{yes=}, {color=}"
   subcommands:
     [one]
-    ... """
+    help:
+      description """
     the first subcommand
 
     this command features both an enum flag and a Count flag

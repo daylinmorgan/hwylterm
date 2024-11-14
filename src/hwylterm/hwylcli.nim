@@ -104,22 +104,24 @@ func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
 func render*(cli: HwylCliHelp): string =
   if cli.header != "":
     result.add cli.header
-  if cli.usage != "":
     result.add "\n\n"
+  if cli.usage != "":
     result.add "[" & cli.styles.header & "]"
     result.add "usage[/]:\n"
     result.add indent(cli.usage, 2 )
+    result.add "\n"
   if cli.description != "":
-    result.add "\n\n"
+    result.add "\n"
     result.add cli.description
+    result.add "\n"
   if cli.subcmds.len > 0:
-    result.add "\n\n"
+    result.add "\n"
     result.add "[" & cli.styles.header & "]"
     result.add "subcommands[/]:\n"
     for s in cli.subcmds:
       result.add cli.render(s)
+    result.add "\n"
   if cli.flags.len > 0:
-    result.add "\n\n"
     result.add "[" & cli.styles.header & "]"
     result.add "flags[/]:\n"
     for f in cli.flags:
