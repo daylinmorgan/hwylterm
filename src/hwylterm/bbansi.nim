@@ -369,8 +369,9 @@ when isMainModule:
   hwylCli:
     name "bbansi"
     settings ShowHelp
-    usage "[bold]bbansi[/] [[[green]args...[/]] [[[faint]-h|-V[/]]"
-    description """
+    help:
+      usage "[bold]bbansi[/] [[[green]args...[/]] [[[faint]-h|-V[/]]"
+      description """
     bbansi "[[yellow] yellow text!"
       -> [yellow] yellow text![/]
     bbansi "[[bold red] bold red text[[/] plain text..."

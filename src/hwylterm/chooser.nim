@@ -131,13 +131,14 @@ when isMainModule:
   hwylcli:
     name "hwylchoose"
     settings ShowHelp
-    usage "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]"
-    description """
-    hwylchoose a b c d
-    hwylchoose a,b,c,d -s ,
-    hwylchoose a,b,c,d --seperator ","
-    hwylchoose --demo
-    """
+    help:
+      usage "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]"
+      description """
+      hwylchoose a b c d
+      hwylchoose a,b,c,d -s ,
+      hwylchoose a,b,c,d --seperator ","
+      hwylchoose --demo
+      """
     hidden demo
     flags:
       demo "show demo"
