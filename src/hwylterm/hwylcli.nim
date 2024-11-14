@@ -88,7 +88,6 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
     result.add "[" & cli.styles.flagDesc & "]"
     result.add f.description
     result.add "[/" & cli.styles.flagDesc & "]"
-  result.add "\n"
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
@@ -97,38 +96,39 @@ func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "[/]"
   result.add " "
   result.add subcmd.desc.alignLeft(cli.subcmdDescLen)
-  result.add "\n"
 
 
 # TODO: split this into separate procs to make overriding more fluid
 func render*(cli: HwylCliHelp): string =
+  var parts: seq[string]
+
   if cli.header != "":
-    result.add cli.header
-    result.add "\n\n"
+    parts.add cli.header
   if cli.usage != "":
-    result.add "[" & cli.styles.header & "]"
-    result.add "usage[/]:\n"
-    result.add indent(cli.usage, 2 )
-    result.add "\n"
+    var part: string
+    part.add "[" & cli.styles.header & "]"
+    part.add "usage[/]:\n"
+    part.add indent(cli.usage, 2 )
+    parts.add part
   if cli.description != "":
-    result.add "\n"
-    result.add cli.description
-    result.add "\n"
+    parts.add cli.description & "\n"
   if cli.subcmds.len > 0:
-    result.add "\n"
-    result.add "[" & cli.styles.header & "]"
-    result.add "subcommands[/]:\n"
-    for s in cli.subcmds:
-      result.add cli.render(s)
-    result.add "\n"
+    var part: string
+    part.add "[" & cli.styles.header & "]"
+    part.add "subcommands[/]:\n"
+    part.add cli.subcmds.mapIt(render(cli,it)).join("\n")
+    parts.add part
   if cli.flags.len > 0:
-    result.add "[" & cli.styles.header & "]"
-    result.add "flags[/]:\n"
-    for f in cli.flags:
-      result.add render(cli,f)
+    var part: string
+    part.add "[" & cli.styles.header & "]"
+    part.add "flags[/]:\n"
+    part.add cli.flags.mapIt(render(cli, it)).join("\n")
+    parts.add part
   if cli.footer != "":
-    result.add "\n"
-    result.add cli.footer
+    parts.add cli.footer
+
+  parts.join("\n\n")
+
 
 proc bb*(cli: HwylCliHelp): BbString = 
   result = bb(render(cli))
