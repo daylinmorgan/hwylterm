@@ -562,42 +562,41 @@ func parseCliHelp(c: var CliCfg, node: NimNode) =
 func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
   result.root = root
-  # TDOO: change call to n or node?
-  for call in body:
-    if call.kind  notin [nnkCall, nnkCommand, nnkPrefix]:
-      error "unexpected node kind: " & $call.kind
-    let name = call[0].strVal
+  for node in body:
+    if node.kind  notin [nnkCall, nnkCommand, nnkPrefix]:
+      error "unexpected node kind: " & $node.kind
+    let name = node[0].strVal
     case name:
       of "name":
-        expectKind call[1], nnkStrLit
-        result.name = call[1].strVal
+        expectKind node[1], nnkStrLit
+        result.name = node[1].strVal
       of "alias":
         if root: error "alias not supported for root command"
-        pasrseCliAlias(result, call)
+        pasrseCliAlias(result, node)
       of "version", "V":
-        result.version = call[1]
+        result.version = node[1]
       of "usage", "?":
-        result.help.usage = call[1]
+        result.help.usage = node[1]
       of "...", "help":
-        parseCliHelp(result, call)
+        parseCliHelp(result, node)
       of "flags":
-        parseCliFlags(result, call[1])
+        parseCliFlags(result, node[1])
       of "settings":
-        parseCliSettings(result, call)
+        parseCliSettings(result, node)
       of "stopWords":
-        result.stopWords = parseIdentLikeList(call)
+        result.stopWords = parseIdentLikeList(node)
       of "subcommands":
-        parseCliSubcommands(result, call)
+        parseCliSubcommands(result, node)
       of "hidden":
-        parseHiddenFlags(result, call)
+        parseHiddenFlags(result, node)
       of "run":
-        result.run = call[1]
+        result.run = node[1]
       of "required":
-        result.required = parseIdentLikeList(call)
+        result.required = parseIdentLikeList(node)
       of "preSub":
-        result.preSub = call[1]
+        result.preSub = node[1]
       of "postSub":
-        result.postSub = call[1]
+        result.postSub = node[1]
       else:
         error "unknown hwylCli setting: " & name
 
