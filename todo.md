@@ -25,6 +25,7 @@
 - [ ] add flag overlap check before case statement generation (after parsing?)
 - [ ] add key-value flag support -> `--setting:a:off`
 - [ ] add defaultFlagType CliCfg setting
+- [ ] add node to flagDef to override builtin `parse(p, varName)`
 
 ## features
 
