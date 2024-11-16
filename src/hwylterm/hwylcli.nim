@@ -671,26 +671,26 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
         styles = `styles`,
       )))
 
-proc preParseCheck(key: string, val: string) =
-  if val == "":
+proc checkVal(p: OptParser) =
+  if p.val == "":
     hwylCliError(
-      "expected value for flag: [b]" & key
+      "expected value for flag: [b]" & p.key
     )
 
-proc parse*(p: OptParser, key: string, val: string, target: var bool) =
+proc parse*(p: OptParser, target: var bool) =
   target = true
 
-proc parse*(p: OptParser, key: string, val: string, target: var string) =
-  preParseCheck(key, val)
-  target = val
+proc parse*(p: OptParser, target: var string) =
+  checkVal p
+  target = p.val
 
-proc parse*(p: OptParser, key: string, val: string, target: var int) =
-  preParseCheck(key, val)
+proc parse*(p: OptParser, target: var int) =
+  checkVal p
   try:
-    target = parseInt(val)
+    target = parseInt(p.val)
   except:
     hwylCliError(
-      "failed to parse value for [b]" & key & "[/] as integer: [b]" & val
+      "failed to parse value for [b]" & p.key & "[/] as integer: [b]" & p.val
     )
 
 macro enumNames(a: typed): untyped =
@@ -700,36 +700,36 @@ macro enumNames(a: typed): untyped =
     assert ai.kind == nnkSym
     result.add newLit ai.strVal
 
-proc parse*[E: enum](p: OptParser, key: string, val: string, target: var E) =
-  preParseCheck(key, val)
+proc parse*[E: enum](p: OptParser, target: var E) =
+  checkVal p
   try:
-    target = parseEnum[E](val)
+    target = parseEnum[E](p.val)
   except:
     let choices = enumNames(E).join(",")
     hwylCliError(
-      "failed to parse value for [b]" & key & "[/] as enum: [b]" & val & "[/] expected one of: " & choices
+      "failed to parse value for [b]" & p.key & "[/] as enum: [b]" & p.val & "[/] expected one of: " & choices
     )
 
-proc parse*(p: OptParser, key: string, val: string, target: var float) =
-  preParseCheck(key, val)
+proc parse*(p: OptParser, target: var float) =
+  checkVal p
   try:
-    target = parseFloat(val)
+    target = parseFloat(p.val)
   except:
     hwylCliError(
-      "failed to parse value for [b]" & key & "[/] as float: [b]" & val
+      "failed to parse value for [b]" & p.key & "[/] as float: [b]" & p.val
     )
 
-proc parse*[T](p: OptParser, key: string, val: string, target: var seq[T]) =
-  preParseCheck(key, val)
+proc parse*[T](p: OptParser, target: var seq[T]) =
+  checkVal p
   var parsed: T
-  parse(p, key, val, parsed)
+  parse(p, parsed)
   target.add parsed
 
-proc parse*(p: OptParser, key: string, val: string, target: var Count) =
+proc parse*(p: OptParser, target: var Count) =
   # if value set to that otherwise increment
-  if val != "":
+  if p.val != "":
     var num: int
-    parse(p, key, val, num)
+    parse(p, num)
     target.val = num
   else:
     inc target.val
@@ -753,7 +753,7 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
   # add flags
   for f in cfg.flags:
     var branch = nnkOfBranch.newTree()
-    if f.long != "": 
+    if f.long != "":
       branch.add newLit(
         if NoNormalize notin cfg.settings: optionNormalize(f.long)
         else: f.long
@@ -763,7 +763,7 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
     let name = newLit(f.name)
     branch.add quote do:
       flagSet.incl `name`
-      parse(p, key, val, `varName`)
+      parse(p, `varName`)
 
     caseStmt.add branch
 
@@ -862,8 +862,6 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
   )
 
   result.add subCommandCase
-
-
 
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
