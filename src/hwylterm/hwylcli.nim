@@ -159,6 +159,7 @@ type
     ident*: NimNode
     default*: NimNode
     typeNode*: NimNode
+    node*: NimNode
     short*: char
     long*: string
     help*: NimNode
@@ -256,12 +257,14 @@ func parseFlagParams(f: var CliFlag, node: NimNode) =
         f.ident = getFlagParamNode(n).strVal.ident
       of "T":
         f.typeNode = n[1]
+      of "node":
+        f.node = n[1]
       else:
         error "unexpected setting: " & n[0].strVal
     else:
       bad(n, "flag params")
 
-func startFlag(f: var CliFlag, n: NimNode) =
+func newFlag(f: var CliFlag, n: NimNode) =
   f.name =
     case n[0].kind
     of nnkIdent, nnkStrLit: n[0].strVal
@@ -280,7 +283,7 @@ func parseCliFlag(n: NimNode): CliFlag =
   if n.kind notin [nnkCommand, nnkCall]:
     bad(n, "flags")
 
-  startFlag(result, n)
+  newFlag(result, n)
   # option "some help desc"
   if n.kind  == nnkCommand:
     result.help = n[1]
@@ -761,9 +764,11 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
     if f.short != '\x00': branch.add(newLit($f.short))
     let varName = f.ident
     let name = newLit(f.name)
-    branch.add quote do:
-      flagSet.incl `name`
-      parse(p, `varName`)
+    branch.add nnkStmtList.newTree(
+      nnkCall.newTree(ident("incl"),ident("flagSet"),name),
+      if f.node == nil: nnkCall.newTree(ident"parse", ident"p", varName)
+      else: f.node
+    )
 
     caseStmt.add branch
 
