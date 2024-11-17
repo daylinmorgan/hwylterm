@@ -6,7 +6,6 @@ type
   Color = enum
     red, blue, green
 
-
 hwylCli:
   name "example"
   V "0.1.0"
@@ -72,14 +71,14 @@ hwylCli:
     """
     flags:
       ^something
-      auto:
-        - a
-        ? "some help"
+      thing:
+        T KV[string, Color]
+        ? "some key value string"
       b:
         T seq[float]
         ? "multiple floats"
       h "this will override the builtin 'h' for help"
     run:
       echo "hello from `example b` command"
-      echo fmt"{auto=}, {b=}"
+      echo fmt"{thing=}, {b=}"
 

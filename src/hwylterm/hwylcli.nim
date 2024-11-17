@@ -138,6 +138,10 @@ proc bb*(cli: HwylCliHelp): BbString =
 type
   Count* = object ## Count type for an incrementing flag
     val*: int
+  KV*[X,Y] = object ## basic key value type
+    key*: X
+    val*: Y
+  KVString* = KV[string, string]
 
 type
   CliSetting* = enum
@@ -751,6 +755,29 @@ proc parse*(p: OptParser, target: var Count) =
     target.val = num
   else:
     inc target.val
+
+proc extractKey(p: var OptParser): string =
+  var i: int
+  for c in p.val:
+    if c notin {'=',':'}: inc i
+    else: break
+  if i == p.val.len:
+    hwylCliError(
+      "failed to parse key val flag" &
+      "\nkey: " & p.key.bb("bold") &
+      "\nval: " & p.val.bb("bold") &
+      "\ndid you include a separator (= or :)?"
+    )
+  else:
+    result = p.val[0..<i]
+    p.key = p.key & ":" & result
+    p.val = p.val[(i+1) .. ^1]
+
+proc parse*[T](p: var OptParser, target: var KV[string, T]) =
+  checkVal p
+  let key = extractKey(p)
+  target.key = key
+  parse(p, target.val)
 
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
   var caseStmt = nnkCaseStmt.newTree()
