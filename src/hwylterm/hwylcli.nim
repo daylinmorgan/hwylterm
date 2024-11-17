@@ -174,6 +174,8 @@ type
   CliHelp = object
     header*, footer*, description*, usage*, styles*: NimNode
 
+  CliArg = object
+
   CliCfg = object
     name*: string
     alias*: HashSet[string] # only supported in subcommands
@@ -187,6 +189,7 @@ type
     subcommands: seq[CliCfg]
     preSub*, postSub*, pre*, post*, run*: NimNode
     hidden*: seq[string]
+    args*: seq[CliArg]
     flags*: seq[CliFlag]
     builtinFlags*: seq[BuiltinFlag]
     flagDefs*: seq[CliFlag]
@@ -880,6 +883,25 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
 
   result.add subCommandCase
 
+func parseArgs(p: OptParser, target: var string) =
+  target = p.key
+
+func parseArgs[T](p: OptParser, target: var seq[T]) =
+  var val: T
+  parseArgs(p, val)
+  target.add val
+
+func argOfBranch(cfg: CliCfg): NimNode =
+  result = nnkOfBranch.newTree(ident"cmdArgument")
+  if cfg.args.len == 0 and cfg.subcommands.len == 0:
+    result.add quote do:
+      hwylCliError("unexpected positional argument: [b]" & p.key)
+  else:
+    result.add quote do:
+      inc nArgs
+      parseArgs(p, result)
+
+
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
     version = cfg.version or newLit("")
@@ -890,9 +912,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     optParser = ident("p")
     cmdLine = ident"cmdLine"
     flagSet = ident"flagSet"
-    kind = ident"kind"
-    key = ident"key"
-    val = ident"val"
+    nArgs = ident"nargs"
     (longNoVal, shortNoVal) = cfg.getNoVals()
     printHelpProc = generateCliHelpProc(cfg, printHelpName)
     flagVars = setFlagVars(cfg)
@@ -908,9 +928,9 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
 
   stopWords = nnkPrefix.newTree(ident"@", stopWords)
 
-  # should this a CritBitTree?
   parserBody.add quote do:
-    var `flagSet` {.used.}: HashSet[string]
+    var `flagSet`: HashSet[string]
+    var `nArgs`: int
 
   parserBody.add(
     quote do:
@@ -922,24 +942,23 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         opChars = {','}
       )
   )
-  # TODO: first key needs to be normalized
+
+  # TODO: first key needs to be normalized?
+  # TODO: don't use getopt? use p.next() instead?
   parserBody.add nnkForStmt.newTree(
-    kind, key, val,
-    nnkCall.newTree(nnkDotExpr.newTree(optParser,ident("getopt"))),
+    ident"kind", ident"key", ident"val",
+    # nnkCall.newTree(nnkDotExpr.newTree(optParser,ident("getopt"))),
+    nnkCall.newTree(ident"getopt", optParser),
     nnkStmtList.newTree(
       # # for debugging..
       # quote do:
       #   echo `kind`,"|",`key`,"|",`val`
       # ,
       nnkCaseStmt.newTree(
-        kind,
+        ident"kind",
         nnkOfBranch.newTree(ident("cmdError"), quote do: hwylCliError(p.message)),
         nnkOfBranch.newTree(ident("cmdEnd"), quote do: assert false),
-        # TODO: add nArgs to change how cmdArgument is handled ...
-        nnkOfBranch.newTree(ident("cmdArgument"),
-          quote do:
-            result.add `key`
-        ),
+        argOfBranch(cfg),
         nnkOfBranch.newTree(
           ident("cmdShortOption"), ident("cmdLongOption"),
           shortLongCaseStmt(cfg, printHelpName, version)
@@ -985,6 +1004,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   else:
     result.add quote do:
       `runProcName`(`args`[1..^1])
+
 
 macro hwylCli*(body: untyped) =
   ## generate a CLI styled by `hwylterm` and parsed by `parseopt3`
