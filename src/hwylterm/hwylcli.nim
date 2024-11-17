@@ -176,19 +176,20 @@ type
 
   CliCfg = object
     name*: string
-    alias*: HashSet[string]
+    alias*: HashSet[string] # only supported in subcommands
+    version*: NimNode
     stopWords*: seq[string]
     help: CliHelp
-    hidden*: seq[string]
-    subcommands: seq[CliCfg]
+    defaultFlagType: NimNode
+    required*: seq[string]
     settings*: set[CliSetting]
+    subName*: string # used for help generator
+    subcommands: seq[CliCfg]
     preSub*, postSub*, pre*, post*, run*: NimNode
-    subName*: string # used for help the generator
-    version*: NimNode
+    hidden*: seq[string]
     flags*: seq[CliFlag]
     builtinFlags*: seq[BuiltinFlag]
     flagDefs*: seq[CliFlag]
-    required*: seq[string]
     inherit*: Inherit
     root*: bool
 
@@ -288,6 +289,7 @@ func parseCliFlag(n: NimNode): CliFlag =
   if n.kind  == nnkCommand:
     result.help = n[1]
   # option:
+  #   T string
   #   help "some help description"
   else:
     parseFlagParams(result, n[1])
@@ -297,7 +299,14 @@ func parseCliFlag(n: NimNode): CliFlag =
   if result.typeNode == nil:
     result.typeNode = ident"bool"
 
-# TODO: change how this works?
+func postParse(cfg: var CliCfg) =
+  let defaultTypeNode = cfg.defaultFlagType or ident"bool"
+  for f in cfg.flagDefs.mitems:
+    if f.typeNode == nil:
+      f.typeNode = defaultTypeNode
+    if f.group in ["", "global"]:
+      cfg.flags.add f
+
 func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
   expectKind node, nnkStmtList
@@ -326,10 +335,8 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
       of nnkIdent, nnkStrLit:
         cfg.inherit.flags.add n[1].strval
       else: bad(n, "flag")
-
     else: bad(n, "flag")
 
-  cfg.flags = cfg.flagDefs.filterIt(it.group in ["", "global"])
 
 func parseCliSetting(s: string): CliSetting =
   try: parseEnum[CliSetting](s)
@@ -507,8 +514,6 @@ func propagate(c: var CliCfg) =
     child.inheritFrom(c)
     propagate(child)
 
-
-
 func parseCliHelp(c: var CliCfg, node: NimNode) =
   ## some possible DSL inputs:
   ##
@@ -603,13 +608,16 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         result.preSub = node[1]
       of "postSub":
         result.postSub = node[1]
+      of "defaultFlagType":
+        result.defaultFlagType = node[1]
       else:
         error "unknown hwylCli setting: " & name
 
   if result.name == "":
     error "missing required option: name"
 
-  # TODO: validate "required" flags exist here
+  postParse result
+  # TODO: validate "required" flags exist here?
   result.addBuiltinFlags()
 
   if root:
@@ -664,15 +672,19 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 
   result = quote do:
     proc `printHelpName`() =
-      echo bb(render(newHwylCliHelp(
-        header = `header`,
-        footer = `footer`,
-        usage = `usage`,
-        description = `description`,
-        subcmds = `subcmds`,
-        flags = `helpFlags`,
-        styles = `styles`,
-      )))
+      echo bb(
+        render(
+          newHwylCliHelp(
+            header = `header`,
+            footer = `footer`,
+            usage = `usage`,
+            description = `description`,
+            subcmds = `subcmds`,
+            flags = `helpFlags`,
+            styles = `styles`,
+          )
+        )
+      )
 
 proc checkVal(p: OptParser) =
   if p.val == "":

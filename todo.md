@@ -24,7 +24,7 @@
 - [x] don't recreate "global"" variables in var section
 - [ ] add flag overlap check before case statement generation (after parsing?)
 - [ ] add key-value flag support -> `--setting:a:off`
-- [ ] add defaultFlagType CliCfg setting
+- [x] add defaultFlagType CliCfg setting
 - [x] add node to flagDef to override builtin `parse(p, varName)`
 
 ## features
