@@ -78,7 +78,10 @@ hwylCli:
         T seq[float]
         ? "multiple floats"
       h "this will override the builtin 'h' for help"
+      def:
+        ? "a flag with a string default"
+        * "the value"
     run:
       echo "hello from `example b` command"
-      echo fmt"{thing=}, {b=}"
+      echo fmt"{thing=}, {b=}, {h=}, {def=}"
 

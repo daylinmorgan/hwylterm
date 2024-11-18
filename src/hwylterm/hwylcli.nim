@@ -856,8 +856,8 @@ func setFlagVars(cfg: CliCfg): NimNode =
     else: cfg.flags.filterIt(it.group != "global")
 
   result.add flags.mapIt(
-          nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
-        )
+    nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
+  )
 
 func literalFlags(f: CliFlag): NimNode =
   var flags: seq[string]
@@ -932,13 +932,13 @@ func parseArgs[T](p: OptParser, target: var seq[T]) =
 
 func argOfBranch(cfg: CliCfg): NimNode =
   result = nnkOfBranch.newTree(ident"cmdArgument")
-  if cfg.args.len == 0 and cfg.subcommands.len == 0:
-    result.add quote do:
-      hwylCliError("unexpected positional argument: [b]" & p.key)
-  else:
-    result.add quote do:
-      inc nArgs
-      parseArgs(p, result)
+  # if cfg.args.len == 0 and cfg.subcommands.len == 0:
+  #   result.add quote do:
+  #     hwylCliError("unexpected positional argument: [b]" & p.key)
+  # else:
+  result.add quote do:
+    inc nArgs
+    parseArgs(p, result)
 
 
 func hwylCliImpl(cfg: CliCfg): NimNode =
