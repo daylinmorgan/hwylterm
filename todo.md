@@ -22,10 +22,13 @@
 - [x] add support to either (lengthen commands) or provide an alias for a subcommand
 - [x] add command aliases to hwylcli help with switch
 - [x] don't recreate "global"" variables in var section
-- [ ] add flag overlap check before case statement generation (after parsing?)
-- [ ] add key-value flag support -> `--setting:a:off`
+- [ ] add flag overlap check before case statement generation (use `postParse` proc)
+- [x] add key-value flag support -> `--setting:a:off`
 - [x] add defaultFlagType CliCfg setting
 - [x] add node to flagDef to override builtin `parse(p, varName)`
+- [ ] consider default (or opt in) "help subcmd"
+  > app help (show all help?)
+  > app help <subcmd> same as app <subcmd> --help
 
 ## features
 
