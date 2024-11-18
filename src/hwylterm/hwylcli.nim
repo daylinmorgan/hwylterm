@@ -741,11 +741,23 @@ proc parse*(p: OptParser, target: var float) =
       "failed to parse value for [b]" & p.key & "[/] as float: [b]" & p.val
     )
 
-proc parse*[T](p: OptParser, target: var seq[T]) =
+proc parse*[T](p: var OptParser, target: var seq[T]) =
   checkVal p
-  var parsed: T
-  parse(p, parsed)
-  target.add parsed
+  case p.sep
+  of ",=":
+    let baseVal = p.val
+    for v in baseVal.split(","):
+      p.val = v.strip()
+      if p.val == "": continue
+      var parsed: T
+      parse(p, parsed)
+      target.add parsed
+  of "=", "":
+   var parsed: T
+   parse(p, parsed)
+   target.add parsed
+  else: assert false
+
 
 proc parse*(p: OptParser, target: var Count) =
   # if value set to that otherwise increment
