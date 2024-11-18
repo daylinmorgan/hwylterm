@@ -70,6 +70,16 @@ hwylCli:
     a longer mulitline description that will be visible in the subcommand help
     and it will automatically be "bb"'ed [bold]this is bold text[/]
     """
+    # args first, second
+    # or
+    args:
+      # default type is string
+      # only one 'arg' can be the seq[string]
+      # order matters here
+      # by default string
+      inputs:
+        T int
+      second seq[string]
     flags:
       ^something
       thing:

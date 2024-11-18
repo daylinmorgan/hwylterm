@@ -3,6 +3,7 @@
 ]##
 
 import std/[
+  algorithm,
   macros, os, sequtils,
   sets, strutils, tables,
   sugar
@@ -149,7 +150,9 @@ type
     GenerateOnly, ## Don't attach root `runProc()` node
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
-    NoNormalize   ## Don't normalize flags and commands
+    NoNormalize,  ## Don't normalize flags and commands
+    NoPositional  ## Raise error if any remaing positional arguments
+    ExactArgs,    ## Raise error if missing positional argument
 
   BuiltinFlag = object
     name*: string
@@ -179,6 +182,9 @@ type
     header*, footer*, description*, usage*, styles*: NimNode
 
   CliArg = object
+    name: string
+    ident: NimNode
+    typeNode: NimNode
 
   CliCfg = object
     name*: string
@@ -200,6 +206,11 @@ type
     inherit*: Inherit
     root*: bool
 
+
+func err(c: CliCfg, msg: string) =
+  ## quit with error while generating cli
+  error "\nfailed to generate '" & c.name & "' hwylcli: \n" & msg
+
 template `<<<`(s: string) {.used.} =
   let pos = instantiationInfo()
   debugEcho "$1:$2" % [pos.filename, $pos.line]
@@ -210,7 +221,6 @@ template `<<<`(s: string) {.used.} =
 template `<<<`(n: NimNode) {.used.} =
   ## for debugging macros
   <<< treeRepr n
-
 
 func `<<<`(f: CliFlag) {.used.}=
   var s: string
@@ -246,6 +256,7 @@ func getFlagParamNode(node: NimNode): NimNode =
     result = node[1]
   else: bad(node, "flag param")
 
+# TODO: also accept the form `flag: "help"`
 func parseFlagParams(f: var CliFlag, node: NimNode) =
   expectKind node, nnkStmtList
   for n in node:
@@ -307,12 +318,23 @@ func parseCliFlag(n: NimNode): CliFlag =
     result.typeNode = ident"bool"
 
 func postParse(cfg: var CliCfg) =
+  if cfg.name == "":
+    error "missing required option: name"
+
+  if cfg.args.len != 0 and cfg.subcommands.len != 0:
+    error "args and subcommands are mutually exclusive"
+
   let defaultTypeNode = cfg.defaultFlagType or ident"bool"
   for f in cfg.flagDefs.mitems:
     if f.typeNode == nil:
       f.typeNode = defaultTypeNode
     if f.group in ["", "global"]:
       cfg.flags.add f
+
+  if cfg.args.len > 0:
+    let count = cfg.args.filterIt(it.typeNode.kind == nnkBracketExpr).len
+    if count > 1:
+      cfg.err "more than one positional argument is variadic"
 
 func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
@@ -514,11 +536,7 @@ func pasrseCliAlias(cfg: var CliCfg, node: NimNode) =
       cfg.alias.incl s
     else: bad(n, "alias")
 
-func err(c: CliCfg, msg: string) =
-  ## quit with error while generating cli
-  error "failed to generate " & c.name & " hwylcli: \n" & msg
-
-func check(c: CliCfg) =
+func postPropagateCheck(c: CliCfg) =
   ## verify the cli is valid
   var
     short: Table[char, CliFlag]
@@ -553,7 +571,7 @@ func propagate(c: var CliCfg) =
       child.post = c.postSub
     child.inheritFrom(c)
     propagate child
-    check child
+    postPropagateCheck child
 
 
 func parseCliHelp(c: var CliCfg, node: NimNode) =
@@ -588,7 +606,6 @@ func parseCliHelp(c: var CliCfg, node: NimNode) =
   of nnkCall:
     if node[1].kind != nnkStmtList:
       error "expected list of arguments for help"
-
     for n in node[1]:
       expectLen n, 2
       let id = n[0].strVal
@@ -599,7 +616,6 @@ func parseCliHelp(c: var CliCfg, node: NimNode) =
       of nnKCall:
         val = n[1][0]
       else: bad(n, id)
-
       case id:
       of "usage": help.usage = val
       of "description": help.description = val
@@ -607,10 +623,45 @@ func parseCliHelp(c: var CliCfg, node: NimNode) =
       of "footer": help.footer = val
       of "styles": help.styles = val
       else: error "unknown help option: " & id
-
   else: bad(node, "help")
-
   c.help = help
+
+func badNode(c: CliCfg, node: NimNode, msg: string) =
+  c.err "unexpected node kind: " & $node.kind & "\n" & msg
+
+func parseCliArg(c: CliCfg, node: NimNode): CliArg =
+  expectLen node, 2
+  result.name = node[0].strVal
+  case node[1].kind
+  of nnkStmtList:
+    for n in node[1]:
+      let id = n[0].strVal
+      var val: NimNode
+      case n.kind:
+      of nnkCommand:
+        val = n[1]
+      of nnkCall:
+        # input seq[string]
+        if n[1].len == 2:
+          result.typeNode = n[1][1]
+        val = n[1][0]
+      else: bad(n, id)
+      case id:
+      of "T": result.typeNode = val
+      of "ident": result.ident = val
+      else: c.err("unknown cli param: " & id & "provided for arg: " & result.name)
+  of nnkIdent, nnkBracketExpr:
+    result.typeNode = node[1]
+  else:
+    c.badNode(node[1], "parsing cli arg: " & result.name)
+  if result.ident == nil:
+    result.ident = ident(result.name)
+
+func parseCliArgs(c: var CliCfg, node: NimNode) =
+  if node.kind != nnkStmtList:
+    bad(node, "expected node kind nnkStmtList")
+  for n in node:
+    c.args.add parseCliArg(c, n)
 
 func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   result.name = name
@@ -652,13 +703,13 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         result.postSub = node[1]
       of "defaultFlagType":
         result.defaultFlagType = node[1]
+      of "args":
+        parseCliArgs result, node[1]
       else:
         error "unknown hwylCli setting: " & name
 
-  if result.name == "":
-    error "missing required option: name"
-
   postParse result
+
   # TODO: validate "required" flags exist here?
   result.addBuiltinFlags()
 
@@ -700,6 +751,7 @@ proc hwylCliError*(msg: string) =
   quit $(bb("error ", "red") & bb(msg))
 
 func defaultUsage(cfg: CliCfg): NimNode =
+  # TODO: attempt to handle pos args
   var s = "[b]" & cfg.name & "[/]"
   if cfg.subcommands.len > 0:
     s.add " [bold italic]subcmd[/]"
@@ -887,8 +939,8 @@ func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
     )
   result = (nnkPrefix.newTree(ident"@",long), short)
 
-func setFlagVars(cfg: CliCfg): NimNode =
-  ## generate all variables not covered in global module
+func setVars(cfg: CliCfg): NimNode =
+  ## generate all positinal variables and flags not covered in global module
   result = nnkVarSection.newTree()
   let flags =
     if cfg.root: cfg.flags
@@ -897,6 +949,10 @@ func setFlagVars(cfg: CliCfg): NimNode =
   result.add flags.mapIt(
     nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
   )
+  if cfg.args.len > 0:
+    result.add cfg.args.mapIt(
+      nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
+    )
 
 func literalFlags(f: CliFlag): NimNode =
   var flags: seq[string]
@@ -904,7 +960,116 @@ func literalFlags(f: CliFlag): NimNode =
   if f.long != "": flags.add "[b]" & "--" & f.long & "[/]"
   result = newLit(flags.join("|"))
 
-func addPostParseCheck(cfg: CliCfg, body: NimNode) =
+type
+  MultiArgKind = enum
+    NoMulti, ## No positionals use seq[[T]]
+    First, ## First positional uses seq[[T]]
+    Last, ## Last positional uses seq[[T]]
+
+func getMultiArgKind(cfg: CliCfg): MultiArgKind =
+  if cfg.args.len == 1:
+    return First
+  if cfg.args[0].typeNode.kind == nnkBracketExpr:
+    return First
+  if cfg.args[^1].typeNode.kind == nnkBracketExpr:
+    return Last
+
+func parseArgs(p: OptParser, target: var string) =
+  target = p.key
+
+func parseArgs[T](p: OptParser, target: var seq[T]) =
+  var val: T
+  parseArgs(p, val)
+  target.add val
+
+proc parseArgs*(arg: string, target: var float) =
+  try: target = parseFloat(arg)
+  except: hwylCliError("failed to parse as float: [b]" & arg)
+
+func parseArgs*(arg: string, target: var string) =
+  target = arg
+
+proc parseArgs*(arg: string, target: var int) =
+  try: target = parseInt(arg)
+  except: hwylCliError("failed to parse as integer: [b]" & arg)
+
+proc parseArgs*[E: enum](arg: string, target: var E) =
+  try: target = parseEnum[E](arg)
+  except:
+    let choices = enumNames(E).join(",")
+    hwylCliError("failed to parse as enum: [b]" & arg & "[/], expected one of: " & choices)
+
+proc parseArgs*[T](arg: string, target: var seq[T]) =
+  var val: T
+  parseArgs(arg, val)
+  target.add val
+
+proc parseArgs*[T](args: seq[string], target: var seq[T]) =
+  for arg in args:
+    parseArgs(arg, target)
+
+
+# TODO: rework conditionals and control flow here...
+func genPosArgHandler(cfg: CliCfg, body: NimNode) =
+  ## generate code to handle positional arguments
+  let numArgs = cfg.args.len
+  let maKind = cfg.getMultiArgKind()
+  if ExactArgs in cfg.settings:
+    case maKind:
+    of NoMulti:
+      body.add quote do:
+        if result.len != `numArgs`:
+          hwylCliError("missing positional args, got: " & $result.len & ", expected: " & $`numArgs`)
+    else:
+      body.add quote do:
+        if result.len < `numArgs`:
+          hwylCliError("missing positional args, got: " & $result.len & ", expected: " & $`numArgs`)
+  elif maKind == First:
+    body.add quote do:
+      if result.len < `numArgs`:
+        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $`numArgs`)
+  elif maKind == Last:
+    body.add quote do:
+      if result.len < (`numArgs` - 1):
+        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $(`numArgs` - 1))
+
+  case maKind:
+  # BUG: this may create index defects,
+  # if not coupled with ExactArgs or result length checks
+  of Last:
+    for i, namedArg in cfg.args[0..^2].mapIt(it.ident):
+      body.add quote do:
+        parseArgs(result[`i`], `namedArg`)
+
+    let lastArg = cfg.args[^1].ident
+    body.add quote do:
+      parseArgs(result[(`numArgs`-1).. ^1],`lastArg`)
+
+  of First:
+    for i, namedArg in cfg.args[1..^1].reversed().mapIt(it.ident):
+      body.add quote do:
+        parseArgs(result[^(1+`i`)], `namedArg`)
+
+    let firstArg = cfg.args[0].ident
+    body.add quote do:
+      parseArgs(result[0..^(`numArgs`)], `firstArg`)
+
+
+  of NoMulti:
+    for i, namedArg in cfg.args.mapIt(it.name.ident):
+      body.add quote do:
+        parseArgs(result[`i`], `namedArg`)
+
+  # clear out 'args'
+  if ExactArgs in cfg.settings:
+    if maKind == NoMulti:
+      body.add quote do:
+        result = @[(`numArgs`)..^1]
+    else:
+      body.add quote do:
+        result = @[`numArgs`..^1]
+
+func addPostParseHook(cfg: CliCfg, body: NimNode) =
   ## generate block to set defaults and check for required flags
   let flagSet = ident"flagSet"
   var required, default: seq[CliFlag]
@@ -930,6 +1095,10 @@ func addPostParseCheck(cfg: CliCfg, body: NimNode) =
     body.add quote do:
       if `name` notin `flagSet`:
         `target` = `default`
+
+  if cfg.args.len > 0:
+    genPosArgHandler cfg, body
+
 
 func hwylCliImpl(cfg: CliCfg): NimNode
 
@@ -961,16 +1130,11 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
 
   result.add subCommandCase
 
-func parseArgs(p: OptParser, target: var string) =
-  target = p.key
-
-func parseArgs[T](p: OptParser, target: var seq[T]) =
-  var val: T
-  parseArgs(p, val)
-  target.add val
-
-func argOfBranch(cfg: CliCfg): NimNode =
+# TODO: collect all strings into a seq and handle prior to subcomamnd parsing?
+# subcommands are really just a special case of positional args handling
+func positionalArgsOfBranch(cfg: CliCfg): NimNode =
   result = nnkOfBranch.newTree(ident"cmdArgument")
+  # TODO: utilize the NoPositional setting here?
   # if cfg.args.len == 0 and cfg.subcommands.len == 0:
   #   result.add quote do:
   #     hwylCliError("unexpected positional argument: [b]" & p.key)
@@ -978,7 +1142,6 @@ func argOfBranch(cfg: CliCfg): NimNode =
   result.add quote do:
     inc nArgs
     parseArgs(p, result)
-
 
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
@@ -993,9 +1156,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     nArgs = ident"nargs"
     (longNoVal, shortNoVal) = cfg.getNoVals()
     printHelpProc = generateCliHelpProc(cfg, printHelpName)
-    flagVars = setFlagVars(cfg)
-
-  result = newTree(nnkStmtList)
+    flagVars = setVars(cfg)
 
   var
     parserBody = nnkStmtList.newTree()
@@ -1035,8 +1196,8 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
       nnkCaseStmt.newTree(
         ident"kind",
         nnkOfBranch.newTree(ident("cmdError"), quote do: hwylCliError(p.message)),
-        nnkOfBranch.newTree(ident("cmdEnd"), quote do: assert false),
-        argOfBranch(cfg),
+        nnkOfBranch.newTree(ident("cmdEnd"), quote do:  hwylCliError("reached cmdEnd unexpectedly.")),
+        positionalArgsOfBranch(cfg),
         nnkOfBranch.newTree(
           ident("cmdShortOption"), ident("cmdLongOption"),
           shortLongCaseStmt(cfg, printHelpName, version)
@@ -1050,9 +1211,11 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
       if commandLineParams().len == 0:
         `printHelpName`(); quit 1
 
+  addPostParseHook(cfg, parserBody)
+
   let runProcName = ident("run" & name)
   let runBody = nnkStmtList.newTree()
-  addPostParseCheck(cfg, parserBody)
+
   # move to proc?
   if cfg.pre != nil:
     runBody.add cfg.pre
@@ -1061,8 +1224,11 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   if cfg.post != nil:
     runBody.add cfg.post
 
+  # args and subcommands need to be mutually exclusive -> implement using a CommandKind?
   if cfg.subcommands.len > 0:
     runBody.add genSubcommandHandler(cfg)
+
+  result = newTree(nnkStmtList)
 
   result.add quote do:
     # block:
@@ -1082,7 +1248,6 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   else:
     result.add quote do:
       `runProcName`(`args`[1..^1])
-
 
 macro hwylCli*(body: untyped) =
   ## generate a CLI styled by `hwylterm` and parsed by `parseopt3`
