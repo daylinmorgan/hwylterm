@@ -744,7 +744,7 @@ proc parse*(p: OptParser, target: var float) =
 proc parse*[T](p: var OptParser, target: var seq[T]) =
   checkVal p
   case p.sep
-  of ",=":
+  of ",=", ",:":
     let baseVal = p.val
     for v in baseVal.split(","):
       p.val = v.strip()
@@ -752,7 +752,7 @@ proc parse*[T](p: var OptParser, target: var seq[T]) =
       var parsed: T
       parse(p, parsed)
       target.add parsed
-  of "=", "":
+  of "=",":","":
    var parsed: T
    parse(p, parsed)
    target.add parsed
