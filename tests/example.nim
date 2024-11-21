@@ -25,7 +25,7 @@ hwylCli:
       ? "path to config file"
       * @["config.yml"]
   preSub:
-    echo "this is run after subcommand parsing but before its run block"
+    echo "this is run after subcommand parsing but before final run block"
     echo fmt"{yes=}, {color=}"
   run:
     echo "this is always run prior to subcommand parsing"
@@ -53,6 +53,7 @@ hwylCli:
       flags:
         ^config
       run:
+        echo "hello from `example one subsub` command"
         echo fmt"{color=}"
 
     run:

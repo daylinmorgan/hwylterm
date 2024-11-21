@@ -516,8 +516,13 @@ func pasrseCliAlias(cfg: var CliCfg, node: NimNode) =
 
 func propagate(c: var CliCfg) =
   for child in c.subcommands.mitems:
-    child.pre = c.preSub
-    child.post = c.postSub
+    # push the preSub to the lowest subcommand
+    if child.subcommands.len != 0 and child.preSub == nil:
+      child.preSub = c.preSub
+      child.postSub = c.postSub
+    else:
+      child.pre = c.preSub
+      child.post = c.postSub
     child.inheritFrom(c)
     propagate(child)
 
