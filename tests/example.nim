@@ -12,8 +12,8 @@ hwylCli:
   flags:
     [global]
     color:
-        T Color
-        ? "a color (red, green, blue)"
+      T Color
+      ? "a color (red, green, blue)"
     yes:
       T bool
       ? "set flag to yes"

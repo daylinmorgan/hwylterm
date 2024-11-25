@@ -514,6 +514,34 @@ func pasrseCliAlias(cfg: var CliCfg, node: NimNode) =
       cfg.alias.incl s
     else: bad(n, "alias")
 
+func err(c: CliCfg, msg: string) =
+  ## quit with error while generating cli
+  error "failed to generate " & c.name & " hwylcli: \n" & msg
+
+func check(c: CliCfg) =
+  ## verify the cli is valid
+  var
+    short: Table[char, CliFlag]
+    long: Table[string, CliFlag]
+
+  for f in c.flags:
+    if f.short != '\x00':
+      if f.short in short:
+        let conflict = short[f.short]
+        c.err "conflicting short flags for: " & f.name & " and " & conflict.name
+        # hwylCliImplError c, (
+        #   "conflicting short flags for: " & f.name & " and " & conflict.name
+        # )
+
+      else:
+        short[f.short] = f
+
+    if f.long in long:
+      let conflict = long[f.long]
+      c.err "conflicting long flags for: " & f.name & " and " & conflict.name
+    else:
+      long[f.long] = f
+
 func propagate(c: var CliCfg) =
   for child in c.subcommands.mitems:
     # push the preSub to the lowest subcommand
@@ -524,7 +552,9 @@ func propagate(c: var CliCfg) =
       child.pre = c.preSub
       child.post = c.postSub
     child.inheritFrom(c)
-    propagate(child)
+    propagate child
+    check child
+
 
 func parseCliHelp(c: var CliCfg, node: NimNode) =
   ## some possible DSL inputs:
@@ -662,7 +692,11 @@ func subCmdsArray(cfg: CliCfg): NimNode =
     result.add quote do:
       (`cmd`, `aliases`, `desc`)
 
-proc hwylCliError*(msg: string | BbString) =
+# is this one necessary?
+proc hwylCliError*(msg: BbString) =
+  quit $(bb("error ", "red") & msg)
+
+proc hwylCliError*(msg: string) =
   quit $(bb("error ", "red") & bb(msg))
 
 func defaultUsage(cfg: CliCfg): NimNode =
