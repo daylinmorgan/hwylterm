@@ -26,6 +26,7 @@
 - [x] add key-value flag support -> `--setting:a:off`
 - [x] add defaultFlagType CliCfg setting
 - [x] add node to flagDef to override builtin `parse(p, varName)`
+- [ ] generalize parser error handling
 - [ ] consider default (or opt in) "help subcmd"
   > app help (show all help?)
   > app help <subcmd> same as app <subcmd> --help
