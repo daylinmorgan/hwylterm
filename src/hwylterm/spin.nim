@@ -25,10 +25,10 @@ type
 
 var spinnyChannel: Channel[SpinnyEvent]
 
-proc newSpinny*(text: string | Bbstring, s: Spinner): Spinny =
+proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
   let style = "bold blue"
   Spinny(
-    text: bb(text),
+    text: text,
     running: true,
     frames: s.frames,
     bbFrames: mapIt(s.frames, bb(bbEscape(it), style)),
@@ -37,6 +37,9 @@ proc newSpinny*(text: string | Bbstring, s: Spinner): Spinny =
     style: "bold blue",
     file: stderr,
   )
+
+proc newSpinny*(text: string, s: Spinner): Spinny =
+  newSpinny(bb(text), s)
 
 proc newSpinny*(text: string | Bbstring, spinType: SpinnerKind): Spinny =
   newSpinny(text, Spinners[spinType])
@@ -110,28 +113,51 @@ proc stop*(spinny: Spinny) =
   spinny.stop(Stop)
 
 template withSpinner*(msg: string = "", body: untyped): untyped =
-  var spinner {.inject.} = newSpinny(msg, Dots)
-  if isatty(spinner.file): # don't spin if it's not a tty
-    start spinner
-    body
-    stop spinner
-  else:
-    body
+  block:
+    var spinner {.inject.} = newSpinny(msg, Dots)
+    if isatty(spinner.file): # don't spin if it's not a tty
+      start spinner
+      body
+      stop spinner
+    else:
+      body
+
+template withSpinner*(msg: BbString = bb"", body: untyped): untyped =
+  block:
+    var spinner {.inject.} = newSpinny(msg, Dots)
+    if isatty(spinner.file): # don't spin if it's not a tty
+      start spinner
+      body
+      stop spinner
+    else:
+      body
+
 
 template withSpinner*(body: untyped): untyped =
   withSpinner("", body)
 
 template with*(kind: SpinnerKind, msg: string, body: untyped): untyped = 
-  var spinner {.inject.} = newSpinny(msg, kind)
-  if isatty(spinner.file): # don't spin if it's not a tty
-    start spinner
-    body
-    stop spinner
-  else:
-    body
+  block:
+    var spinner {.inject.} = newSpinny(msg, kind)
+    if isatty(spinner.file): # don't spin if it's not a tty
+      start spinner
+      body
+      stop spinner
+    else:
+      body
+
+template with*(kind: SpinnerKind, msg: BbString, body: untyped): untyped = 
+  block:
+    var spinner {.inject.} = newSpinny(msg, kind)
+    if isatty(spinner.file): # don't spin if it's not a tty
+      start spinner
+      body
+      stop spinner
+    else:
+      body
+
 
 when isMainModule:
   for kind, _ in Spinners:
     with(kind, $kind):
       sleep 1 * 1000
-
