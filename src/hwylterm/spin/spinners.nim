@@ -49,9 +49,9 @@ const Spinners*: array[SpinnerKind, Spinner] = [
   # Pipe
   Spinner(interval: 100, frames: @[ "┤", "┘", "┴", "└", "├", "┌", "┬", "┐", ]),
   # SimpleDots
-  Spinner(interval: 400, frames: @[ ". ", "..", "...", "  ", ]),
+  Spinner(interval: 400, frames: @[ ". ", ".. ", "...", "  ", ]),
   # SimpleDotsScrolling
-  Spinner(interval: 200, frames: @[ ". ", "..", "...", " ..", "  .", "  ", ]),
+  Spinner(interval: 200, frames: @[ ". ", ".. ", "...", " ..", "  .", "  ", ]),
   # Star
   Spinner(interval: 70, frames: @[ "✶", "✸", "✹", "✺", "✹", "✷", ]),
   # Star2
