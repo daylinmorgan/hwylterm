@@ -6,7 +6,6 @@
 
 ## improvements
 
-
 - [ ] addJoinStyle(); works like join except wraps each argument in a style
 - [ ] add span aware split/splitlines
 - [ ] consider reducing illwill surface to only relevant IO (input) features
@@ -35,6 +34,7 @@
 
 - [x] make a basic choose one from list widget
 - [ ] tables/boxes?
+  current hwylcli help could be replaced by a borderless table in the simplest situation
 - [x] confirmation proc
 - [ ] basic progress bar
 - [ ] support for 256 and truecolors
