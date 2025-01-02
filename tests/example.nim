@@ -1,6 +1,7 @@
 import std/[strformat, strutils]
 import hwylterm, hwylterm/hwylcli
 
+# TODO: break this up into a bunch of integration tests
 
 type
   Color = enum
