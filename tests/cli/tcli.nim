@@ -9,3 +9,5 @@ suite "hwylcli":
     checkRunWithArgs("posLastExact", "a b c d e", """first=a, second=b, third=@["c", "d", "e"]""")
     checkRunWithArgs("posNoMulti", "5 b c", """first=5, second=b, third=c""")
     checkRunWithArgs("posNoMulti", "5 b c d", """error missing positional args, got: 4, expected: 3""", code = 1)
+    checkRunWithArgs("enumFlag","--color red", "")
+    checkRunWithArgs("enumFlag","--color black", "")

@@ -1069,6 +1069,11 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
       body.add quote do:
         result = @[`numArgs`..^1]
 
+  # first and last already absorbed the remaining args
+  elif maKind in [First, Last]:
+    body.add quote do:
+      result = @[] # args are ab
+
 func addPostParseHook(cfg: CliCfg, body: NimNode) =
   ## generate block to set defaults and check for required flags
   let flagSet = ident"flagSet"
