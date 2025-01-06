@@ -1,5 +1,6 @@
 import std/[os, locks, sequtils, terminal]
 import "."/[bbansi, spin/spinners]
+export spinners
 
 type
   Spinny = ref object
