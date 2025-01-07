@@ -1,5 +1,30 @@
 ##[
   # HwylCli
+
+  ## example program:
+
+  ```nim
+  import std/[strutils]
+  import hywlterm/hwylcli
+
+  hwylCli:
+    name "example"
+    flags:
+      count:
+        ? "# of times"
+        - n
+      input:
+        ? "content"
+        - i
+    run:
+      echo (input & " ").repeat(count)
+  ```
+
+  ```
+  $ example -n 2 --input "testing"
+  > testing testing
+  ```
+
 ]##
 
 import std/[
