@@ -161,8 +161,8 @@ func shift(s: BbSpan, i: Natural): BbSpan =
   inc(result.slice[0],i)
   inc(result.slice[1],i)
 
-proc size(span: BbSpan): int =
-  span.slice[1] - span.slice[0]
+# proc size(span: BbSpan): int =
+#   span.slice[1] - span.slice[0]
 
 # TODO: make sure we don't get non-existent spans?
 template endSpan(bbs: var BbString) =
