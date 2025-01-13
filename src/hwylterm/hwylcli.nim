@@ -654,6 +654,10 @@ func parseCliHelp(c: var CliCfg, node: NimNode) =
 func badNode(c: CliCfg, node: NimNode, msg: string) =
   c.err "unexpected node kind: " & $node.kind & "\n" & msg
 
+func isSeq(arg: CliArg): bool =
+  # NOTE: does this need to be more rigorous?
+  arg.typeNode.kind == nnkBracketExpr
+
 func parseCliArg(c: CliCfg, node: NimNode): CliArg =
   expectLen node, 2
   result.name = node[0].strVal
@@ -780,6 +784,14 @@ func defaultUsage(cfg: CliCfg): NimNode =
   var s = "[b]" & cfg.name & "[/]"
   if cfg.subcommands.len > 0:
     s.add " [bold italic]subcmd[/]"
+  if cfg.args.len > 0:
+    for arg in cfg.args:
+      s.add " [bold italic]"
+      s.add arg.name
+      if arg.isSeq:
+        s.add "..."
+
+      s.add"[/]"
   s.add " [[[faint]flags[/]]"
   newLit(s)
 
@@ -991,12 +1003,16 @@ type
     First, ## First positional uses seq[[T]]
     Last, ## Last positional uses seq[[T]]
 
+
 func getMultiArgKind(cfg: CliCfg): MultiArgKind =
   if cfg.args.len == 1:
+    if cfg.args[0].isSeq:
+      return First
+    else:
+      return NoMulti
+  if cfg.args[0].isSeq:
     return First
-  if cfg.args[0].typeNode.kind == nnkBracketExpr:
-    return First
-  if cfg.args[^1].typeNode.kind == nnkBracketExpr:
+  if cfg.args[^1].isSeq:
     return Last
 
 func parseArgs(p: OptParser, target: var string) =
@@ -1085,19 +1101,23 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
-  # clear out 'args'
   if ExactArgs in cfg.settings:
     if maKind == NoMulti:
       body.add quote do:
-        result = @[(`numArgs`)..^1]
-    else:
-      body.add quote do:
-        result = @[`numArgs`..^1]
+        result = result[(`numArgs`)..^1]
+        if result.len > 0:
+          hwylCliError("unexpected positional arguments: " & $result)
+        # # here if result.len > 1 then it should error?
+        # # really if we pass ExactArgs the parse function should return nothing...
 
   # first and last already absorbed the remaining args
-  elif maKind in [First, Last]:
+  # so ExactArgs is a NOOP use a compile Hint?
+
+  if maKind in [First, Last]:
+    if ExactArgs in cfg.settings:
+      hint "Exact args is a No-op when one of the positional args is seq[T]"
     body.add quote do:
-      result = @[] # args are ab
+      result = @[]
 
 func addPostParseHook(cfg: CliCfg, body: NimNode) =
   ## generate block to set defaults and check for required flags
