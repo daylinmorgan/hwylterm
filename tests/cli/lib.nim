@@ -8,11 +8,10 @@ let hwylCliWriteTime =  getFileInfo(hwylCliSrc).lastWriteTime
 if not dirExists(binDir):
   createDir(binDir)
 
-proc runTestCli(module: string, args: string, code: int = 0): string =
+proc runTestCli(module: string, args: string, code: int = 0): (string, int) =
   let cmd = binDir / module & " " & args
-  let (output, exitCode) = execCmdEx(cmd)
-  check code == exitCode
-  result = output.strip()
+  let (output, code) = execCmdEx(cmd)
+  result = (output.strip(), code)
 
 proc preCompileWorkingModule(module: string) =
   let exe = binDir / module
@@ -24,6 +23,16 @@ proc preCompileWorkingModule(module: string) =
       echo "cmd: ", cmd
       quit "failed to precompile test module"
 
-proc checkRunWithArgs*(module: string, args = "", output = "", code = 0) =
+template okWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
-  check output == runTestCli(module, args, code)
+  test module:
+    let (actualOutput, code) = runTestCli(module, args)
+    check code == 0
+    check output == actualOutput
+
+template failWithArgs*(module: string, args = "", output = "") =
+  preCompileWorkingModule(module)
+  test module:
+    let (actualOutput, code) = runTestCli(module, args)
+    check code == 1
+    check output == actualOutput
