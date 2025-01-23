@@ -1217,8 +1217,11 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
 
   stopWords = nnkPrefix.newTree(ident"@", stopWords)
 
+  if cfg.flags.len > 0:
+    parserBody.add quote do:
+      var `flagSet`: HashSet[string]
+
   parserBody.add quote do:
-    var `flagSet`: HashSet[string]
     var `nArgs`: int
 
   parserBody.add(
