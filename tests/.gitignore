@@ -1,4 +1,7 @@
+# Ignore all files without extensions in any directory
 *
-!*.nim
-!*.nims
-!cli/
+!*/
+!*.*
+
+# Don't ignore .gitignore file
+!.gitignore
