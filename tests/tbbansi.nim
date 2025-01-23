@@ -1,6 +1,7 @@
-import std/[strutils,unittest]
+import std/[os, strutils, unittest]
 
 import hwylterm/bbansi
+bbMode = On
 
 template bbCheck(input: string, output: string): untyped =
   check escape($bb(input)) == escape(output)

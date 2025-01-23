@@ -44,7 +44,7 @@ proc checkColorSystem(): ColorSystem =
     of "16color": Standard
     else: Standard
 
-let bbMode* = checkColorSupport()
+var bbMode* = checkColorSupport()
 let colorSystem* = checkColorSystem()
 
 func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
