@@ -341,11 +341,17 @@ func `&`*(x: BbString, y: BbString): Bbstring =
   for span in y.spans:
     result.spans.add shift(span, i)
 
-func add*(x: var Bbstring, y :Bbstring) =
+func add*(x: var Bbstring, y: Bbstring) =
   let i = x.plain.len
   x.plain.add y.plain
   for span in y.spans:
     x.spans.add shift(span, i)
+
+# TODO: squash "like" spans for efficiency?
+func add*(x: var Bbstring, y: string) =
+  let i = x.plain.len
+  x.plain.add y
+  x.spans.add BbSpan(styles: @[], slice:[i, i + y.len - 1 ])
 
 func bbEscape*(s: string): string {.inline.} =
   s.replace("[", "[[").replace("\\", "\\\\")

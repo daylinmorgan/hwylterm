@@ -92,5 +92,13 @@ suite "strutils":
     check (bb"[red]red").align(10) == bb"       [red]red"
     check (bb"[red]red").alignLeft(10) == bb"[red]red[/]       "
 
+  test "add":
+    var x = bb("[red]red")
+    x.add bb("[yellow]yellow")
+    check bb"[red]red[/][yellow]yellow[/]" == x
+
+    var y = bb("[red]red")
+    y.add "yellow"
+    check bb"[red]red[/]yellow" == y
 
 
