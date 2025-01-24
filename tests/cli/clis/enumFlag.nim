@@ -5,8 +5,6 @@ type
   Color = enum
     red, blue, green
 
-# TODO: color should be a required flag by default?
-
 hwylCli:
   name "enumFlag"
   flags:
@@ -14,4 +12,3 @@ hwylCli:
       T Color
   run:
     echo fmt"{color=}"
-    assert args.len == 0

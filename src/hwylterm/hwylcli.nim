@@ -231,6 +231,7 @@ type
     inherit*: Inherit
     root*: bool
 
+func hasSubcommands(c: CliCfg): bool = c.subcommands.len > 0
 
 func err(c: CliCfg, msg: string) =
   ## quit with error while generating cli
@@ -395,6 +396,7 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
 func parseCliSetting(s: string): CliSetting =
   try: parseEnum[CliSetting](s)
   except: error "unknown cli setting: " & s
+
 
 func parseCliSettings(cfg: var CliCfg, node: NimNode) =
   case node.kind
@@ -732,7 +734,7 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         result.postSub = node[1]
       of "defaultFlagType":
         result.defaultFlagType = node[1]
-      of "args":
+      of "positionals":
         parseCliArgs result, node[1]
       else:
         error "unknown hwylCli setting: " & name
@@ -964,6 +966,7 @@ func isBool(f: CliFlag): bool =
 func isCount(f: CliFlag): bool = 
   f.typeNode == ident"Count"
 
+
 func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
   let flagFlags = cfg.flags.filterIt(it.isBool or it.isCount)
   let long =
@@ -975,6 +978,7 @@ func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
       (flagFlags.mapIt(it.short) & cfg.builtinFlags.mapIt(it.short)).filterIt(it != '\x00').mapIt(newLit(it))
     )
   result = (nnkPrefix.newTree(ident"@",long), short)
+
 
 func setVars(cfg: CliCfg): NimNode =
   ## generate all positinal variables and flags not covered in global module
@@ -990,6 +994,8 @@ func setVars(cfg: CliCfg): NimNode =
     result.add cfg.args.mapIt(
       nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
     )
+  if hasSubcommands cfg:
+    result.add nnkIdentDefs.newTree(ident"subcmd", ident"string", newEmptyNode())
 
 func literalFlags(f: CliFlag): NimNode =
   var flags: seq[string]
@@ -1007,7 +1013,7 @@ type
 func getMultiArgKind(cfg: CliCfg): MultiArgKind =
   if cfg.args.len == 1:
     if cfg.args[0].isSeq:
-      return First
+      return Last
     else:
       return NoMulti
   if cfg.args[0].isSeq:
@@ -1055,38 +1061,21 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
   ## generate code to handle positional arguments
   let numArgs = cfg.args.len
   let maKind = cfg.getMultiArgKind()
-  if ExactArgs in cfg.settings:
-    case maKind:
-    of NoMulti:
-      body.add quote do:
-        if result.len != `numArgs`:
-          hwylCliError("missing positional args, got: " & $result.len & ", expected: " & $`numArgs`)
-    else:
-      body.add quote do:
-        if result.len < `numArgs`:
-          hwylCliError("missing positional args, got: " & $result.len & ", expected: " & $`numArgs`)
-  elif maKind == First:
-    body.add quote do:
-      if result.len < `numArgs`:
-        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $`numArgs`)
-  elif maKind == Last:
-    body.add quote do:
-      if result.len < (`numArgs` - 1):
-        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $(`numArgs` - 1))
-
   case maKind:
-  # BUG: this may create index defects,
-  # if not coupled with ExactArgs or result length checks
-  of Last:
-    for i, namedArg in cfg.args[0..^2].mapIt(it.ident):
+  of NoMulti:
+    body.add quote do:
+      if result.len > `numArgs`:
+        hwylCliError("unexepected positional args, got: " & $result.len & ", expected: " & $`numArgs`)
+      elif result.len < `numArgs`:
+        hwylCliError("missing positional args, got: " & $result.len & ", expected: " & $`numArgs`)
+    for i, namedArg in cfg.args.mapIt(it.name.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
-    let lastArg = cfg.args[^1].ident
-    body.add quote do:
-      parseArgs(result[(`numArgs`-1).. ^1],`lastArg`)
-
   of First:
+    body.add quote do:
+      if result.len < `numArgs`:
+        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $`numArgs`)
     for i, namedArg in cfg.args[1..^1].reversed().mapIt(it.ident):
       body.add quote do:
         parseArgs(result[^(1+`i`)], `namedArg`)
@@ -1095,33 +1084,26 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
     body.add quote do:
       parseArgs(result[0..^(`numArgs`)], `firstArg`)
 
-
-  of NoMulti:
-    for i, namedArg in cfg.args.mapIt(it.name.ident):
+  of Last:
+    body.add quote do:
+      if result.len < (`numArgs` - 1):
+        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $(`numArgs` - 1))
+    for i, namedArg in cfg.args[0..^2].mapIt(it.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
-  if ExactArgs in cfg.settings:
-    if maKind == NoMulti:
-      body.add quote do:
-        result = result[(`numArgs`)..^1]
-        if result.len > 0:
-          hwylCliError("unexpected positional arguments: " & $result)
-        # # here if result.len > 1 then it should error?
-        # # really if we pass ExactArgs the parse function should return nothing...
-
-  # first and last already absorbed the remaining args
-  # so ExactArgs is a NOOP use a compile Hint?
-
-  if maKind in [First, Last]:
-    if ExactArgs in cfg.settings:
-      hint "Exact args is a No-op when one of the positional args is seq[T]"
+    let lastArg = cfg.args[^1].ident
     body.add quote do:
-      result = @[]
+      if result.len > `numArgs` - 1:
+        parseArgs(result[(`numArgs`-1).. ^1],`lastArg`)
+
+  body.add quote do:
+    result = @[]
 
 func addPostParseHook(cfg: CliCfg, body: NimNode) =
   ## generate block to set defaults and check for required flags
   let flagSet = ident"flagSet"
+  let subcmd = ident"subcmd"
   var required, default: seq[CliFlag]
 
   for f in cfg.flags:
@@ -1146,24 +1128,34 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
       if `name` notin `flagSet`:
         `target` = `default`
 
-  if cfg.args.len > 0:
-    genPosArgHandler cfg, body
 
+  if hasSubcommands cfg:
+    body.add quote do:
+      if result.len == 0:
+        hwylCliError("expected subcommand")
+      `subcmd` = result[0]
+      result = result[1..^1]
+
+
+  elif cfg.args.len == 0:
+    body.add quote do:
+      if result.len > 0:
+        hwylCliError("got unexpected positionals args: [b]" & result.join(" "))
+
+  elif cfg.args.len > 0:
+    genPosArgHandler cfg, body
 
 func hwylCliImpl(cfg: CliCfg): NimNode
 
 func genSubcommandHandler(cfg: CliCfg): NimNode =
-  let args = ident"args"
+  let subcmd = ident"subcmd"
   result = nnkStmtList.newTree()
-  result.add quote do:
-    if `args`.len == 0:
-      hwylCliError("expected subcommand")
 
   var subCommandCase = nnkCaseStmt.newTree()
   if NoNormalize notin cfg.settings:
-    subCommandCase.add(quote do: optionNormalize(`args`[0]))
+    subCommandCase.add(quote do: optionNormalize(`subcmd`))
   else:
-    subCommandCase.add(quote do: `args`[0])
+    subCommandCase.add(quote do: `subcmd`)
 
   for sub in cfg.subcommands:
     var branch = nnkOfBranch.newTree()
@@ -1175,7 +1167,7 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
 
   subcommandCase.add nnkElse.newTree(
     quote do:
-      hwylCliError("unknown subcommand: [b]" & `args`[0])
+      hwylCliError("unknown subcommand: [b]" & `subcmd`)
   )
 
   result.add subCommandCase
@@ -1199,14 +1191,14 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     name = cfg.name.replace(" ", "")
     printHelpName = ident("print" & name & "Help")
     parserProcName = ident("parse" & name)
-    args = ident"args"
+    posArgs = ident"posArgs"
     optParser = ident("p")
     cmdLine = ident"cmdLine"
     flagSet = ident"flagSet"
     nArgs = ident"nargs"
     (longNoVal, shortNoVal) = cfg.getNoVals()
     printHelpProc = generateCliHelpProc(cfg, printHelpName)
-    flagVars = setVars(cfg)
+    varBlock= setVars(cfg)
 
   var
     parserBody = nnkStmtList.newTree()
@@ -1259,6 +1251,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     )
   )
 
+
   if ShowHelp in cfg.settings:
     parserBody.add quote do:
       if commandLineParams().len == 0:
@@ -1278,7 +1271,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     runBody.add cfg.post
 
   # args and subcommands need to be mutually exclusive -> implement using a CommandKind?
-  if cfg.subcommands.len > 0:
+  if hasSubcommands cfg:
     runBody.add genSubcommandHandler(cfg)
 
   result = newTree(nnkStmtList)
@@ -1286,12 +1279,12 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   result.add quote do:
     # block:
       `printHelpProc`
-      `flagVars`
+      `varBlock`
       proc `parserProcName`(`cmdLine`: openArray[string] = commandLineParams()): seq[string] =
         `parserBody`
 
       proc `runProcName`(`cmdLine`: openArray[string] = commandLineParams()) =
-        let `args` {.used.} = `parserProcName`(`cmdLine`)
+        let `posArgs` {.used.} = `parserProcName`(`cmdLine`)
         `runBody`
 
   if cfg.root:
@@ -1300,7 +1293,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         `runProcName`()
   else:
     result.add quote do:
-      `runProcName`(`args`[1..^1])
+      `runProcName`(`posArgs`)
 
 macro hwylCli*(body: untyped) =
   ## generate a CLI styled by `hwylterm` and parsed by `parseopt3`

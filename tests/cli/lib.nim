@@ -23,16 +23,22 @@ proc preCompileWorkingModule(module: string) =
       echo "cmd: ", cmd
       quit "failed to precompile test module"
 
+proc preCompileTestModules*() =
+  for srcModule in walkDirRec(pathToSrc / "clis"):
+    if srcModule.endsWith(".nim"):
+      let (_, moduleName, _) = srcModule.splitFile
+      preCompileWorkingModule(moduleName)
+
 template okWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
-  test module:
+  test (module & "|" & args):
     let (actualOutput, code) = runTestCli(module, args)
     check code == 0
     check output == actualOutput
 
 template failWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
-  test module:
+  test (module & "|" & args):
     let (actualOutput, code) = runTestCli(module, args)
     check code == 1
     check output == actualOutput

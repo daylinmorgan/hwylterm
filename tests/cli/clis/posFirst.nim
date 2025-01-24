@@ -3,10 +3,9 @@ import hwylterm, hwylterm/hwylcli
 
 hwylCli:
   name "positionals"
-  args:
+  positionals:
     first seq[string]
     second string
     third string
   run:
     echo fmt"{first=}, {second=}, {third=}"
-    echo fmt"{args=}"

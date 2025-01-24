@@ -132,7 +132,6 @@ when isMainModule:
     name "hwylchoose"
     settings ShowHelp
     help:
-      usage "[bold]hwylchoose[/] [[[green]args...[/]] [[[faint]-h[/]]"
       description """
       hwylchoose a b c d
       hwylchoose a,b,c,d -s ,
@@ -140,6 +139,8 @@ when isMainModule:
       hwylchoose --demo
       """
     hidden demo
+    positionals:
+      args seq[string]
     flags:
       demo "show demo"
       separator:
