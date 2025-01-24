@@ -3,7 +3,6 @@ import std/[strformat, strutils]
 
 task test, "run tests":
   selfExec "r tests/tbbansi.nim"
-  selfExec "r tests/tcli.nim"
   selfExec "r tests/cli/tester.nim"
 
 task develop, "install cligen for development":

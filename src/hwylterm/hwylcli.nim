@@ -38,7 +38,7 @@ export parseopt3, sets, bbansi
 
 type
   HwylFlagHelp* = tuple
-    short, long, description: string
+    short, long, description, defaultVal: string
   HwylSubCmdHelp* = tuple
     name, aliases, desc: string
   HwylCliStyleSetting = enum
@@ -48,6 +48,8 @@ type
     flagShort* = "yellow"
     flagLong* = "magenta"
     flagDesc* = ""
+    default* = "faint"
+    required* = "red"
     cmd* = "bold"
     settings*: set[HwylCliStyleSetting] = {Aliases}
   HwylCliHelp* = object
@@ -55,7 +57,8 @@ type
     subcmds*: seq[HwylSubCmdHelp]
     flags*: seq[HwylFlagHelp]
     styles*: HwylCliStyles
-    subcmdLen*, subcmdDescLen*, shortArgLen*, longArgLen*, descArgLen*: int
+    # make 'lengths' it's own object?
+    subcmdLen*, subcmdDescLen*, shortArgLen*, longArgLen*, descArgLen*, defaultValLen*: int
 
 # NOTE: do i need both strips?
 func firstLine(s: string): string =
@@ -88,6 +91,7 @@ func newHwylCliHelp*(
     result.shortArgLen = max(result.shortArgLen, f.short.len)
     result.longArgLen  = max(result.longArgLen, f.long.len)
     result.descArgLen  = max(result.descArgLen, f.description.len)
+    result.defaultValLen  = max(result.defaultValLen, f.defaultVal.len)
   for s in result.subcmds:
     result.subcmdLen = max(result.subcmdLen, s.name.len)
     result.subcmdDescLen = max(result.subcmdDescLen, s.desc.len)
@@ -109,11 +113,16 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
     result.add " ".repeat(2 + cli.longArgLen)
 
   result.add " "
-
   if f.description != "":
     result.add "[" & cli.styles.flagDesc & "]"
     result.add f.description
     result.add "[/" & cli.styles.flagDesc & "]"
+    if f.defaultVal != "":
+      result.add " "
+      result.add "[" & cli.styles.default & "]"
+      result.add "(" & f.defaultVal & ")"
+      result.add "[/" & cli.styles.default & "]"
+
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
@@ -156,10 +165,9 @@ func render*(cli: HwylCliHelp): string =
   parts.join("\n\n")
 
 
-proc bb*(cli: HwylCliHelp): BbString = 
+proc bb*(cli: HwylCliHelp): BbString =
   result = bb(render(cli))
 
-# ----------------------------------------
 
 type
   Count* = object ## Count type for an incrementing flag
@@ -169,6 +177,10 @@ type
     val*: Y
   KVString* = KV[string, string]
 
+proc `$`(c: Count): string = $c.val
+
+# ----------------------------------------
+
 type
   CliSetting* = enum
     # Propagate,  ## Include parent command settings in subcommand
@@ -176,8 +188,12 @@ type
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
     NoNormalize,  ## Don't normalize flags and commands
-    NoPositional  ## Raise error if any remaing positional arguments
-    ExactArgs,    ## Raise error if missing positional argument
+    NoPositional, ## Raise error if any remaing positional arguments DEPRECATED
+    HideDefault   ## Don't show default values
+    # ExactArgs,    ## Raise error if missing positional argument
+
+  CliFlagSetting* = enum
+    HideDefault   ## Don't show default values
 
   BuiltinFlag = object
     name*: string
@@ -185,11 +201,13 @@ type
     long*: string
     help*: NimNode
     node: NimNode
+    defaultVal: NimNode
+    settings*: set[CliFlagSetting]
 
   CliFlag = object
     name*: string
     ident*: NimNode
-    default*: NimNode
+    defaultVal*: NimNode
     typeNode*: NimNode
     node*: NimNode
     short*: char
@@ -197,6 +215,7 @@ type
     help*: NimNode
     group*: string
     inherited*: bool
+    settings*: set[CliFlagSetting]
 
   Inherit = object
     settings: set[CliSetting]
@@ -270,6 +289,40 @@ func bad(n: NimNode, argument: string = "") =
     msg &= " for argument: " & argument
   error msg
 
+# could I deduplicate these somehow? template?
+
+func parseCliSetting(s: string): CliSetting =
+  try: parseEnum[CliSetting](s)
+  except: error "unknown cli setting: " & s
+
+
+func parseCliSettings(cfg: var CliCfg, node: NimNode) =
+  case node.kind
+  of nnkCommand:
+    for n in node[1..^1]:
+      cfg.settings.incl parseCliSetting(n.strVal)
+  of nnkCall:
+    expectKind node[1], nnkStmtList
+    for n in node[1]:
+      cfg.settings.incl parseCliSetting(n.strVal)
+  else: assert false
+
+func parseCliFlagSetting(s: string): CliFlagSetting =
+  try: parseEnum[CliFlagSetting](s)
+  except: error "unknown cli flag setting: " & s
+
+
+func parseCliFlagSettings(f: var CliFlag, node: NimNode) =
+  case node.kind
+  of nnkCommand:
+    for n in node[1..^1]:
+      f.settings.incl parseCliFlagSetting(n.strVal)
+  of nnkCall:
+    expectKind node[1], nnkStmtList
+    for n in node[1]:
+      f.settings.incl parseCliFlagSetting(n.strVal)
+  else: assert false
+
 func getFlagParamNode(node: NimNode): NimNode = 
   case node.kind
   of nnkStrLit:
@@ -297,13 +350,15 @@ func parseFlagParams(f: var CliFlag, node: NimNode) =
           error "short flag must be a char"
         f.short = val[0].char
       of "*", "default":
-        f.default = getFlagParamNode(n)
+        f.defaultVal = getFlagParamNode(n)
       of "i", "ident":
         f.ident = getFlagParamNode(n).strVal.ident
       of "T":
         f.typeNode = n[1]
       of "node":
         f.node = n[1]
+      of "settings", "S":
+        parseCliFlagSettings(f, n)
       else:
         error "unexpected setting: " & n[0].strVal
     else:
@@ -393,24 +448,8 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
     else: bad(n, "flag")
 
 
-func parseCliSetting(s: string): CliSetting =
-  try: parseEnum[CliSetting](s)
-  except: error "unknown cli setting: " & s
-
-
-func parseCliSettings(cfg: var CliCfg, node: NimNode) =
-  case node.kind
-  of nnkCommand:
-    for n in node[1..^1]:
-      cfg.settings.incl parseCliSetting(n.strVal)
-  of nnkCall:
-    expectKind node[1], nnkStmtList
-    for n in node[1]:
-      cfg.settings.incl parseCliSetting(n.strVal)
-  else: assert false
-
 func parseIdentLikeList(node: NimNode): seq[string] =
-  template check = 
+  template check =
     if n.kind notin [nnkStrLit,nnkIdent]:
       error "expected StrLit or Ident, got:" & $n.kind
   case node.kind
@@ -716,7 +755,7 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         parseCliHelp(result, node)
       of "flags":
         parseCliFlags(result, node[1])
-      of "settings":
+      of "settings", "S":
         parseCliSettings(result, node)
       of "stopWords":
         result.stopWords = parseIdentLikeList(node)
@@ -747,23 +786,30 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   if root:
     propagate(result)
 
-func flagToTuple(f: CliFlag | BuiltinFlag): NimNode =
+func flagToTuple(c: CliCfg, f: CliFlag | BuiltinFlag): NimNode =
   let
     short =
       if f.short != '\x00': newLit($f.short)
       else: newLit("")
     long = newLit(f.long)
     help = f.help
+
+    defaultVal =
+      if (HideDefault in f.settings) or
+        (HideDefault in c.settings):
+        newLit""
+      else:
+        f.defaultVal or newLit""
   quote do:
-    (`short`, `long`, `help`)
+    (`short`, `long`, `help`, bbEscape($`defaultVal`))
 
 func flagsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
   for f in cfg.flags:
     if f.name in cfg.hidden: continue
-    result.add f.flagToTuple()
+    result.add cfg.flagToTuple(f)
   for f in cfg.builtinFlags:
-    result.add f.flagToTuple()
+    result.add cfg.flagToTuple(f)
 
 func subCmdsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
@@ -963,7 +1009,7 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
 func isBool(f: CliFlag): bool =
   f.typeNode == ident"bool"
 
-func isCount(f: CliFlag): bool = 
+func isCount(f: CliFlag): bool =
   f.typeNode == ident"Count"
 
 
@@ -1107,9 +1153,9 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
   var required, default: seq[CliFlag]
 
   for f in cfg.flags:
-    if f.name in cfg.required and f.default == nil:
+    if f.name in cfg.required and f.defaultVal == nil:
       required.add f
-    elif f.default != nil:
+    elif f.defaultVal != nil:
       default.add f
 
   for f in required:
@@ -1123,10 +1169,10 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
     let
       name = newLit(f.name)
       target = f.ident
-      default = f.default
+      defaultVal = f.defaultVal
     body.add quote do:
       if `name` notin `flagSet`:
-        `target` = `default`
+        `target` = `defaultVal`
 
 
   if hasSubcommands cfg:

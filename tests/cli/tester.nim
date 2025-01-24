@@ -1,9 +1,9 @@
 import std/[unittest]
 import ./lib
 
+preCompileTestModules()
+
 suite "hwylcli":
-  setup:
-    preCompileTestModules()
 
   okWithArgs(
     "posBasic",
@@ -37,4 +37,23 @@ suite "hwylcli":
 
 flags:
   -h --help show this help""")
+
+
+  okWithArgs("flagSettings", "--help",
+"""usage:
+  flag-settings [flags]
+
+flags:
+     --input flag with default hidden
+     --count a count var with default (0)
+  -h --help  show this help""")
+
+  okWithArgs("cliCfgSettingHideDefault", "--help",
+"""usage:
+  setting-hide-default [flags]
+
+flags:
+     --input flag with default hidden
+     --count a count var with default
+  -h --help  show this help""")
 

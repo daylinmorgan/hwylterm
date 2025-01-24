@@ -16,7 +16,6 @@
 ### cli generator
 
 - [ ] add support for types(metavars)/defaults/required in help output
-- [ ] add nargs to CliCfg
 - [x] add support for inheriting a single flag from parent (even from a "group")
 - [x] add support to either (lengthen commands) or provide an alias for a subcommand
 - [x] add command aliases to hwylcli help with switch

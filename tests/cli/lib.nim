@@ -1,4 +1,4 @@
-import std/[compilesettings, os, osproc, strutils, times, unittest]
+import std/[compilesettings, os, osproc, strutils, times, unittest, terminal]
 
 const pathToSrc = querySetting(SingleValueSetting.projectPath)
 const binDir = pathToSrc / "bin"
@@ -13,21 +13,36 @@ proc runTestCli(module: string, args: string, code: int = 0): (string, int) =
   let (output, code) = execCmdEx(cmd)
   result = (output.strip(), code)
 
+# poor man's progress meter
+proc status(s: string) =
+  eraseLine stdout
+  stdout.write(s.alignLeft(terminalWidth()).substr(0, terminalWidth()-1))
+  flushFile stdout
+
 proc preCompileWorkingModule(module: string) =
   let exe = binDir / module
   let srcModule = pathToSrc / "clis" / (module & ".nim")
-  if not exe.fileExists or getFileInfo(exe).lastWriteTime < max(getFileInfo(srcModule).lastWriteTime, hwylCliWriteTime):
+  if not exe.fileExists or getFileInfo(exe).lastWriteTime < max(getFileInfo(srcModule).lastWriteTime, hwylCliWriteTime) or defined(forceSetup):
     let cmd = "nim c -o:$1 $2" % [exe, srcModule]
-    let code = execCmd(cmd)
+    let (output, code) = execCmdEx(cmd)
     if code != 0:
       echo "cmd: ", cmd
-      quit "failed to precompile test module"
+      quit "failed to precompile test module:\n" & output
 
 proc preCompileTestModules*() =
+  var modules: seq[string]
   for srcModule in walkDirRec(pathToSrc / "clis"):
     if srcModule.endsWith(".nim"):
-      let (_, moduleName, _) = srcModule.splitFile
-      preCompileWorkingModule(moduleName)
+      modules.add srcModule.splitFile().name
+
+  for i, module in modules:
+    status "compiling [$2/$3] $1" % [ module, $(i+1), $modules.len]
+    preCompileWorkingModule(module)
+
+  eraseLine stdout
+
+      #let (_, moduleName, _) = srcModule.splitFile
+#      preCompileWorkingModule(moduleName)
 
 template okWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)

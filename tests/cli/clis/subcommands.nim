@@ -16,6 +16,8 @@ hwylCli:
     flags:
       input:
         T string
+        * "testing"
+        ? "some help after default"
       outputs:
         T seq[string]
     run:
