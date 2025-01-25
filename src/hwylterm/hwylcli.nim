@@ -52,13 +52,15 @@ type
     required* = "red"
     cmd* = "bold"
     settings*: set[HwylCliStyleSetting] = {Aliases}
+  HwylCliLengths = object
+    subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, defaultVal*: int
+
   HwylCliHelp* = object
     header*, footer*, description*, usage*: string
     subcmds*: seq[HwylSubCmdHelp]
     flags*: seq[HwylFlagHelp]
     styles*: HwylCliStyles
-    # make 'lengths' it's own object?
-    subcmdLen*, subcmdDescLen*, shortArgLen*, longArgLen*, descArgLen*, defaultValLen*: int
+    lengths*: HwylCliLengths
 
 # NOTE: do i need both strips?
 func firstLine(s: string): string =
@@ -85,32 +87,32 @@ func newHwylCliHelp*(
   result.usage = dedent(usage).strip()
   result.flags = @flags
   result.styles = styles
-  # TODO: incorporate into "styles?"
-  result.subcmdLen = 8
+  result.lengths.subcmd = 8 # TODO: incorporate into "styles?"
   for f in flags:
-    result.shortArgLen = max(result.shortArgLen, f.short.len)
-    result.longArgLen  = max(result.longArgLen, f.long.len)
-    result.descArgLen  = max(result.descArgLen, f.description.len)
-    result.defaultValLen  = max(result.defaultValLen, f.defaultVal.len)
+    result.lengths.shortArg = max(result.lengths.shortArg, f.short.len)
+    result.lengths.longArg  = max(result.lengths.longArg, f.long.len)
+    result.lengths.descArg  = max(result.lengths.descArg, f.description.len)
+    result.lengths.defaultVal  = max(result.lengths.defaultVal, f.defaultVal.len)
   for s in result.subcmds:
-    result.subcmdLen = max(result.subcmdLen, s.name.len)
-    result.subcmdDescLen = max(result.subcmdDescLen, s.desc.len)
+    result.lengths.subcmd = max(result.lengths.subcmd, s.name.len)
+    result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
-func render*(cli: HwylCliHelp, f: HwylFlagHelp): string = 
+
+func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
   result.add "  "
   if f.short != "":
     result.add "[" & cli.styles.flagShort & "]"
-    result.add "-" & f.short.alignLeft(cli.shortArgLen)
+    result.add "-" & f.short.alignLeft(cli.lengths.shortArg)
     result.add "[/" & cli.styles.flagShort & "]"
   else:
-    result.add " ".repeat(1 + cli.shortArgLen)
+    result.add " ".repeat(1 + cli.lengths.shortArg)
   result.add " "
   if f.long != "":
     result.add "[" & cli.styles.flagLong & "]"
-    result.add "--" & f.long.alignLeft(cli.longArgLen)
+    result.add "--" & f.long.alignLeft(cli.lengths.longArg)
     result.add "[/" & cli.styles.flagLong & "]"
   else:
-    result.add " ".repeat(2 + cli.longArgLen)
+    result.add " ".repeat(2 + cli.lengths.longArg)
 
   result.add " "
   if f.description != "":
@@ -127,14 +129,14 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
   result.add "[" & cli.styles.cmd & "]"
-  result.add subcmd.name.alignLeft(cli.subcmdLen)
+  result.add subcmd.name.alignLeft(cli.lengths.subcmd)
   result.add "[/]"
   result.add " "
-  result.add subcmd.desc.alignLeft(cli.subcmdDescLen)
+  result.add subcmd.desc.alignLeft(cli.lengths.subcmdDesc)
 
 
 # TODO: split this into separate procs to make overriding more fluid
-func render*(cli: HwylCliHelp): string =
+template render*(cli: HwylCliHelp): string =
   var parts: seq[string]
 
   if cli.header != "":
@@ -395,8 +397,6 @@ func parseCliFlag(n: NimNode): CliFlag =
 
   if result.ident == nil:
     result.ident = result.name.ident
-  if result.typeNode == nil:
-    result.typeNode = ident"bool"
 
 func postParse(cfg: var CliCfg) =
   if cfg.name == "":

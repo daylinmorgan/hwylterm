@@ -57,3 +57,14 @@ flags:
      --count a count var with default
   -h --help  show this help""")
 
+  okWithArgs("customHelp", "--help",
+"""usage:
+  custom-help [flags]
+
+flags:
+     --input 
+         input (input.txt)
+     --output
+         output (output.txt)
+  -h --help  
+         show this help""")
