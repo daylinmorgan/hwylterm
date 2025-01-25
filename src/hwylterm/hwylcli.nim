@@ -800,6 +800,12 @@ func flagToTuple(c: CliCfg, f: CliFlag | BuiltinFlag): NimNode =
         newLit""
       else:
         f.defaultVal or newLit""
+
+  # BUG: if f.defaultVal is @[] `$` fails
+  # but works with `newSeq[T]()`
+  # could replace "defaultVal" with newSeq[T]()
+  # under the hood when parsing type/val
+
   quote do:
     (`short`, `long`, `help`, bbEscape($`defaultVal`))
 
