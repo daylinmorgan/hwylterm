@@ -628,10 +628,10 @@ func postPropagateCheck(c: CliCfg) =
 
 func propagate(c: var CliCfg) =
   for child in c.subcommands.mitems:
-    # push the preSub to the lowest subcommand
-    if child.subcommands.len != 0 and child.preSub == nil:
-      child.preSub = c.preSub
-      child.postSub = c.postSub
+    # push the hooks to the lowest subcommand unless another one exists on the way
+    if child.subcommands.len != 0:
+      child.preSub = child.preSub or c.preSub
+      child.postSub = child.postSub or c.postSub
     else:
       child.pre = c.preSub
       child.post = c.postSub
@@ -861,19 +861,17 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 
   result = quote do:
     proc `printHelpName`() =
-      echo bb(
-        render(
-          newHwylCliHelp(
-            header = `header`,
-            footer = `footer`,
-            usage = `usage`,
-            description = `description`,
-            subcmds = `subcmds`,
-            flags = `helpFlags`,
-            styles = `styles`,
-          )
+      let help =
+        newHwylCliHelp(
+          header = `header`,
+          footer = `footer`,
+          usage = `usage`,
+          description = `description`,
+          subcmds = `subcmds`,
+          flags = `helpFlags`,
+          styles = `styles`,
         )
-      )
+      echo help.render().bb()
 
 proc checkVal(p: OptParser) =
   if p.val == "":
@@ -1314,17 +1312,17 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   let runProcName = ident("run" & name)
   let runBody = nnkStmtList.newTree()
 
-  # move to proc?
   if cfg.pre != nil:
     runBody.add cfg.pre
-  if cfg.run != nil:
-    runBody.add cfg.run
-  if cfg.post != nil:
-    runBody.add cfg.post
 
   # args and subcommands need to be mutually exclusive -> implement using a CommandKind?
   if hasSubcommands cfg:
     runBody.add genSubcommandHandler(cfg)
+
+  if cfg.run != nil:
+    runBody.add cfg.run
+  if cfg.post != nil:
+    runBody.add cfg.post
 
   result = newTree(nnkStmtList)
 

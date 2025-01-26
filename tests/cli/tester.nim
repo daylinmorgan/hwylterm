@@ -1,7 +1,8 @@
-import std/[unittest]
+import std/[os, unittest]
 import ./lib
 
-preCompileTestModules()
+if commandLineParams().len == 0:
+  preCompileTestModules()
 
 suite "hwylcli":
 
@@ -68,3 +69,17 @@ flags:
          output (output.txt)
   -h --help  
          show this help""")
+  okWithArgs("subHooks", "a", """preSub from root!
+inside sub 'a'
+postSub from root!""")
+  okWithArgs("subHooks", "b a", """preSub from root!
+inside sub 'b a'
+postSub from root!
+inside sub 'b'""")
+  okWithArgs("subHooks", "c a","""preSub from 'c'!
+inside sub 'c a'
+postSub from root!
+inside sub c""")
+
+
+
