@@ -41,19 +41,16 @@ proc preCompileTestModules*() =
 
   eraseLine stdout
 
-      #let (_, moduleName, _) = srcModule.splitFile
-#      preCompileWorkingModule(moduleName)
-
 template okWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
   test (module & "|" & args):
     let (actualOutput, code) = runTestCli(module, args)
     check code == 0
-    check output == actualOutput
+    check output.strip().strip(leading=false, chars = {'\n'}).dedent() == actualOutput
 
 template failWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
   test (module & "|" & args):
     let (actualOutput, code) = runTestCli(module, args)
     check code == 1
-    check output == actualOutput
+    check output.strip().strip(leading=false, chars = {'\n'}).dedent() == actualOutput
