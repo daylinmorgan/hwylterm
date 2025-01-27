@@ -861,7 +861,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 
   result = quote do:
     proc `printHelpName`() =
-      let help =
+      const help =
         newHwylCliHelp(
           header = `header`,
           footer = `footer`,
