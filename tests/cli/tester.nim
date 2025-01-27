@@ -30,6 +30,9 @@ suite "hwylcli":
     """input=in outputs=@["out1", "out2"]""",
   )
 
+  okWithArgs("subcommands", "ccccc", """no flags :)""")
+  okWithArgs("subcommands", "c", """no flags :)""")
+
   okWithArgs(
     "posFirst", "--help",
     """

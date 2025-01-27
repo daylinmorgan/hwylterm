@@ -22,3 +22,8 @@ hwylCli:
         T seq[string]
     run:
       echo fmt"{input=} {outputs=}"
+    [ccccc]
+    ... "a subcommand with an alias"
+    alias c
+    run:
+      echo "no flags :)"
