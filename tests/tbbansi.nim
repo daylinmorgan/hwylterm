@@ -6,6 +6,7 @@ bbMode = On
 template bbCheck(input: string, output: string): untyped =
   check escape($bb(input)) == escape(output)
 
+
 suite "basic":
   test "simple":
     bbCheck "[red][/red]", ""
@@ -15,6 +16,10 @@ suite "basic":
     bbCheck "[bold red]Bold Red Text", "\e[1;38;5;1mBold Red Text\e[0m"
     bbCheck "[red]5[/]", "\e[38;5;1m5\e[0m"
     bbCheck "[bold][red]5","\e[1;38;5;1m5\e[0m"
+
+  test "compile time":
+    const s = bb"[red]red text"
+    check s == bb"[red]red text"
 
   test "closing":
     bbCheck "[bold]Bold[red] Bold Red[/red] Bold Only",
@@ -100,5 +105,6 @@ suite "strutils":
     var y = bb("[red]red")
     y.add "yellow"
     check bb"[red]red[/]yellow" == y
+
 
 
