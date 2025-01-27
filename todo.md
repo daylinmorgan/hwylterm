@@ -7,7 +7,6 @@
 ## improvements
 
 - [ ] addJoinStyle(); works like join except wraps each argument in a style
-- [ ] add span aware split/splitlines
 - [ ] consider reducing illwill surface to only relevant IO (input) features
 - [ ] revamp spinner api (new  threads?)
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
@@ -16,14 +15,8 @@
 ### cli generator
 
 - [ ] add support for types(metavars)/defaults/required in help output
-- [x] add support for inheriting a single flag from parent (even from a "group")
-- [x] add support to either (lengthen commands) or provide an alias for a subcommand
-- [x] add command aliases to hwylcli help with switch
-- [x] don't recreate "global"" variables in var section
-- [x] add flag overlap check before case statement generation (use `postParse` proc)
-- [x] add key-value flag support -> `--setting:a:off`
-- [x] add defaultFlagType CliCfg setting
-- [x] add node to flagDef to override builtin `parse(p, varName)`
+- [ ] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
+      inject this code in the same place as the "default" setting
 - [ ] generalize parser error handling
 - [ ] consider default (or opt in) "help subcmd"
   > app help (show all help?)
@@ -33,7 +26,6 @@
 
 - [x] make a basic choose one from list widget
 - [ ] tables/boxes?
-  current hwylcli help could be replaced by a borderless table in the simplest situation
 - [x] confirmation proc
 - [ ] basic progress bar
 - [ ] support for 256 and truecolors
