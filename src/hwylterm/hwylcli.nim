@@ -827,6 +827,7 @@ func subCmdsArray(cfg: CliCfg): NimNode =
       (`cmd`, `aliases`, `desc`)
 
 # is this one necessary?
+
 proc hwylCliError*(msg: BbString) =
   quit $(bb("error ", "red") & msg)
 

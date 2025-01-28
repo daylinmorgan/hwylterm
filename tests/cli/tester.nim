@@ -111,3 +111,6 @@ postSub from root!
 inside sub c
 """,
   )
+  failWithArgs(
+    "errorOverride", "--flag","override the default error\nerror unknown flag: flag"
+  )

@@ -2,8 +2,9 @@ import std/os except getCurrentDir
 import std/[strformat, strutils]
 
 task test, "run tests":
-  selfExec "r tests/tbbansi.nim"
-  selfExec "r tests/cli/tester.nim"
+  const testDir = thisDir() / "tests"
+  selfExec fmt"r {testDir}/tbbansi.nim"
+  selfExec fmt"r {testDir}/cli/tester.nim"
 
 task develop, "install cligen for development":
   exec "nimble install -l 'cligen@1.7.5'"
