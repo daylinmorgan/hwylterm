@@ -11,6 +11,7 @@ hwylCli:
       outputs seq[string]
     run:
       echo fmt"{input=} {outputs=}"
+
     [b]
     ... "a subcommand with flags"
     flags:
@@ -22,6 +23,7 @@ hwylCli:
         T seq[string]
     run:
       echo fmt"{input=} {outputs=}"
+
     [ccccc]
     ... "a subcommand with an alias"
     alias c

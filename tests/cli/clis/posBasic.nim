@@ -4,6 +4,9 @@ import hwylterm, hwylterm/hwylcli
 hwylCli:
   name "posLast"
   positionals:
-    args seq[string]
+    first:
+      T string
+      ident notFirst
+    rest seq[string]
   run:
-    echo fmt"{args=}"
+    echo fmt"{notFirst=} {rest=}"

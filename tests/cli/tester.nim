@@ -4,8 +4,10 @@ import ./lib
 if commandLineParams().len == 0:
   preCompileTestModules()
 
-suite "hwylcli":
-  okWithArgs("posBasic", "a b c d e", """args=@["a", "b", "c", "d", "e"]""")
+
+suite "positional":
+
+  okWithArgs("posBasic", "a b c d e", """notFirst=a rest=@["b", "c", "d", "e"]""")
   okWithArgs("posFirst", "a b c d e", """first=@["a", "b", "c"], second=d, third=e""")
   failWithArgs(
     "posFirst", "a b", "error missing positional args, got: 2, expected at least: 3"
@@ -17,11 +19,15 @@ suite "hwylcli":
     """error unexepected positional args, got: 4, expected: 3""",
   )
 
+
+suite "flags":
   okWithArgs("enumFlag", "--color red", "color=red")
   failWithArgs(
     "enumFlag", "--color black",
     "error failed to parse value for color as enum: black expected one of: red,blue,green",
   )
+
+suite "subcommands":
 
   okWithArgs("subcommands", "a b c", """input=b outputs=@["c"]""")
   failWithArgs("subcommands", "b b c", """error got unexpected positionals args: b c""")
@@ -33,6 +39,8 @@ suite "hwylcli":
   okWithArgs("subcommands", "ccccc", """no flags :)""")
   okWithArgs("subcommands", "c", """no flags :)""")
 
+
+suite "help":
   okWithArgs(
     "posFirst", "--help",
     """
@@ -85,6 +93,8 @@ flags:
          show this help
 """,
   )
+
+suite "hooks":
   okWithArgs(
     "subHooks", "a",
 """
@@ -111,6 +121,8 @@ postSub from root!
 inside sub c
 """,
   )
+
+suite "settings":
   okWithArgs(
     "inferShort", "-i input -o output","""input=input, output=output, count=0, nancy=false, ignore=false"""
   )
