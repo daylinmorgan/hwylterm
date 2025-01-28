@@ -191,11 +191,12 @@ type
     ShowHelp,     ## If cmdline empty show help
     NoNormalize,  ## Don't normalize flags and commands
     NoPositional, ## Raise error if any remaing positional arguments DEPRECATED
-    HideDefault   ## Don't show default values
-    # ExactArgs,    ## Raise error if missing positional argument
+    HideDefault,  ## Don't show default values
+    InferShort    ## Autodefine short flags
 
   CliFlagSetting* = enum
-    HideDefault   ## Don't show default values
+    HideDefault,   ## Don't show default values
+    NoShort        ## Counter option to Parent's InferShort
 
   BuiltinFlag = object
     name*: string
@@ -268,6 +269,9 @@ template `<<<`(s: string) {.used.} =
 template `<<<`(n: NimNode) {.used.} =
   ## for debugging macros
   <<< treeRepr n
+
+template `<<<`(n: untyped) {.used.} =
+  debugEcho n, "|||", instantiationInfo().line
 
 func `<<<`(f: CliFlag) {.used.}=
   var s: string
@@ -398,6 +402,19 @@ func parseCliFlag(n: NimNode): CliFlag =
   if result.ident == nil:
     result.ident = result.name.ident
 
+func inferShortFlags(cfg: var CliCfg) =
+  ## supplement existing short flags based on initial characters of long flags
+  let taken = cfg.flags.mapIt(it.short).toHashSet() - toHashSet(['\x00'])
+  var candidates = cfg.flags.mapIt(it.long[0]).toHashSet() - taken
+  for f in cfg.flags.mitems:
+
+    if f.short != '\x00' or NoShort in f.settings: continue
+    let c = f.long[0]
+    if c in candidates:
+      f.short = c
+      candidates.excl c
+
+
 func postParse(cfg: var CliCfg) =
   if cfg.name == "":
     error "missing required option: name"
@@ -416,6 +433,9 @@ func postParse(cfg: var CliCfg) =
     let count = cfg.args.filterIt(it.typeNode.kind == nnkBracketExpr).len
     if count > 1:
       cfg.err "more than one positional argument is variadic"
+
+  if InferShort in cfg.settings:
+    inferShortFlags cfg
 
 func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
@@ -613,9 +633,6 @@ func postPropagateCheck(c: CliCfg) =
       if f.short in short:
         let conflict = short[f.short]
         c.err "conflicting short flags for: " & f.name & " and " & conflict.name
-        # hwylCliImplError c, (
-        #   "conflicting short flags for: " & f.name & " and " & conflict.name
-        # )
 
       else:
         short[f.short] = f

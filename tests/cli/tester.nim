@@ -114,3 +114,6 @@ inside sub c
   failWithArgs(
     "errorOverride", "--flag","override the default error\nerror unknown flag: flag"
   )
+  okWithArgs(
+    "inferShort", "-i input -o output","""input=input, output=output, count=0, nancy=false, ignore=false"""
+  )
