@@ -14,10 +14,10 @@
 
 ### cli generator
 
+- [x] add InferShortFlags setting
 - [ ] ShowHelp setting should occur after "a hwylCliError"
       could be by default (see `program --help` for more info.)
-- [ ] add InferShortFlags setting
-- [ ] consier support "more verbose" help i.e. -h vs --help giving different results
+- [ ] consider support "more verbose" help i.e. -h vs --help giving different results
 - [ ] add support for types(metavars)/defaults/required in help output
 - [ ] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
       inject this code in the same place as the "default" setting
