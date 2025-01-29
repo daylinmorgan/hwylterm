@@ -122,6 +122,17 @@ inside sub c
 """,
   )
 
+suite "parent-child":
+  okWithArgs(
+    "inheritFlags", "first --always", "always=true,first=false"
+  )
+  okWithArgs(
+    "inheritFlags", "second --always --misc2", "always=true,misc1=false,misc2=true"
+  )
+  okWithArgs(
+    "inheritFlags", "third --misc1", "always=false,misc1=true"
+  )
+
 suite "settings":
   okWithArgs(
     "inferShort", "-i input -o output","""input=input, output=output, count=0, nancy=false, ignore=false"""

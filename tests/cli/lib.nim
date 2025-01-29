@@ -43,14 +43,16 @@ proc preCompileTestModules*() =
 
 template okWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
+  let normalizedOutput = output.strip().strip(leading = false, chars = {'\n'}).dedent()
   test (module & "|" & args):
     let (actualOutput, code) = runTestCli(module, args)
     check code == 0
-    check output.strip().strip(leading=false, chars = {'\n'}).dedent() == actualOutput
+    check normalizedOutput == actualOutput
 
 template failWithArgs*(module: string, args = "", output = "") =
   preCompileWorkingModule(module)
+  let normalizedOutput = output.strip().strip(leading = false, chars = {'\n'}).dedent()
   test (module & "|" & args):
     let (actualOutput, code) = runTestCli(module, args)
     check code == 1
-    check output.strip().strip(leading=false, chars = {'\n'}).dedent() == actualOutput
+    check normalizedOutput == actualOutput
