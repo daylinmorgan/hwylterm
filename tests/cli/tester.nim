@@ -93,6 +93,32 @@ flags:
          show this help
 """,
   )
+  okWithArgs(
+    "helpSettings", "--help",
+"""
+usage:
+  help-switches subcmd [flags]
+
+subcommands:
+  required 
+
+flags:
+  -h --help show this help
+"""
+  )
+
+  okWithArgs(
+    "helpSettings", "required --help",
+"""
+usage:
+  help-switches required [flags]
+
+flags:
+     --input required input
+  -k         predefined flag
+  -h --help  show this help
+"""
+  )
 
 suite "hooks":
   okWithArgs(

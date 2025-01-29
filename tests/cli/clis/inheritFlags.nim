@@ -2,7 +2,7 @@ import std/strformat
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:
-  name "base"
+  name "inherit-flags"
   flags:
     [global]
     always "in all subcommands"

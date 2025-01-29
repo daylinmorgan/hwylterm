@@ -37,12 +37,14 @@ import ./[bbansi, parseopt3]
 export parseopt3, sets, bbansi
 
 type
-  HwylFlagHelp* = tuple
-    short, long, description, defaultVal: string
-  HwylSubCmdHelp* = tuple
+  HwylFlagHelp* = tuple[
+    short, long, description, defaultVal: string; required: bool
+  ]
+  HwylSubCmdHelp* = tuple[
     name, aliases, desc: string
+  ]
   HwylCliStyleSetting = enum
-    Aliases
+    Aliases, Required, Defaults
   HwylCliStyles* = object
     header* = "bold cyan"
     flagShort* = "yellow"
@@ -51,7 +53,9 @@ type
     default* = "faint"
     required* = "red"
     cmd* = "bold"
-    settings*: set[HwylCliStyleSetting] = {Aliases}
+    minCmdLen* = 8
+    settings*: set[HwylCliStyleSetting] = {Aliases, Required, Defaults}
+
   HwylCliLengths = object
     subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, defaultVal*: int
 
@@ -87,7 +91,7 @@ func newHwylCliHelp*(
   result.usage = dedent(usage).strip()
   result.flags = @flags
   result.styles = styles
-  result.lengths.subcmd = 8 # TODO: incorporate into "styles?"
+  result.lengths.subcmd = styles.minCmdLen
   for f in flags:
     result.lengths.shortArg = max(result.lengths.shortArg, f.short.len)
     result.lengths.longArg  = max(result.lengths.longArg, f.long.len)
@@ -119,11 +123,19 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
     result.add "[" & cli.styles.flagDesc & "]"
     result.add f.description
     result.add "[/" & cli.styles.flagDesc & "]"
-    if f.defaultVal != "":
-      result.add " "
-      result.add "[" & cli.styles.default & "]"
-      result.add "(" & f.defaultVal & ")"
-      result.add "[/" & cli.styles.default & "]"
+
+  if f.defaultVal != "" and Defaults in cli.styles.settings:
+    result.add " "
+    result.add "[" & cli.styles.default & "]"
+    result.add "(" & f.defaultVal & ")"
+    result.add "[/" & cli.styles.default & "]"
+
+  if f.required and Required in cli.styles.settings:
+    result.add " "
+    result.add "[" & cli.styles.required & "]"
+    result.add "(required)"
+    result.add "[/" & cli.styles.required & "]"
+
 
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
@@ -190,13 +202,13 @@ type
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
     NoNormalize,  ## Don't normalize flags and commands
-    NoPositional, ## Raise error if any remaing positional arguments DEPRECATED
     HideDefault,  ## Don't show default values
     InferShort    ## Autodefine short flags
 
   CliFlagSetting* = enum
     HideDefault,   ## Don't show default values
-    NoShort        ## Counter option to Parent's InferShort
+    NoShort,       ## Counter option to Parent's InferShort
+    Required,      ## Flag must be used (or have default value)
 
   BuiltinFlag = object
     name*: string
@@ -240,7 +252,6 @@ type
     stopWords*: seq[string]
     help: CliHelp
     defaultFlagType: NimNode
-    required*: seq[string]
     settings*: set[CliSetting]
     subName*: string # used for help generator
     subcommands: seq[CliCfg]
@@ -735,7 +746,6 @@ func parseCliHelp(c: var CliCfg, node: NimNode) =
     if node[1].kind != nnkStmtList:
       c.err node, "expected list of arguments for help"
     for n in node[1]:
-      <<< n
       c.expectLen n, 2
       let id = n[0].strVal
       var val: NimNode
@@ -853,8 +863,6 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
         parseHiddenFlags(result, node)
       of "run":
         result.run = node[1]
-      of "required":
-        result.required = result.parseIdentLikeList(node)
       of "preSub":
         result.preSub = node[1]
       of "postSub":
@@ -874,7 +882,45 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   if root:
     propagate(result)
 
-func flagToTuple(c: CliCfg, f: CliFlag | BuiltinFlag): NimNode =
+
+func isBool(f: CliFlag | BuiltinFlag): bool =
+  f.typeNode == ident"bool"
+
+func isCount(f: CliFlag): bool =
+  f.typeNode == ident"Count"
+
+func isRequiredFlag(cfg: CliCfg, f: CliFlag): bool =
+  result = (Required in f.settings and f.defaultVal == nil)
+  if result and f.isBool:
+    cfg.err "boolean flag `$1` can't be a required flag " % [f.long]
+
+# TODO: deprecate builtinflag
+func flagToTuple(c: CliCfg, f: BuiltinFlag): NimNode =
+  let
+    short =
+      if f.short != '\x00': newLit($f.short)
+      else: newLit("")
+    long = newLit(f.long)
+    help = f.help
+
+    defaultVal =
+      if (HideDefault in f.settings) or
+        (HideDefault in c.settings):
+        newLit""
+      else:
+        f.defaultVal or newLit""
+    required = newLit(false)
+
+  # BUG: if f.defaultVal is @[] `$` fails
+  # but works with `newSeq[T]()`
+  # could replace "defaultVal" with newSeq[T]()
+  # under the hood when parsing type/val
+
+  quote do:
+    (`short`, `long`, `help`, bbEscape($`defaultVal`), `required`)
+
+
+func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
   let
     short =
       if f.short != '\x00': newLit($f.short)
@@ -889,14 +935,22 @@ func flagToTuple(c: CliCfg, f: CliFlag | BuiltinFlag): NimNode =
       else:
         f.defaultVal or newLit""
 
+    required = newLit(c.isRequiredFlag(f))
+
   # BUG: if f.defaultVal is @[] `$` fails
   # but works with `newSeq[T]()`
   # could replace "defaultVal" with newSeq[T]()
   # under the hood when parsing type/val
-
-  quote do:
-    (`short`, `long`, `help`, bbEscape($`defaultVal`))
-
+  result = nnkTupleConstr.newTree(
+    short,
+    newLit(f.long),
+    f.help,
+    quote do: bbEscape($`defaultVal`),
+    required,
+  )
+  # quote do:
+  #   (`short`, `long`, `help`, bbEscape($`defaultVal`), `required`)
+  #
 func flagsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
   for f in cfg.flags:
@@ -1099,12 +1153,6 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
 
   result = nnkStmtList.newTree(caseStmt)
 
-func isBool(f: CliFlag): bool =
-  f.typeNode == ident"bool"
-
-func isCount(f: CliFlag): bool =
-  f.typeNode == ident"Count"
-
 
 func getNoVals(cfg: CliCfg): tuple[long: NimNode, short: NimNode] =
   let flagFlags = cfg.flags.filterIt(it.isBool or it.isCount)
@@ -1246,7 +1294,7 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
   var required, default: seq[CliFlag]
 
   for f in cfg.flags:
-    if f.name in cfg.required and f.defaultVal == nil:
+    if cfg.isRequiredFlag(f):
       required.add f
     elif f.defaultVal != nil:
       default.add f

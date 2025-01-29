@@ -21,7 +21,7 @@
 - [ ] add support for types(metavars)/defaults/required in help output
 - [ ] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
       inject this code in the same place as the "default" setting
-- [ ] generalize parser error handling
+- [ ] BUG: flag can't be `key`
 - [ ] consider default (or opt in) "help subcmd"
   > app help (show all help?)
   > app help <subcmd> same as app <subcmd> --help
