@@ -25,6 +25,7 @@
   > testing testing
   ```
 
+  For more example programs see the [tests directory](https://github.com/daylinmorgan/hwylterm/tree/main/tests/cli/clis).
 ]##
 
 import std/[
