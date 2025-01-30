@@ -941,7 +941,7 @@ func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
       else:
         let val = f.defaultVal
         quote do:
-          bbEscape($`val`)
+          bbEscape($(`val`))
 
     required = newLit(c.isRequiredFlag(f))
     typeNode =
@@ -964,9 +964,7 @@ func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
     defaultVal,
     required,
   )
-  # quote do:
-  #   (`short`, `long`, `help`, bbEscape($`defaultVal`), `required`)
-  #
+
 func flagsArray(cfg: CliCfg): NimNode =
   result = newTree(nnkBracket)
   for f in cfg.flags:
@@ -1020,7 +1018,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 
   result = quote do:
     proc `printHelpName`() =
-      const help =
+      let help =
         newHwylCliHelp(
           header = `header`,
           footer = `footer`,
