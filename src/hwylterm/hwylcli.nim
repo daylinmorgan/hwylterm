@@ -206,7 +206,7 @@ proc `$`(c: Count): string = $c.val
 
 type
   CliSetting* = enum
-    # Propagate,  ## Include parent command settings in subcommand
+    Propagate,  ## Include parent command settings in subcommand
     GenerateOnly, ## Don't attach root `runProc()` node
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
@@ -460,7 +460,6 @@ func inferShortFlags(cfg: var CliCfg) =
   ## supplement existing short flags based on initial characters of long flags
   let taken = cfg.flags.mapIt(it.short).toHashSet() - toHashSet(['\x00'])
   var candidates = cfg.flags.mapIt(it.long[0]).toHashSet() - taken
-
   for f in cfg.flags.mitems:
 
     if f.short != '\x00' or NoShort in f.settings: continue
@@ -488,10 +487,7 @@ func postParse(c: var CliCfg) =
     let count = c.args.filterIt(it.typeNode.kind == nnkBracketExpr).len
     if count > 1:
       c.err "more than one positional argument is variadic"
-
-  if InferShort in c.settings:
-    inferShortFlags c
-
+  
 func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
   cfg.expectKind node, nnkStmtList
@@ -579,7 +575,7 @@ func sliceStmts(c: CliCfg, node: NimNode): seq[
 
 # TODO: swap error stmts
 func inheritFrom(child: var CliCfg, parent: CliCfg) =
-  ## inherit settings from parent command
+  ## inherit flags/groups and settings from parent command
   var
     pflags: Table[string, CliFlag]
     pgroups: Table[string, seq[CliFlag]]
@@ -614,6 +610,9 @@ func inheritFrom(child: var CliCfg, parent: CliCfg) =
       child.flags.add pgroups[g]
       # so subcommands can continue the inheritance
       child.flagDefs.add pgroups[g]
+
+  if Propagate in parent.settings:
+    child.settings = child.settings + parent.settings
 
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   cfg.expectKind node[1], nnkStmtList
@@ -687,7 +686,7 @@ func parseCliAlias(cfg: var CliCfg, node: NimNode) =
       cfg.alias.incl s
     else: cfg.unexpectedKind n
 
-func postPropagateCheck(c: CliCfg) =
+func postPropagate(c: var CliCfg) =
   ## verify the cli is valid
   var
     short: Table[char, CliFlag]
@@ -708,6 +707,9 @@ func postPropagateCheck(c: CliCfg) =
     else:
       long[f.long] = f
 
+  if InferShort in c.settings:
+    inferShortFlags c
+
 func propagate(c: var CliCfg) =
   for child in c.subcommands.mitems:
     # push the hooks to the lowest subcommand unless another one exists on the way
@@ -717,9 +719,11 @@ func propagate(c: var CliCfg) =
     else:
       child.pre = c.preSub
       child.post = c.postSub
+
     child.inheritFrom(c)
+
     propagate child
-    postPropagateCheck child
+    postPropagate child
 
 
 func parseCliHelp(c: var CliCfg, node: NimNode) =
@@ -890,6 +894,8 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
 
   if root:
     propagate(result)
+
+  postPropagate result
 
 func isBool(f: CliFlag | BuiltinFlag): bool =
   f.typeNode == ident"bool"

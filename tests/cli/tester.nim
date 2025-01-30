@@ -66,7 +66,7 @@ flags:
   )
 
   okWithArgs(
-    "cliCfgSettingHideDefault", "--help",
+    "hideDefaultSetting", "--help",
 """
 usage:
   setting-hide-default [flags]
@@ -159,7 +159,34 @@ suite "parent-child":
     "inheritFlags", "third --misc1", "always=false,misc1=true"
   )
 
+
+
 suite "settings":
   okWithArgs(
     "inferShort", "-i input -o output","""input=input, output=output, count=0, nancy=false, ignore=false"""
   )
+  okWithArgs(
+    "propagateSetting", "one --help",
+"""
+usage:
+  setting-propagate one [flags]
+
+flags:
+  -i --input string input flag (default: the default)
+  -c --count Count  a count var with default (default: 0)
+  -h --help         show this help
+"""
+  )
+  okWithArgs(
+    "propagateSetting", "two --help",
+"""
+usage:
+  setting-propagate two [flags]
+
+flags:
+  -i --input string input flag
+  -c --count Count  a count var with default
+  -h --help         show this help
+"""
+  )
+
