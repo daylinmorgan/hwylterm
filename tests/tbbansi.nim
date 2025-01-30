@@ -16,10 +16,12 @@ suite "basic":
     bbCheck "[bold red]Bold Red Text", "\e[1;38;5;1mBold Red Text\e[0m"
     bbCheck "[red]5[/]", "\e[38;5;1m5\e[0m"
     bbCheck "[bold][red]5","\e[1;38;5;1m5\e[0m"
+    check "[bold]bold[/bold]" == "bold".bbMarkup("bold")
 
   test "compile time":
     const s = bb"[red]red text"
     check s == bb"[red]red text"
+
 
   test "closing":
     bbCheck "[bold]Bold[red] Bold Red[/red] Bold Only",

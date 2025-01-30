@@ -353,6 +353,10 @@ func add*(x: var Bbstring, y: string) =
   x.plain.add y
   x.spans.add BbSpan(styles: @[], slice:[i, i + y.len - 1 ])
 
+func bbMarkup*(s: string, style: string): string =
+  ## enclose a string in bbansi markup for the given style
+  fmt"[{style}]{s}[/{style}]"
+
 func bbEscape*(s: string): string {.inline.} =
   s.replace("[", "[[").replace("\\", "\\\\")
 
