@@ -7,6 +7,8 @@ type
   Color = enum
     red, blue, green
 
+  KVColor = KV[string, Color]
+
 hwylCli:
   name "example"
   V "0.1.0"
@@ -59,7 +61,6 @@ hwylCli:
 
     run:
       echo "hello from `example one` command!"
-      echo args
       echo fmt"{color=}"
       echo fmt"{verbose=}"
       echo fmt"{config=}"
@@ -71,21 +72,11 @@ hwylCli:
     a longer mulitline description that will be visible in the subcommand help
     and it will automatically be "bb"'ed [bold]this is bold text[/]
     """
-    # args first, second
-    # or
-    args:
-      # default type is string
-      # only one 'arg' can be the seq[string]
-      # order matters here
-      # by default string
-      inputs:
-        T int
-      second seq[string]
     flags:
       ^something
-      thing:
-        T seq[KV[string, Color]]
-        ? "some key value colors"
+      inputs:
+        T seq[KVColor]
+        ? "some key stuff"
       b:
         T seq[float]
         ? "multiple floats"
@@ -95,5 +86,5 @@ hwylCli:
         * "the value"
     run:
       echo "hello from `example b` command"
-      echo fmt"{thing=}, {b=}, {def=}"
+      echo fmt"{inputs=}, {b=}, {def=}"
 

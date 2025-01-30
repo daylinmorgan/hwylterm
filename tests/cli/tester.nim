@@ -48,7 +48,7 @@ usage:
   positionals first... second third [flags]
 
 flags:
-  -h --help show this help
+  -h --help  show this help
 """,
   )
 
@@ -59,9 +59,9 @@ usage:
   flag-settings [flags]
 
 flags:
-     --input flag with default hidden
-     --count a count var with default (0)
-  -h --help  show this help
+     --input string flag with default hidden
+     --count Count  a count var with default (default: 0)
+  -h --help         show this help
 """,
   )
 
@@ -72,9 +72,9 @@ usage:
   setting-hide-default [flags]
 
 flags:
-     --input flag with default hidden
-     --count a count var with default
-  -h --help  show this help
+     --input string flag with default hidden
+     --count Count  a count var with default
+  -h --help         show this help
 """,
   )
 

@@ -38,13 +38,13 @@ export parseopt3, sets, bbansi
 
 type
   HwylFlagHelp* = tuple[
-    short, long, description, defaultVal: string; required: bool
+    short, long, description, typeRepr, defaultVal: string; required: bool
   ]
   HwylSubCmdHelp* = tuple[
     name, aliases, desc: string
   ]
   HwylCliStyleSetting = enum
-    Aliases, Required, Defaults
+    Aliases, Required, Defaults, Types
   HwylCliStyles* = object
     header* = "bold cyan"
     flagShort* = "yellow"
@@ -52,12 +52,13 @@ type
     flagDesc* = ""
     default* = "faint"
     required* = "red"
-    cmd* = "bold"
+    subcmd* = "bold"
+    typeRepr = "faint"
     minCmdLen* = 8
-    settings*: set[HwylCliStyleSetting] = {Aliases, Required, Defaults}
+    settings*: set[HwylCliStyleSetting] = {Aliases, Required, Defaults, Types}
 
   HwylCliLengths = object
-    subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, defaultVal*: int
+    subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, typeRepr*, defaultVal*: int
 
   HwylCliHelp* = object
     header*, footer*, description*, usage*: string
@@ -92,57 +93,63 @@ func newHwylCliHelp*(
   result.flags = @flags
   result.styles = styles
   result.lengths.subcmd = styles.minCmdLen
+
   for f in flags:
+    # template?
     result.lengths.shortArg = max(result.lengths.shortArg, f.short.len)
     result.lengths.longArg  = max(result.lengths.longArg, f.long.len)
     result.lengths.descArg  = max(result.lengths.descArg, f.description.len)
+
     result.lengths.defaultVal  = max(result.lengths.defaultVal, f.defaultVal.len)
+
+    # using "bb" before len.. to squash out the escaped [[
+    result.lengths.typeRepr = max(result.lengths.typeRepr, f.typeRepr.bb.len)
+
   for s in result.subcmds:
     result.lengths.subcmd = max(result.lengths.subcmd, s.name.len)
     result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
-
 func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
   result.add "  "
   if f.short != "":
-    result.add "[" & cli.styles.flagShort & "]"
-    result.add "-" & f.short.alignLeft(cli.lengths.shortArg)
-    result.add "[/" & cli.styles.flagShort & "]"
+    result.add ("-" & f.short.alignLeft(cli.lengths.shortArg)).bbMarkup(cli.styles.flagShort)
   else:
     result.add " ".repeat(1 + cli.lengths.shortArg)
+
   result.add " "
   if f.long != "":
-    result.add "[" & cli.styles.flagLong & "]"
-    result.add "--" & f.long.alignLeft(cli.lengths.longArg)
-    result.add "[/" & cli.styles.flagLong & "]"
+    result.add ("--" & f.long.alignLeft(cli.lengths.longArg)).bbMarkup(cli.styles.flagLong)
   else:
     result.add " ".repeat(2 + cli.lengths.longArg)
 
+  if Types in cli.styles.settings:
+    result.add " "
+    # BUG alignLeft isn't accounting for these '[['
+    let offset = int(
+      (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
+    )
+    result.add f.typeRepr
+      .alignLeft(
+        cli.lengths.typeRepr + offset
+      )
+      .bbMarkup(cli.styles.typeRepr)
+
   result.add " "
   if f.description != "":
-    result.add "[" & cli.styles.flagDesc & "]"
-    result.add f.description
-    result.add "[/" & cli.styles.flagDesc & "]"
+    result.add f.description.bbMarkup(cli.styles.flagDesc)
 
   if f.defaultVal != "" and Defaults in cli.styles.settings:
     result.add " "
-    result.add "[" & cli.styles.default & "]"
-    result.add "(" & f.defaultVal & ")"
-    result.add "[/" & cli.styles.default & "]"
+    result.add ("(default: " & f.defaultVal & ")")
+      .bbMarkup(cli.styles.default)
 
   if f.required and Required in cli.styles.settings:
     result.add " "
-    result.add "[" & cli.styles.required & "]"
-    result.add "(required)"
-    result.add "[/" & cli.styles.required & "]"
-
-
+    result.add "(required)".bbMarkup(cli.styles.required)
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
-  result.add "[" & cli.styles.cmd & "]"
-  result.add subcmd.name.alignLeft(cli.lengths.subcmd)
-  result.add "[/]"
+  result.add subcmd.name.alignLeft(cli.lengths.subcmd).bbMarkup(cli.styles.subcmd)
   result.add " "
   result.add subcmd.desc.alignLeft(cli.lengths.subcmdDesc)
 
@@ -154,25 +161,13 @@ template render*(cli: HwylCliHelp): string =
   if cli.header != "":
     parts.add cli.header
   if cli.usage != "":
-    var part: string
-    part.add "[" & cli.styles.header & "]"
-    part.add "usage[/]:\n"
-    part.add indent(cli.usage, 2 )
-    parts.add part
+    parts.add "usage".bbMarkup(cli.styles.header) & ":\n" & indent(cli.usage, 2 )
   if cli.description != "":
     parts.add cli.description
   if cli.subcmds.len > 0:
-    var part: string
-    part.add "[" & cli.styles.header & "]"
-    part.add "subcommands[/]:\n"
-    part.add cli.subcmds.mapIt(render(cli,it)).join("\n")
-    parts.add part
+    parts.add "subcommands".bbMarkup(cli.styles.header) & ":\n" & cli.subcmds.mapIt(render(cli,it)).join("\n")
   if cli.flags.len > 0:
-    var part: string
-    part.add "[" & cli.styles.header & "]"
-    part.add "flags[/]:\n"
-    part.add cli.flags.mapIt(render(cli, it)).join("\n")
-    parts.add part
+    parts.add "flags".bbMarkup(cli.styles.header) & ":\n" & cli.flags.mapIt(render(cli, it)).join("\n")
   if cli.footer != "":
     parts.add cli.footer
 
@@ -191,7 +186,20 @@ type
     val*: Y
   KVString* = KV[string, string]
 
+
+proc `$`*(t: typedesc[KVString]): string =
+  result.add "k(string):v(string)"
+
+proc `$`*[X,Y](t: typedesc[KV[X, Y]]): string =
+  result.add "k(" & $X & ")"
+  result.add ":"
+  result.add "v(" & $Y & ")"
+
+proc `$`[X,Y](t: typedesc[seq[KV[X,Y]]]): string =
+  "seq[" & $(KV[X,Y]) & "]"
+
 proc `$`(c: Count): string = $c.val
+
 
 # ----------------------------------------
 
@@ -882,7 +890,6 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   if root:
     propagate(result)
 
-
 func isBool(f: CliFlag | BuiltinFlag): bool =
   f.typeNode == ident"bool"
 
@@ -917,35 +924,44 @@ func flagToTuple(c: CliCfg, f: BuiltinFlag): NimNode =
   # under the hood when parsing type/val
 
   quote do:
-    (`short`, `long`, `help`, bbEscape($`defaultVal`), `required`)
+    (`short`, `long`, `help`, "", bbEscape($`defaultVal`), `required`)
 
 
 func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
   let
     short =
       if f.short != '\x00': newLit($f.short)
-      else: newLit("")
-    long = newLit(f.long)
-    help = f.help
+      else: newLit""
 
     defaultVal =
       if (HideDefault in f.settings) or
-        (HideDefault in c.settings):
+        (HideDefault in c.settings) or
+        f.defaultVal == nil:
         newLit""
       else:
-        f.defaultVal or newLit""
+        let val = f.defaultVal
+        quote do:
+          bbEscape($`val`)
 
     required = newLit(c.isRequiredFlag(f))
+    typeNode =
+      if f.isBool: newLit""
+      else:
+        let t = f.typeNode
+        quote do: bbEscape($`t`)
+
 
   # BUG: if f.defaultVal is @[] `$` fails
   # but works with `newSeq[T]()`
   # could replace "defaultVal" with newSeq[T]()
   # under the hood when parsing type/val
+
   result = nnkTupleConstr.newTree(
     short,
     newLit(f.long),
     f.help,
-    quote do: bbEscape($`defaultVal`),
+    typeNode,
+    defaultVal,
     required,
   )
   # quote do:
