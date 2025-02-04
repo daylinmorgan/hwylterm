@@ -1,6 +1,6 @@
 import std/[compilesettings, os, osproc, strutils, times, unittest, terminal]
 
-const pathToSrc = querySetting(SingleValueSetting.projectPath)
+const pathToSrc = currentSourcePath().parentDir()
 const binDir = pathToSrc / "bin"
 const hwylCliSrc = pathToSrc / "../../src/hwylterm/hwylcli.nim"
 let hwylCliWriteTime =  getFileInfo(hwylCliSrc).lastWriteTime
