@@ -7,7 +7,7 @@
 {.push raises:[].}
 
 import std/[
-  macros, os, sequtils, strformat, strutils, terminal
+  macros, os, sequtils, strformat, strscans, strutils, terminal
 ]
 import ./bbansi/[styles, colors]
 
@@ -18,7 +18,9 @@ type
   ColorSystem = enum
     TrueColor, EightBit, Standard, None
 
-proc checkColorSupport(): BbMode =
+proc checkColorSupport(file = stdout): BbMode =
+  when defined(bbansiOn):
+    return On
   when defined(bbansiOff):
     return Off
   when defined(bbansiNoColor):
@@ -28,7 +30,7 @@ proc checkColorSupport(): BbMode =
       return On
     elif getEnv("NO_COLOR") != "":
       return NoColor
-    elif (getEnv("TERM") in ["dumb", "unknown"]) or not isatty(stdout):
+    elif (getEnv("TERM") in ["dumb", "unknown"]) or not isatty(file):
       return Off
 
 proc checkColorSystem(): ColorSystem =
@@ -44,7 +46,7 @@ proc checkColorSystem(): ColorSystem =
     of "16color": Standard
     else: Standard
 
-var bbMode* = checkColorSupport()
+let gbbMode* = checkColorSupport()
 let colorSystem* = checkColorSystem()
 
 func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
@@ -69,45 +71,53 @@ macro enumNames(a: typed): untyped =
 
 const ColorXTermNames = enumNames(ColorXterm).mapIt(firstCapital(it))
 const BbStyleNames = enumNames(BbStyle).mapIt(firstCapital(it))
-const ColorDigitStrings = (1..255).toSeq().mapIt($it)
+# const ColorDigitStrings = (1..255).toSeq().mapIt($it)
 
-
-template parseUnsafe(body: untyped): untyped =
-  try: body
+func get256Color(s: string): int =
+  try:
+    if scanf(s, "Color($i)", result):
+      if result > 255:
+        result = 0
   except: discard
 
-proc parseStyle(codes: var seq[string], style: string)  =
-  var style = normalizeStyle(style)
+func parseStyle(mode: BbMode, style: string): string =
+  try:
+    var style = normalizeStyle(style)
 
-  if style in ["B", "I", "U"]:
-    parseUnsafe: codes.add parseEnum[BbStyleAbbr](style).toCode()
-  elif style in BbStyleNames:
-    parseUnsafe: codes.add parseEnum[BbStyle](style).toCode()
+    if style in ["B", "I", "U"]:
+      return parseEnum[BbStyleAbbr](style).toCode()
+    elif style in BbStyleNames:
+      return parseEnum[BbStyle](style).toCode()
 
-  if not (bbMode == On): return
+    if not (mode == On): return
 
-  if style in ColorXtermNames:
-    parseUnsafe: codes.add parseEnum[ColorXterm](style).toCode()
-  elif style.isHex():
-    codes.add style.hexToRgb.toCode()
-  elif style in ColorDigitStrings:
-    parseUnsafe: codes.add parseInt(style).toCode()
-  else:
-    when defined(debugBB): echo "unknown style: " & normalizedStyle
+    if style in ColorXtermNames:
+      return parseEnum[ColorXterm](style).toCode()
+    elif style.isHex():
+      return style.hexToRgb.toCode()
+    elif "Color(" in style:
+      if (let num = style.get256Color(); num > 0):
+        return num.toCode()
+    else:
+      when defined(debugBB): debugEcho "unknown style: " & style
+  except: discard
 
-func parseBgStyle(codes: var seq[string], style: string) =
+func parseBgStyle(mode: BbMode, style: string): string =
+  try:
     var style = normalizeStyle(style)
     if style in ColorXtermNames:
-      parseUnsafe: codes.add parseEnum[ColorXTerm](style).toBgCode()
+      return parseEnum[ColorXTerm](style).toBgCode()
     elif style.isHex():
-      codes.add style.hexToRgb().toBgCode()
-    elif style in ColorDigitStrings:
-      parseUnsafe: codes.add parseInt(style).toBgCode()
+      return style.hexToRgb().toBgCode()
+    elif "Color(" in style:
+      if (let num = style.get256Color(); num > 0):
+        return num.toBgCode()
     else:
-      when defined(debugBB): echo "unknown bg style: " & style
+      when defined(debugBB): debugEcho "unknown style: " & style
+  except: discard
 
-proc toAnsiCode*(s: string): string =
-  if bbMode == Off: return
+func toAnsiCode*(mode: BbMode, s: string ): string =
+  if mode == Off: return
   var
     codes: seq[string]
     styles: seq[string]
@@ -118,17 +128,21 @@ proc toAnsiCode*(s: string): string =
     bgStyle = fgBgSplit[1].strip().toLowerAscii()
   else:
     styles = s.splitWhitespace()
-  for style in styles:
-    parseStyle codes, style
 
-  if bbMode == On and bgStyle != "":
-    parseBgStyle codes, bgStyle
+  for style in styles:
+    let code = parseStyle(mode, style)
+    if code != "": codes.add code
+
+  if mode == On and bgStyle != "":
+    let code = parseBgStyle(mode, bgStyle)
+    if code != "": codes.add code
 
   if codes.len > 0:
     result.add "\e["
     result.add codes.join ";"
     result.add "m"
 
+proc toAnsiCode*(s: string): string {.inline.} = toAnsiCode(gBbMode, s)
 
 func stripAnsi*(s: string): string =
   ## remove all ansi escape codes from a string
@@ -264,6 +278,7 @@ func bb*(s: string): BbString =
 
   result.closeFinalSpan
 
+
 proc bb*(s: string, style: string): BbString =
   bb("[" & style & "]" & s & "[/" & style & "]")
 
@@ -290,20 +305,23 @@ proc `&`*(x: string, y: BbString): BbString =
 func len*(bbs: BbString): int =
   bbs.plain.len
 
-proc `$`*(bbs: BbString): string =
-  if bbMode == Off:
+func toString(bbs: Bbstring, mode: BbMode): string =
+  if mode == Off:
     return bbs.plain
 
   for span in bbs.spans:
     var codes = ""
     if span.styles.len > 0:
-      codes = span.styles.join(" ").toAnsiCode
+      codes = toAnsiCode(mode, span.styles.join(" "))
 
     result.add codes
     result.add bbs.plain[span.slice[0] .. span.slice[1]]
 
     if codes != "":
-      result.add toAnsiCode("reset")
+      result.add toAnsiCode(mode, "reset")
+
+proc `$`*(bbs: BbString): string =
+  bbs.toString(gBbMode)
 
 func align*(bs: BbString, count: Natural, padding = ' '): Bbstring =
   if bs.len < count:

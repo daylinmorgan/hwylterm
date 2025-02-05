@@ -1,7 +1,6 @@
+{.define: bbansiOn.}
 import std/[os, strutils, unittest]
-
 import hwylterm/bbansi
-bbMode = On
 
 template bbCheck(input: string, output: string): untyped =
   check escape($bb(input)) == escape(output)
@@ -17,6 +16,8 @@ suite "basic":
     bbCheck "[red]5[/]", "\e[38;5;1m5\e[0m"
     bbCheck "[bold][red]5","\e[1;38;5;1m5\e[0m"
     check "[bold]bold[/bold]" == "bold".bbMarkup("bold")
+    bbCheck "[color(9)]red[/color(9)][color(2)]blue[/color(2)]", "\x1B[38;5;9mred\x1B[0m\x1B[38;5;2mblue\x1B[0m"
+    bbCheck "[color(256)]no color![/]", "no color!"
 
   test "compile time":
     const s = bb"[red]red text"
