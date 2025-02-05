@@ -26,6 +26,7 @@ suite "flags":
     "enumFlag", "--color black",
     "error failed to parse value for color as enum: black expected one of: red,blue,green",
   )
+  okWithArgs("flagKey", "--key", "key set")
 
 suite "subcommands":
 

@@ -1138,9 +1138,9 @@ proc parse*[T](p: var OptParser, target: var KV[string, T]) =
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
   var caseStmt = nnkCaseStmt.newTree()
   if NoNormalize notin cfg.settings:
-    caseStmt.add nnkCall.newTree(ident"optionNormalize", ident"key")
+    caseStmt.add nnkCall.newTree(ident"optionNormalize", ident"hwylKey")
   else:
-    caseStmt.add ident"key"
+    caseStmt.add ident"hwylKey"
 
   caseStmt.add nnkOfBranch.newTree(newLit(""), quote do: hwylCliError("empty flag not supported currently"))
 
@@ -1170,7 +1170,7 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
 
     caseStmt.add branch
 
-  caseStmt.add nnkElse.newTree(quote do: hwylCliError("unknown flag: [b]" & key))
+  caseStmt.add nnkElse.newTree(quote do: hwylCliError("unknown flag: [b]" & hwylKey))
 
   result = nnkStmtList.newTree(caseStmt)
 
@@ -1393,6 +1393,7 @@ func positionalArgsOfBranch(cfg: CliCfg): NimNode =
     inc nArgs
     parseArgs(p, result)
 
+
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
     version = cfg.version or newLit("")
@@ -1438,16 +1439,11 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   # TODO: first key needs to be normalized?
   # TODO: don't use getopt? use p.next() instead?
   parserBody.add nnkForStmt.newTree(
-    ident"kind", ident"key", ident"val",
-    # nnkCall.newTree(nnkDotExpr.newTree(optParser,ident("getopt"))),
+    ident"hwylKind", ident"hwylKey", ident"hwylVal",
     nnkCall.newTree(ident"getopt", optParser),
     nnkStmtList.newTree(
-      # # for debugging..
-      # quote do:
-      #   echo `kind`,"|",`key`,"|",`val`
-      # ,
       nnkCaseStmt.newTree(
-        ident"kind",
+        ident"hwylKind",
         nnkOfBranch.newTree(ident("cmdError"), quote do: hwylCliError(p.message)),
         nnkOfBranch.newTree(ident("cmdEnd"), quote do:  hwylCliError("reached cmdEnd unexpectedly.")),
         positionalArgsOfBranch(cfg),
