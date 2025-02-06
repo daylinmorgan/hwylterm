@@ -276,19 +276,20 @@ type
 func hasSubcommands(c: CliCfg): bool = c.subcommands.len > 0
 
 
-template `<<<`(s: string) {.used.} =
-  let pos = instantiationInfo()
-  debugEcho "$1:$2" % [pos.filename, $pos.line]
-  debugEcho s
-  debugEcho "^^^^^^^^^^^^^^^^^^^^^"
+# template `<<<`(s: string) {.used.} =
+#   let pos = instantiationInfo()
+#   debugEcho "$1:$2" % [pos.filename, $pos.line]
+#   debugEcho s
 
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
 template `<<<`(n: NimNode) {.used.} =
   ## for debugging macros
-  <<< treeRepr n
+  <<< ("TreeRepr:\n" & (treeRepr n))
+  <<< ("Repr: \n" & (repr n))
+
 
 template `<<<`(n: untyped) {.used.} =
-  debugEcho n, "|||", instantiationInfo().line
+  debugEcho n, "....................", instantiationInfo().line
 
 func `<<<`(f: CliFlag) {.used.}=
   var s: string
@@ -301,7 +302,7 @@ func `<<<`(f: CliFlag) {.used.}=
   ]
   s.add "CliFlag(\n"
   for (k,v) in fields:
-    s.add "$1 = $2\n" % [k,v]
+    s.add "  $1 = $2\n" % [k,v]
   s.add ")"
   <<< s
 
@@ -311,7 +312,7 @@ func err(c: CliCfg, msg: string) =
   ## quit with error while generating cli
   error "hwylcli: \nfailed to generate '" & c.name & "' cli: \n" & msg
 
-func prettyRepr(n: NimNode): string = 
+func prettyRepr(n: NimNode): string =
   let r = n.repr
   let maxWidth = r.splitlines().mapIt(it.len).max()
   const padding = "│ "
@@ -321,24 +322,27 @@ func prettyRepr(n: NimNode): string =
   result.add "╰"
   result.add "─".repeat(maxWidth + 2)
 
-func err(c: CliCfg, node: NimNode, msg: string = "") =
+func err(c: CliCfg, node: NimNode, msg: string = "", instantiationInfo: tuple[filename: string, line: int, column: int]) =
   var fullMsg: string
   fullMsg.add node.prettyRepr() & "\n"
-  fullMsg.add "parsing error"
+  fullMsg.add "parsing error ($1, $2) " % [instantiationInfo.filename, $instantiationInfo.line] 
   if msg != "":
     fullMsg.add ": " & msg
   c.err fullMsg
 
-func expectLen(c: CliCfg, node: NimNode, length: Natural) =
+template err(c: CliCfg, node: NimNode, msg: string = "") =
+  err c, node, msg, instantiationInfo()
+
+template expectLen(c: CliCfg, node: NimNode, length: Natural) =
   if node.len != length:
-    c.err node, fmt"expected node to be length {length} not {node.len}"
+    c.err node, "expected node to be length $1 not $2" % [$length, $node.len], instantiationInfo()
 
-func expectKind(c: CliCfg, node: NimNode, kinds: varargs[NimNodeKind]) =
+template expectKind(c: CliCfg, node: NimNode, kinds: varargs[NimNodeKind]) =
   if node.kind notin kinds:
-    c.err node, fmt"expected node kind to be one of: $1 but got $2" % [$kinds, $node.kind]
+    c.err node, "expected node kind to be one of: $1 but got $2" % [$kinds, $node.kind], instantiationInfo()
 
-func unexpectedKind(c: CliCfg, node: NimNode) =
-  c.err node, fmt"unexpected node kind: $1" & $node.kind
+template unexpectedKind(c: CliCfg, node: NimNode) =
+  c.err node, "unexpected node kind: $1" % $node.kind, instantiationInfo()
 
 
 template parseCliSetting(s: string) =
@@ -389,7 +393,7 @@ func getFlagParamNode(c: CliCfg, node: NimNode): NimNode =
   else: c.unexpectedKind node
 
 # TODO: also accept the form `flag: "help"`
-func parseFlagParams(c: CliCfg, f: var CliFlag, node: NimNode) =
+func parseFlagStmtList(c: CliCfg, f: var CliFlag, node: NimNode) =
   c.expectKind node, nnkStmtList
   for n in node:
     case n.kind
@@ -418,41 +422,148 @@ func parseFlagParams(c: CliCfg, f: var CliFlag, node: NimNode) =
     else:
       c.unexpectedKind n
 
-func newFlag(cfg: var CliCfg , n: NimNode): CliFlag =
-  cfg.expectKind n[0], nnkIdent, nnkStrLit, nnkAccQuoted
+func getShortChar(c: CliCfg, n: NimNode): char =
+  let val = n.strVal
+  if val.len > 1:
+    c.err n, "short flag must be a char not: " & val
+  result = val[0].char
 
-  case n[0].kind:
+func parseCliFlagCall(c: var CliCfg, f: var CliFlag, nodes: seq[NimNode]) =
+
+  # TODO: be more careful here?
+  # TODO: ignore positionals that are ident'_'
+  template `<-`(target: untyped, node: NimNode) =
+    if node != ident"_":
+      target = node
+
+  case nodes.len:
+
+  # flag("help string")
+  of 1:
+    f.help <- nodes[0]
+
+  # flag(T, "help string")
+  of 2:
+    f.typeNode <- nodes[0]
+    f.help <- nodes[1]
+
+  # flag(NimNode , T , "help string")
+  of 3:
+    f.defaultVal <- nodes[0]
+    f.typeNode <- nodes[1]
+    f.help <- nodes[2]
+
+  else:
+    c.err "unexpected number of parameters for flag"
+
+func newFlag(cfg: var CliCfg , n: NimNode): CliFlag =
+  cfg.expectKind n, nnkIdent, nnkStrLit, nnkAccQuoted
+
+  case n.kind:
   of nnkIdent, nnkStrLit:
-    result.name = n[0].strVal
+    result.name = n.strVal
   of nnkAccQuoted:
-    result.name = collect(for c in n[0]: c.strVal).join("")
-  else: cfg.unexpectedKind n[0]
+    result.name = collect(for c in n: c.strVal).join("")
+  else: cfg.unexpectedKind n
 
   result.help = newLit("") # by default no string
+
   # assume a single character is a short flag
   if result.name.len == 1:
     result.short = result.name[0].char
   else:
     result.long = result.name
 
+type FlagKind = enum
+  Command       ## flag "help"
+  InfixCommand  ## a | aflag "help"
+  InfixCall     ## a | aflag("help")
+  InfixStmt     ## a | aflag: ? "help"
+  InfixCallStmt ## c | count ("some number"): * 5
+  Stmt          ## count: * 5
+  CallStmt      ## count("help"): * 5
+  Call          ## count(5, int, "help")
 
-func parseCliFlag(c: var CliCfg, n: NimNode, group: string) =
 
-  c.expectKind n, [nnkCommand, nnkCall]
-  var f = c.newFlag n
+func toFlagKind(c: CliCfg, n: NimNode): FlagKind =
+  case n.kind:
+  of nnkInfix:
+    case n[^1].kind
+    of nnkCommand:
+      result = InfixCommand
+    of nnkStmtList:
+      case n[2].kind
+      of nnkIdent:
+        result = InfixStmt
+      of nnkCall:
+        result = InfixCallStmt
+      else: c.err n, "failed to determine flag kind"
+    of nnkCall:
+      result = InfixCall
+    else:
+      c.err n, "failed to determine flag kind with short flag"
+  of nnkCall:
+    if n.len == 2 and n[1].kind == nnkStmtList:
+      result = Stmt
+    elif n[^1].kind == nnkStmtList:
+      result = CallStmt
+    else:
+      result = Call
+  of nnkCommand:
+    result = Command
+  else:
+    c.unexpectedKind n
 
-  # option "some help desc"
-  if n.kind == nnkCommand:
+func parseCliFlag(
+  c: var CliCfg,
+  n: NimNode,
+  group: string,
+  short: char = '\x00'
+) =
+  var f : CliFlag
+
+
+  let flagKind = c.toFlagKind n
+
+  case flagKind
+  of Stmt:
+     f = c.newFlag n[0]
+     parseFlagStmtList c, f, n[1]
+
+  of InfixCommand:
+    f = c.newFlag n[2][0]
+    f.help = n[2][1]
+
+  of InfixStmt:
+    f = c.newFlag n[2]
+    parseFlagStmtList c, f, n[^1]
+
+  of InfixCallStmt:
+    f = c.newFlag n[2][0]
+    parseCliFlagCall c, f, n[^2][1..^1]
+    parseFlagStmtList c, f, n[^1]
+
+  of Call:
+    f = c.newFlag n[0]
+    parseCliFlagCall c, f, n[1..^1]
+
+  of CallStmt:
+    f = c.newFlag n[0]
+    parseCliFlagCall c, f, n[1..^2]
+    parseFlagStmtList c, f, n[^1]
+
+  of InfixCall:
+    f = c.newFlag n[2][0]
+    parseCliFlagCall c, f, n[^1][1..^1]
+
+  of Command:
+    f = c.newFlag n[0]
     f.help = n[1]
 
-  # option:
-  #   T string
-  #   help "some help description"
-  else:
-    parseFlagParams c, f, n[1]
+  if short != '\x00':
+    f.short = short
 
   f.ident = f.ident or f.name.ident
-
   f.group = group
   c.flagDefs.add f
 
@@ -487,20 +598,13 @@ func postParse(c: var CliCfg) =
     let count = c.args.filterIt(it.typeNode.kind == nnkBracketExpr).len
     if count > 1:
       c.err "more than one positional argument is variadic"
-  
+
 func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
   var group: string
   cfg.expectKind node, nnkStmtList
   for n in node:
-    case n.kind
-    # flags:
-    #   input "some input"
-    #   count:
-    #     T int
-    #     ? "a number"
-    of nnkCall, nnkCommand:
-      cfg.parseCliFlag n, group
 
+    case n.kind
     # start a new flag group
     # flags:
     #   [category]
@@ -516,7 +620,6 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
     of nnkPrefix:
       if
         n[0].kind != nnkIdent or
-        n[0].strVal != "^" or
         n.len != 2 or
         n[1].kind notin [nnkBracket, nnkIdent, nnkStrLit]:
         cfg.err n, "unable to determine inherited flag/group"
@@ -527,6 +630,29 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
       of nnkIdent, nnkStrLit:
         cfg.inherit.flags.add n[1].strval
       else: cfg.unexpectedKind n
+
+    # flags:
+    #   input "some input"
+    #   count:
+    #     T int
+    #     ? "a number"
+    of nnkCall, nnkCommand:
+      cfg.expectKind n, [nnkCommand, nnkCall]
+      cfg.parseCliFlag n, group
+
+    # flags:
+    #   l | `long-flag` "flag with short using infix"
+    #   n | `dry-run`("set dry-run"):
+    #     ident dry
+    of nnkInfix:
+      cfg.expectKind n[0], nnkIdent
+      if n[0].strVal != "|":
+        cfg.err n, "unexpected infix operator in flags"
+      cfg.expectKind n[2], nnkCall, nnkCommand, nnkAccQuoted, nnkIdent
+
+      # need to make sure that this node getting passed here is stmt?
+      cfg.parseCliFlag n, group, cfg.getShortChar(n[1])
+
     else: cfg.unexpectedKind n
 
 
@@ -701,7 +827,8 @@ func postPropagate(c: var CliCfg) =
       else:
         short[f.short] = f
 
-    if f.long in long:
+    if f.long == "": discard
+    elif f.long in long:
       let conflict = long[f.long]
       c.err "conflicting long flags for: " & f.name & " and " & conflict.name
     else:

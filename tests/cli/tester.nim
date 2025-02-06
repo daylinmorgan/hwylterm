@@ -27,6 +27,30 @@ suite "flags":
     "error failed to parse value for color as enum: black expected one of: red,blue,green",
   )
   okWithArgs("flagKey", "--key", "key set")
+  okWithArgs("multiShortFlags", "--help","""
+usage:
+  multiple-short-flags [flags]
+
+flags:
+  -a         first short
+  -b         second short
+  -h --help  show this help
+  """)
+  okWithArgs("allFlagKinds", "--help", """
+usage:
+  flag-kinds [flags]
+
+flags:
+  -a               kind: Command
+  -b --bbbb        kind: InfixCommand
+     --cccc        kind: Stmt
+  -d --dddd        kind: InfixStmt
+  -e        string kind: Call
+  -f --ffff        kind: InfixCallStmt
+     --gggg string kind: CallStmt (default: default)
+  -h --hhhh        kind: InfixCall
+     --help        show this help
+""")
 
 suite "subcommands":
 

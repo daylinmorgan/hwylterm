@@ -1,4 +1,4 @@
-import std/[compilesettings, os, osproc, strutils, times, unittest, terminal]
+import std/[os, osproc, strutils, times, unittest, terminal]
 
 const pathToSrc = currentSourcePath().parentDir()
 const binDir = pathToSrc / "bin"
