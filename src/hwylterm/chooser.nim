@@ -158,8 +158,8 @@ when isMainModule:
         else:
           items = args
 
-      let item = choose(items)
-      echo "selected: ", item
+      let selected= choose(items)
+      echo selected.join("\n")
 
 
 
