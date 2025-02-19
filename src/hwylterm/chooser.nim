@@ -143,10 +143,7 @@ when isMainModule:
       args seq[string]
     flags:
       demo "show demo"
-      separator:
-        T string
-        help "separator to split items"
-        short "s"
+      s|separator(string, "separator to split items")
     run:
       var items: seq[string]
       if demo:

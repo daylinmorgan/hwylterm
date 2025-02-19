@@ -427,10 +427,7 @@ when isMainModule:
     flags:
       debug "show debug"
       testCard "show test card"
-      style:
-        T string
-        ? "set style for string"
-        - "s"
+      s|style(string, "set style for string")
     run:
       if testCard: showTestCard()
       for arg in args:
