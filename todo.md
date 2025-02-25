@@ -2,29 +2,33 @@
 
 - [x] add cligen adapters to add colors with bbansi
   - [ ] add integration test check cligen
+  - [ ] test cligen generator with recent releases (use example from cligen repo?)
 - [x] add generic help generator to accompany parseopt
 
 ## improvements
 
 - [ ] addJoinStyle(); works like join except wraps each argument in a style
 - [ ] consider reducing illwill surface to only relevant IO (input) features
-- [ ] revamp spinner api (new  threads?)
+- [ ] revamp spinner api (new threads module?)
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
-- [ ] console object with customizable options to apply formatting
+- [ ] console object with customizable options to apply formatting (like rich.console)
 
-### cli generator
+## cli generator
 
 - [x] add InferShortFlags setting
 - [x] add support for types(metavars)/defaults/required in help output
+- [x] BUG: flag can't be `key`
 - [ ] ShowHelp setting should also occur after "a hwylCliError"
       could be by default (see `program --help` for more info.)
 - [ ] consider support "more verbose" help i.e. -h vs --help giving different results
 - [ ] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
       inject this code in the same place as the "default" setting
-- [x] BUG: flag can't be `key`
 - [ ] consider default (or opt in) "help subcmd"
   > app help (show all help?)
   > app help <subcmd> same as app <subcmd> --help
+- [ ] support old positionals behavior as optin toplevel setting (store data in `args`)
+- [ ] allow single positional to be optional
+
 
 ## features
 
