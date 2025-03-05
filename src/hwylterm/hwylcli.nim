@@ -1559,7 +1559,8 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         longNoVal = `longNoVal`,
         shortNoVal = `shortNoVal`,
         stopWords = `stopWords`,
-        opChars = {','}
+        opChars = {','},
+        longPfxOk = false,
       )
   )
 
