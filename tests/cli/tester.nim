@@ -4,7 +4,6 @@ import ./lib
 if commandLineParams().len == 0:
   preCompileTestModules()
 
-
 suite "positional":
 
   okWithArgs("posBasic", "a b c d e", """notFirst=a rest=@["b", "c", "d", "e"]""")
@@ -63,6 +62,7 @@ suite "subcommands":
 
   okWithArgs("subcommands", "ccccc", """no flags :)""")
   okWithArgs("subcommands", "c", """no flags :)""")
+  okWithArgs("subcommands", "dd-dd", """not all hyphens are flags""")
 
 
 suite "help":

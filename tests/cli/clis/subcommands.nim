@@ -29,3 +29,9 @@ hwylCli:
     alias c
     run:
       echo "no flags :)"
+
+    [dd-dd]
+    ... "subcommand with hyphen"
+    run:
+      echo "not all hyphens are flags"
+
