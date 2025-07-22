@@ -1,4 +1,4 @@
-import std/[os, locks, sequtils, terminal]
+import std/[os, locks, sequtils, strutils, terminal]
 import "."/[bbansi, spin/spinners]
 export spinners
 
@@ -20,6 +20,8 @@ type
     Stop
     SymbolChange
     TextChange
+    Echo
+
   SpinnyEvent = object
     kind: EventKind
     payload: BbString
@@ -54,6 +56,9 @@ proc setSymbol*(spinny: Spinny, symbol: string) =
 proc setText*(spinny: Spinny, text: string | BbString) =
   spinnyChannel.send(SpinnyEvent(kind: TextChange, payload: bb(text)))
 
+proc echo*(spinny: Spinny, text: string | BbString) =
+  spinnyChannel.send(SpinnyEvent(kind: Echo, payload: bb(text)))
+
 proc spinnyLoop(spinny: Spinny) {.thread.} =
   var frameCounter = 0
 
@@ -74,6 +79,11 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
         spinny.frame = msg.payload
       of TextChange:
         spinny.text = msg.payload
+      of Echo:
+        eraseLine spinny.file
+        flushFile spinny.file
+        writeLine(stdout, $msg.payload)
+        flushFile stdout
 
     flushFile spinny.file
     if not spinny.customSymbol:
@@ -111,6 +121,8 @@ proc stop*(spinny: Spinny) =
 template useSpinner(spinner: Spinny, body: untyped) =
   # NOTE: it it necessary to inject the spinner here?
   if isatty(spinner.file): # don't spin if it's not a tty
+    proc echo(x: varargs[string, `$`]) =
+      spinner.echo(x.join(""))
     try:
       start spinner
       body
@@ -142,8 +154,8 @@ template with*(kind: SpinnerKind, msg: BbString, body: untyped): untyped =
     var spinner {.inject.} = newSpinny(msg, kind)
     useSpinner(spinner, body)
 
-
 when isMainModule:
   for kind, _ in Spinners:
     with(kind, $kind):
+      echo $kind
       sleep 1 * 1000
