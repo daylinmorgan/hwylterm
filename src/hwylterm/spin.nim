@@ -108,54 +108,45 @@ proc stop(spinny: Spinny, kind: EventKind, payload = "") =
   spinnyChannel.send(SpinnyEvent(kind: Stop))
   joinThread spinny.t
   eraseLine spinny.file
+  deinitLock spinny.lock
   flushFile spinny.file
 
 proc stop*(spinny: Spinny) =
   spinny.stop(Stop)
 
+template useSpinner(spinner: Spinny, body: untyped) =
+  # NOTE: it it necessary to inject the spinner here?
+  if isatty(spinner.file): # don't spin if it's not a tty
+    try:
+      start spinner
+      body
+    finally:
+      stop spinner
+  else:
+    body
+
 template withSpinner*(msg: string = "", body: untyped): untyped =
   block:
     var spinner {.inject.} = newSpinny(msg, Dots)
-    if isatty(spinner.file): # don't spin if it's not a tty
-      start spinner
-      body
-      stop spinner
-    else:
-      body
+    useSpinner(spinner, body)
 
 template withSpinner*(msg: BbString = bb"", body: untyped): untyped =
   block:
     var spinner {.inject.} = newSpinny(msg, Dots)
-    if isatty(spinner.file): # don't spin if it's not a tty
-      start spinner
-      body
-      stop spinner
-    else:
-      body
-
+    useSpinner(spinner, body)
 
 template withSpinner*(body: untyped): untyped =
   withSpinner("", body)
 
-template with*(kind: SpinnerKind, msg: string, body: untyped): untyped = 
+template with*(kind: SpinnerKind, msg: string, body: untyped): untyped =
   block:
     var spinner {.inject.} = newSpinny(msg, kind)
-    if isatty(spinner.file): # don't spin if it's not a tty
-      start spinner
-      body
-      stop spinner
-    else:
-      body
+    useSpinner(spinner, body)
 
-template with*(kind: SpinnerKind, msg: BbString, body: untyped): untyped = 
+template with*(kind: SpinnerKind, msg: BbString, body: untyped): untyped =
   block:
     var spinner {.inject.} = newSpinny(msg, kind)
-    if isatty(spinner.file): # don't spin if it's not a tty
-      start spinner
-      body
-      stop spinner
-    else:
-      body
+    useSpinner(spinner, body)
 
 
 when isMainModule:
