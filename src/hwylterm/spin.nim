@@ -35,7 +35,7 @@ proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
     bbFrames: mapIt(s.frames, bb(bbEscape(it), style)),
     customSymbol: false,
     interval: s.interval,
-    style: "bold blue",
+    style: style,
     file: stderr,
   )
 
@@ -54,32 +54,26 @@ proc setSymbol*(spinny: Spinny, symbol: string) =
 proc setText*(spinny: Spinny, text: string | BbString) =
   spinnyChannel.send(SpinnyEvent(kind: TextChange, payload: bb(text)))
 
-proc handleEvent(spinny: Spinny, eventData: SpinnyEvent): bool =
-  result = true
-  case eventData.kind
-  of Stop:
-    result = false
-  of SymbolChange:
-    spinny.customSymbol = true
-    spinny.frame = eventData.payload
-  of TextChange:
-    spinny.text = eventData.payload
-
 proc spinnyLoop(spinny: Spinny) {.thread.} =
   var frameCounter = 0
 
   while spinny.running:
-    let data = spinnyChannel.tryRecv()
-    if data.dataAvailable:
-      # If we received a Stop event
-      if not spinny.handleEvent(data.msg):
+    let (dataAvailable, msg) = spinnyChannel.tryRecv()
+    if dataAvailable:
+      case msg.kind
+      of Stop:
         spinnyChannel.close()
         # This is required so we can reopen the same channel more than once
         # See https://github.com/nim-lang/Nim/issues/6369
+        # is this still required?
         spinnyChannel = default(typeof(spinnyChannel))
-        # TODO: Do we need spinny.running at all?
         spinny.running = false
         break
+      of SymbolChange:
+        spinny.customSymbol = true
+        spinny.frame = msg.payload
+      of TextChange:
+        spinny.text = msg.payload
 
     flushFile spinny.file
     if not spinny.customSymbol:
