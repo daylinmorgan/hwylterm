@@ -21,6 +21,7 @@ type
     SymbolChange
     TextChange
     Echo
+    Write
 
   SpinnyEvent = object
     kind: EventKind
@@ -59,6 +60,9 @@ proc setText*(spinny: Spinny, text: string | BbString) =
 proc echo*(spinny: Spinny, text: string | BbString) =
   spinnyChannel.send(SpinnyEvent(kind: Echo, payload: bb(text)))
 
+proc write*(spinny: Spinny, text: string | BbString) =
+  spinnyChannel.send(SpinnyEvent(kind: Write, payload: bb(text)))
+
 proc spinnyLoop(spinny: Spinny) {.thread.} =
   var frameCounter = 0
 
@@ -79,11 +83,16 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
         spinny.frame = msg.payload
       of TextChange:
         spinny.text = msg.payload
+      # TODO: combine echo/write with sensible 'File abstraction'
       of Echo:
         eraseLine spinny.file
         flushFile spinny.file
         writeLine(stdout, $msg.payload)
         flushFile stdout
+      of Write:
+        eraseLine spinny.file
+        flushFile spinny.file
+        writeLine spinny.file, $msg.payload
 
     flushFile spinny.file
     if not spinny.customSymbol:
