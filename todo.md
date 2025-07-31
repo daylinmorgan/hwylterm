@@ -28,6 +28,7 @@
   > app help <subcmd> same as app <subcmd> --help
 - [ ] support old positionals behavior as optin toplevel setting (store data in `args`)
 - [ ] allow single positional to be optional
+- [ ] add support for hidden flags
 
 
 ## features
