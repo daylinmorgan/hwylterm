@@ -49,12 +49,15 @@ proc newSpinny*(text: string | Bbstring, spinType: SpinnerKind): Spinny =
   newSpinny(text, Spinners[spinType])
 
 proc setSymbolColor*(spinny: Spinny, style: string) =
+  if not spinny.running: return
   spinny.bbFrames = mapIt(spinny.frames, bb(bbEscape(it), style))
 
 proc setSymbol*(spinny: Spinny, symbol: string) =
+  if not spinny.running: return
   spinnyChannel.send(SpinnyEvent(kind: SymbolChange, payload: bb(symbol)))
 
 proc setText*(spinny: Spinny, text: string | BbString) =
+  if not spinny.running: return
   spinnyChannel.send(SpinnyEvent(kind: TextChange, payload: bb(text)))
 
 proc echo*(spinny: Spinny, text: string | BbString) =
@@ -166,5 +169,5 @@ template with*(kind: SpinnerKind, msg: BbString, body: untyped): untyped =
 when isMainModule:
   for kind, _ in Spinners:
     with(kind, $kind):
-      echo $kind
+      echo $kind 
       sleep 1 * 1000
