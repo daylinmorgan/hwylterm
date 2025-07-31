@@ -33,7 +33,7 @@ proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
   let style = "bold blue"
   Spinny(
     text: text,
-    running: true,
+    # running: true,
     frames: s.frames,
     bbFrames: mapIt(s.frames, bb(bbEscape(it), style)),
     customSymbol: false,
@@ -116,6 +116,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
 
 proc start*(spinny: Spinny) =
   initLock spinny.lock
+  spinny.running = true
   spinnyChannel.open()
   createThread(spinny.t, spinnyLoop, spinny)
 
