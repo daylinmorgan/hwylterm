@@ -3,7 +3,7 @@ import "."/[bbansi, spin/spinners]
 export spinners
 
 type
-  Spinny = ref object
+  Spinny* = ref object
     t: Thread[Spinny]
     lock: Lock
     text: BbString
