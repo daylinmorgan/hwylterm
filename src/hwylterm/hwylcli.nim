@@ -673,9 +673,7 @@ func parseCliBody(body: NimNode, name: string = "", root: bool= false): CliCfg
 
 func isSubMarker(node: NimNode): bool =
   if node.kind != nnkBracket: return false
-  <<< node
   if node.len != 1: return false
-  <<< node.len
   if node[0].kind notin [nnkIdent, nnkStrLit, nnkInfix]:
     return false
   result = true
@@ -747,8 +745,6 @@ func inheritFrom(child: var CliCfg, parent: CliCfg) =
 
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   cfg.expectKind node[1], nnkStmtList
-  <<< node[1]
-  <<< cfg.sliceStmts(node[1])
   for (name, s) in cfg.sliceStmts(node[1]):
     var subCfg = parseCliBody(
       nnkStmtList.newTree(node[1][s]), cfg.name & " " & name
