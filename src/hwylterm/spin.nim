@@ -1,5 +1,6 @@
 import std/[os, locks, sequtils, strutils, terminal]
-import "."/[bbansi, spin/spinners]
+import ./bbansi
+import ./spin/spinners
 export spinners
 
 type
@@ -29,6 +30,11 @@ type
 
 var spinnyChannel: Channel[SpinnyEvent]
 
+const defaultSpinnerKind* =
+  block:
+    const defaultSpinner {.strdefine.} = "Dots2" # I prefer Dots2 ¯\_(ツ)_/¯ 
+    parseEnum[SpinnerKind](defaultSpinner)
+
 proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
   let style = "bold blue"
   Spinny(
@@ -45,7 +51,7 @@ proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
 proc newSpinny*(text: string, s: Spinner): Spinny =
   newSpinny(bb(text), s)
 
-proc newSpinny*(text: string | Bbstring, spinType: SpinnerKind): Spinny =
+proc newSpinny*(text: string | Bbstring, spinType: SpinnerKind = defaultSpinnerKind): Spinny =
   newSpinny(text, Spinners[spinType])
 
 proc setSymbolColor*(spinny: Spinny, style: string) =
@@ -157,12 +163,12 @@ template useSpinner(spinner: Spinny, body: untyped) =
 
 template withSpinner*(msg: string = "", body: untyped): untyped =
   block:
-    var spinner {.inject.} = newSpinny(msg, Dots)
+    var spinner {.inject.} = newSpinny(msg, defaultSpinnerKind)
     useSpinner(spinner, body)
 
 template withSpinner*(msg: BbString = bb"", body: untyped): untyped =
   block:
-    var spinner {.inject.} = newSpinny(msg, Dots)
+    var spinner {.inject.} = newSpinny(msg, defaultSpinnerKind)
     useSpinner(spinner, body)
 
 template withSpinner*(body: untyped): untyped =
