@@ -147,8 +147,6 @@ proc stop*(spinny: Spinny) =
 template useSpinner(spinner: Spinny, body: untyped) =
   # NOTE: it it necessary to inject the spinner here?
   if isatty(spinner.file): # don't spin if it's not a tty
-    proc echo(x: varargs[string, `$`]) =
-      spinner.echo(x.join(""))
     try:
       start spinner
       body
