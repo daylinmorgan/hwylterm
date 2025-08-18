@@ -63,6 +63,7 @@ suite "subcommands":
   okWithArgs("subcommands", "ccccc", """no flags :)""")
   okWithArgs("subcommands", "c", """no flags :)""")
   okWithArgs("subcommands", "dd-dd", """not all hyphens are flags""")
+  failWithArgs("subcommands", "e", "error unknown subcommand: e expected one of: a, b, ccccc, dd-dd")
 
 
 suite "help":

@@ -1486,6 +1486,9 @@ func hwylCliImpl(cfg: CliCfg): NimNode
 
 func genSubcommandHandler(cfg: CliCfg): NimNode =
   let subcmd = ident"subcmd"
+  let subcmdOptions = cfg.subcommands.mapIt(
+    it.subName.bbMarkup("b")
+  ).join(", ")
   result = nnkStmtList.newTree()
 
   var subCommandCase = nnkCaseStmt.newTree()
@@ -1504,7 +1507,12 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
 
   subcommandCase.add nnkElse.newTree(
     quote do:
-      hwylCliError("unknown subcommand: [b]" & `subcmd`)
+      hwylCliError(
+        "unknown subcommand: " &
+        `subcmd`.bbMarkup("b") &
+        " expected one of: " &
+        `subcmdOptions`
+      )
   )
 
   result.add subCommandCase
