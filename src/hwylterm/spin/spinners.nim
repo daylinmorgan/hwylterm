@@ -11,6 +11,7 @@ type
     Clock, Earth, Moon, Runner, Pong, Shark, Dqpb
 
   Spinner* = object
+    # Make Configurable?
     interval*: int = 80
     frames*: seq[string]
 

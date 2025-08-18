@@ -68,36 +68,49 @@ proc write*(spinny: Spinny, text: string | BbString) =
 
 proc spinnyLoop(spinny: Spinny) {.thread.} =
   var frameCounter = 0
+  var lastTextEvent: BbString # Variable to hold the last text change
 
   while spinny.running:
-    let (dataAvailable, msg) = spinnyChannel.tryRecv()
-    if dataAvailable:
+    var textUpdatePending = false
+    while true:
+      let (dataAvailable, msg) = spinnyChannel.tryRecv()
+      if not dataAvailable:
+        break # Channel is empty, exit the drain loop
+
+      # Process all events in the channel
       case msg.kind
       of Stop:
+        # A Stop event should immediately stop the spinner
         spinnyChannel.close()
-        # This is required so we can reopen the same channel more than once
-        # See https://github.com/nim-lang/Nim/issues/6369
-        # is this still required?
         spinnyChannel = default(typeof(spinnyChannel))
         spinny.running = false
-        break
+        return # Use `return` to exit the thread immediately
       of SymbolChange:
         spinny.customSymbol = true
         spinny.frame = msg.payload
       of TextChange:
-        spinny.text = msg.payload
-      # TODO: combine echo/write with sensible 'File abstraction'
+        # We only care about the last text change, so we store it
+        lastTextEvent = msg.payload
+        textUpdatePending = true
       of Echo:
-        eraseLine spinny.file
-        flushFile spinny.file
-        writeLine(stdout, $msg.payload)
-        flushFile stdout
+        withLock spinny.lock:
+          eraseLine spinny.file
+          flushFile spinny.file
+          writeLine(stdout, $msg.payload)
+          flushFile stdout
       of Write:
-        eraseLine spinny.file
-        flushFile spinny.file
-        writeLine spinny.file, $msg.payload
+        withLock spinny.lock:
+          eraseLine spinny.file
+          flushFile spinny.file
+          writeLine spinny.file, $msg.payload
 
-    flushFile spinny.file
+    # After draining the channel, apply the last pending text change
+    if textUpdatePending:
+      spinny.text = lastTextEvent
+
+    withLock spinny.lock:
+      flushFile spinny.file
+
     if not spinny.customSymbol:
       spinny.frame = spinny.bbFrames[frameCounter]
 
@@ -168,7 +181,10 @@ template with*(kind: SpinnerKind, msg: BbString, body: untyped): untyped =
     useSpinner(spinner, body)
 
 when isMainModule:
+  var delay = 1000
+  let params = commandLineParams()
+  if params.len > 0: delay = parseInt(params[0])
   for kind, _ in Spinners:
     with(kind, $kind):
-      echo $kind 
-      sleep 1 * 1000
+      echo $kind
+      sleep 1 * delay
