@@ -17,6 +17,10 @@ type
     On, NoColor, Off
   ColorSystem = enum
     TrueColor, EightBit, Standard, None
+  Console = object
+    mode*: BbMode
+    colorSystem*: ColorSystem
+    file*: File
 
 proc checkColorSupport(file = stdout): BbMode =
   when defined(bbansiOn):
@@ -46,8 +50,17 @@ proc checkColorSystem(): ColorSystem =
     of "16color": Standard
     else: Standard
 
-let gbbMode* = checkColorSupport()
-let colorSystem* = checkColorSystem()
+
+proc newConsole*(file: File = stdout): Console =
+  result.file = file
+  result.mode = checkColorSupport(file)
+  result.colorSystem = checkColorSystem()
+
+var hwylConsole* = newConsole()
+
+proc setHwylConsoleFile*(file: File) =
+  hwylConsole.file = file
+  hwylConsole.mode = checkColorSupport(file)
 
 func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
 func normalizeStyle(style: string): string = style.replace("_","").toLowerAscii().capitalizeAscii()
@@ -116,7 +129,7 @@ func parseBgStyle(mode: BbMode, style: string): string =
       when defined(debugBB): debugEcho "unknown style: " & style
   except: discard
 
-func toAnsiCode*(mode: BbMode, s: string ): string =
+func toAnsiCode*(mode: BbMode, s: string): string =
   if mode == Off: return
   var
     codes: seq[string]
@@ -142,7 +155,8 @@ func toAnsiCode*(mode: BbMode, s: string ): string =
     result.add codes.join ";"
     result.add "m"
 
-proc toAnsiCode*(s: string): string {.inline.} = toAnsiCode(gBbMode, s)
+proc toAnsiCode*(c: Console, s: string): string {.inline} = toAnsiCode(c.mode, s)
+proc toAnsiCode*(s: string): string {.inline.} = toAnsiCode(hwylConsole.mode, s)
 
 func stripAnsi*(s: string): string =
   ## remove all ansi escape codes from a string
@@ -170,6 +184,19 @@ type
     plain*: string
     spans*: seq[BbSpan]
 
+func bbMarkup*(s: string, style: string): string =
+  ## enclose a string in bbansi markup for the given style
+  result.add "["
+  result.add style
+  result.add "]"
+  result.add s
+  result.add "[/"
+  result.add style
+  result.add "]"
+
+func bbEscape*(s: string): string {.inline.} =
+  s.replace("[", "[[").replace("\\", "\\\\")
+
 func shift(s: BbSpan, i: Natural): BbSpan =
   result = s
   inc(result.slice[0],i)
@@ -188,7 +215,7 @@ template endSpan(bbs: var BbString) =
 
   elif bbs.plain.len >= 1:
     bbs.spans[^1].slice[1] = bbs.plain.len - 1
-  
+
   # I think this is covered by the first condition now?
   # if bbs.spans[^1].size == 0 and bbs.plain.len == 0:
   #   bbs.spans.delete(bbs.spans.len - 1)
@@ -225,7 +252,7 @@ template closeFinalSpan(bbs: var BbString) =
     elif bbs.spans[^1].slice[1] == 0:
       bbs.endSpan
 
-func bb*(s: string): BbString =
+func bbImpl(s: string): BbString =
   ## convert bbcode markup to ansi escape codes
   var
     pattern: string
@@ -278,12 +305,24 @@ func bb*(s: string): BbString =
 
   result.closeFinalSpan
 
+proc bb*(s: string): BbString =
+  bbImpl(s)
+
+proc bb*(s: static string): BbString  {.compileTime.}=
+  bbImpl(s)
 
 proc bb*(s: string, style: string): BbString =
-  bb("[" & style & "]" & s & "[/" & style & "]")
+  bb(bbMarkup(s, style))
 
 proc bb*(s: string, style: Color256): BbString =
   bb(s, $style)
+
+# error in vmgen when trying to define both the
+# runtime and compile time (aka static string versions below)?
+# proc bb*(s: static string, style: Color256): BbString =
+#   bb(s, $style)
+# proc bb*(s: static string, style: static string): BBString {.compileTime.} =
+#   bbImpl(bbMarkup(s, style))
 
 proc bb*(s: BbString): BbString = s
 
@@ -293,7 +332,7 @@ func `&`*(x: BbString, y: string): BbString =
   result.spans.add BbSpan(styles: @[], slice: [x.plain.len, result.plain.len - 1])
 
 template bbfmt*(pattern: static string): BbString =
-  bb(fmt(pattern))
+  bbImpl(fmt(pattern))
 
 proc `&`*(x: string, y: BbString): BbString =
   result.plain = x & y.plain
@@ -320,36 +359,46 @@ func toString(bbs: Bbstring, mode: BbMode): string =
     if codes != "":
       result.add toAnsiCode(mode, "reset")
 
-proc `$`*(bbs: BbString): string =
-  bbs.toString(gBbMode)
+func toString*(c: Console, s: BbString): string {.inline.} =
+  toString(s, c.mode)
 
-func align*(bs: BbString, count: Natural, padding = ' '): Bbstring =
-  if bs.len < count:
-    result = (padding.repeat(count - bs.len)) & bs
+proc debugBb(bbs: BbString): string {.used.} =
+    echo "bbString("
+    echo "  plain: ", bbs.plain
+    echo "  spans: ", bbs.spans
+    echo "  escaped: ", escape($bbs)
+    echo ")"
+
+proc `$`*(s: BbString): string =
+  toString(hwylConsole, s)
+
+func align*(s: BbString, count: Natural, padding = ' '): Bbstring =
+  if s.len < count:
+    result = (padding.repeat(count - s.len)) & s
   else:
-    result = bs
+    result = s
 
-func alignLeft*(bs: BbString, count: Natural, padding = ' '): Bbstring = 
-  if bs.len < count:
-    result = bs & (padding.repeat(count - bs.len))
+func alignLeft*(s: BbString, count: Natural, padding = ' '): Bbstring = 
+  if s.len < count:
+    result = s & (padding.repeat(count - s.len))
   else:
-    result = bs
+    result = s
 
-func slice(bs: BbString, span: BbSpan): string =
-  bs.plain[span.slice[0]..span.slice[1]]
+func slice(s: BbString, span: BbSpan): string =
+  s.plain[span.slice[0]..span.slice[1]]
 
-func truncate*(bs: Bbstring, len: Natural): Bbstring =
-  if bs.len < len: return bs
-  for span in bs.spans:
+func truncate*(s: Bbstring, len: Natural): Bbstring =
+  if s.len < len: return s
+  for span in s.spans:
     if span.slice[0] >= len: break
     if span.slice[1] >= len:
       var finalSpan = span
       finalSpan.slice[1] = len - 1
       result.spans.add finalSpan
-      result.plain.add bs.slice(finalSpan)
+      result.plain.add s.slice(finalSpan)
       break
     result.spans.add span
-    result.plain.add bs.slice(span)
+    result.plain.add s.slice(span)
 
 func `&`*(x: BbString, y: BbString): Bbstring =
   result.plain.add x.plain
@@ -371,18 +420,19 @@ func add*(x: var Bbstring, y: string) =
   x.plain.add y
   x.spans.add BbSpan(styles: @[], slice:[i, i + y.len - 1 ])
 
-func bbMarkup*(s: string, style: string): string =
-  ## enclose a string in bbansi markup for the given style
-  fmt"[{style}]{s}[/{style}]"
+template echo*(c: Console, args: varargs[untyped]) =
+  for x in @[args]:
+    c.file.write(c.toString(x))
+  c.file.write('\n')
+  c.file.flushFile
 
-func bbEscape*(s: string): string {.inline.} =
-  s.replace("[", "[[").replace("\\", "\\\\")
-
-proc bbEcho*(args: varargs[string, `$`]) {.raises: [IOError]} =
+# `$` already uses the global Console..
+proc hecho*(args: varargs[string, `$`]) {.raises: [IOError]} =
+  ## hwylterm builtin echo
   for x in args:
-    stdout.write(x.bb)
-  stdout.write('\n')
-  stdout.flushFile
+    hwylconsole.file.write(x)
+  hwylConsole.file.write('\n')
+  hwylConsole.file.flushFile
 
 # NOTE: could move to standlone modules in the tools/ directory
 when isMainModule:
@@ -400,13 +450,6 @@ when isMainModule:
     for color in colors:
       echo "on ", color, " -> ", fmt"[on {color}]****".bb
     quit(QuitSuccess)
-
-  proc debugBb(bbs: BbString): string =
-    echo "bbString("
-    echo "  plain: ", bbs.plain
-    echo "  spans: ", bbs.spans
-    echo "  escaped: ", escape($bbs)
-    echo ")"
 
   hwylCli:
     name "bbansi"

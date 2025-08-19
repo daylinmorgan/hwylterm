@@ -1,3 +1,4 @@
+# TODO: better integrate console with spinner
 import std/[os, locks, sequtils, strutils, terminal]
 import ./bbansi
 import ./spin/spinners
@@ -37,7 +38,7 @@ const defaultSpinnerKind* =
 
 proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
   let style = "bold blue"
-  Spinny(
+  result = Spinny(
     text: text,
     # running: true,
     frames: s.frames,
@@ -45,7 +46,7 @@ proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
     customSymbol: false,
     interval: s.interval,
     style: style,
-    file: stderr,
+    file: hwylConsole.file,
   )
 
 proc newSpinny*(text: string, s: Spinner): Spinny =
@@ -123,7 +124,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
     # TODO: instead of truncating support multiline text, need custom wrapping and cleanup then
     withLock spinny.lock:
       eraseLine spinny.file
-      spinny.file.write $((spinny.frame & " " & spinny.text).truncate(terminalWidth())) # needs to be truncated
+      spinny.file.write hwylConsole.toString((spinny.frame & " " & spinny.text).truncate(terminalWidth())) # needs to be truncated
       flushFile spinny.file
 
     sleep spinny.interval

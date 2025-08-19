@@ -254,6 +254,7 @@ type
     ident: NimNode
     typeNode: NimNode
 
+  # support custom console?
   CliCfg = object
     name*: string
     alias*: HashSet[string] # only supported in subcommands
@@ -792,7 +793,7 @@ func addBuiltinFlags(c: var CliCfg) =
   if c.version != nil:
     let version = c.version
     let versionNode = quote do:
-      echo `version`; quit 0
+      hecho `version`; quit 0
 
     c.builtinFlags.add BuiltinFlag(
       name:"version",
@@ -1164,7 +1165,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
           flags = `helpFlags`,
           styles = `styles`,
         )
-      echo help.render().bb()
+      hecho help.render().bb()
 
 proc checkVal(p: OptParser) =
   if p.val == "":
