@@ -1,23 +1,22 @@
 {.define: bbansiOn.}
-import std/[os, strutils, unittest]
+import std/[strutils, unittest]
 import hwylterm/bbansi
 
-template bbCheck(input: string, output: string): untyped =
-  check escape($bb(input)) == escape(output)
-
+proc `~=`(input: string, output: string): bool =
+  escape($bb(input)) == escape(output)
 
 suite "basic":
   test "simple":
-    bbCheck "[red][/red]", ""
-    bbCheck "[red]red text", "\e[38;5;1mred text\e[0m"
-    bbCheck "[red]Red Text", "\e[38;5;1mRed Text\e[0m"
-    bbCheck "[yellow]Yellow Text", "\e[38;5;3mYellow Text\e[0m"
-    bbCheck "[bold red]Bold Red Text", "\e[1;38;5;1mBold Red Text\e[0m"
-    bbCheck "[red]5[/]", "\e[38;5;1m5\e[0m"
-    bbCheck "[bold][red]5","\e[1;38;5;1m5\e[0m"
+    check "[red][/red]" ~= ""
+    check "[red]red text" ~= "\e[38;5;1mred text\e[0m"
+    check "[red]Red Text" ~= "\e[38;5;1mRed Text\e[0m"
+    check "[yellow]Yellow Text" ~= "\e[38;5;3mYellow Text\e[0m"
+    check "[bold red]Bold Red Text" ~= "\e[1;38;5;1mBold Red Text\e[0m"
+    check "[red]5[/]" ~= "\e[38;5;1m5\e[0m"
+    check "[bold][red]5" ~= "\e[1;38;5;1m5\e[0m"
     check "[bold]bold[/bold]" == "bold".bbMarkup("bold")
-    bbCheck "[color(9)]red[/color(9)][color(2)]blue[/color(2)]", "\x1B[38;5;9mred\x1B[0m\x1B[38;5;2mblue\x1B[0m"
-    bbCheck "[color(256)]no color![/]", "no color!"
+    check "[color(9)]red[/color(9)][color(2)]blue[/color(2)]" ~= "\x1B[38;5;9mred\x1B[0m\x1B[38;5;2mblue\x1B[0m"
+    check "[color(256)]no color![/]" ~= "no color!"
 
   test "compile time":
     const s = bb"[red]red text"
@@ -25,25 +24,25 @@ suite "basic":
 
 
   test "closing":
-    bbCheck "[bold]Bold[red] Bold Red[/red] Bold Only",
+    check "[bold]Bold[red] Bold Red[/red] Bold Only" ~=
       "\e[1mBold\e[0m\e[1;38;5;1m Bold Red\e[0m\e[1m Bold Only\e[0m"
 
   test "abbreviated":
-    bbCheck "[b]Bold[/] Not Bold", "\e[1mBold\e[0m Not Bold"
+    check "[b]Bold[/] Not Bold" ~= "\e[1mBold\e[0m Not Bold"
 
   test "noop":
-    bbCheck "No Style", "No Style"
-    bbCheck "[unknown]Unknown Style", "Unknown Style"
+    check "No Style" ~= "No Style"
+    check "[unknown]Unknown Style" ~= "Unknown Style"
 
   test "escaped":
-    bbCheck "[[red] ignored pattern", "[red] ignored pattern"
-    bbCheck "\\[red] ignored pattern","[red] ignored pattern"
+    check "[[red] ignored pattern" ~= "[red] ignored pattern"
+    check "\\[red] ignored pattern" ~= "[red] ignored pattern"
 
   test "newlines":
-    bbCheck "[red]Red Text[/]\nNext Line", "\e[38;5;1mRed Text\e[0m\nNext Line"
+    check "[red]Red Text[/]\nNext Line" ~= "\e[38;5;1mRed Text\e[0m\nNext Line"
 
   test "on color":
-    bbCheck "[red on yellow]Red on Yellow", "\e[38;5;1;48;5;3mRed on Yellow\e[0m"
+    check "[red on yellow]Red on Yellow" ~= "\e[38;5;1;48;5;3mRed on Yellow\e[0m"
 
   test "concat-ops":
     check "[red]RED[/]".bb & " plain string" == "[red]RED[/] plain string".bb
@@ -61,9 +60,9 @@ suite "basic":
     check bb("[red]red[/red][blue]blue[/]").spans.len == 2
 
   test "style insensitive":
-    bbCheck "[red]no case sensitivity[/RED]", "\e[38;5;1mno case sensitivity\e[0m"
-    bbCheck "[bright_red]should be BrightRed[/]", "\e[38;5;9mshould be BrightRed\e[0m"
-    bbCheck "[BrightRed]should be BrightRed[/]", "\e[38;5;9mshould be BrightRed\e[0m"
+    check "[red]no case sensitivity[/RED]" ~= "\e[38;5;1mno case sensitivity\e[0m"
+    check "[bright_red]should be BrightRed[/]" ~= "\e[38;5;9mshould be BrightRed\e[0m"
+    check "[BrightRed]should be BrightRed[/]" ~= "\e[38;5;9mshould be BrightRed\e[0m"
 
   test "style full":
     check "[red]Red[/red]".bb == bb("Red", "red")
@@ -72,14 +71,14 @@ suite "basic":
 
   test "escape":
     check bbEscape("[info] brackets") == "[[info] brackets"
-    bbCheck bbEscape("[info] brackets"), "[info] brackets"
+    check bbEscape("[info] brackets") ~= "[info] brackets"
 
   test "fmt":
     let x = 5
     check $bbfmt"[red]{x}" == "\e[38;5;1m5\e[0m"
 
   test "hex":
-    bbCheck "[#FF0000]red", "\e[38;2;255;0;0mred\e[0m"
+    check "[#FF0000]red" ~= "\e[38;2;255;0;0mred\e[0m"
 
 suite "strutils":
   test "stripAnsi":
@@ -108,6 +107,5 @@ suite "strutils":
     var y = bb("[red]red")
     y.add "yellow"
     check bb"[red]red[/]yellow" == y
-
 
 
