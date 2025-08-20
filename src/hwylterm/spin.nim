@@ -1,5 +1,5 @@
 # TODO: better integrate console with spinner
-import std/[os, locks, sequtils, strutils, terminal]
+import std/[os, locks, sequtils, strutils, terminal, unicode]
 import ./bbansi
 import ./spin/spinners
 export spinners
@@ -15,6 +15,7 @@ type
     frame: BbString
     interval: int
     customSymbol: bool
+    symbolPad*: Natural
     style: string
     file: File
 
@@ -46,12 +47,13 @@ proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
     interval: s.interval,
     style: style,
     file: hwylConsole.file,
+    symbolPad: mapIt(s.frames, it.runeLen).max() + 1
   )
 
 proc newSpinny*(text: string, s: Spinner): Spinny =
   newSpinny(bb(text), s)
 
-proc newSpinny*(text: string | Bbstring, spinType: SpinnerKind = defaultSpinnerKind): Spinny =
+proc newSpinny*(text: string | Bbstring = "", spinType: SpinnerKind = defaultSpinnerKind): Spinny =
   newSpinny(text, Spinners[spinType])
 
 proc setSymbolColor*(spinny: Spinny, style: string) =
@@ -91,6 +93,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
       of SymbolChange:
         spinny.customSymbol = true
         spinny.frame = msg.payload
+        spinny.symbolPad = msg.payload.plain.runeLen + 1
       of TextChange:
         # We only care about the last text change, so we store it
         lastTextEvent = msg.payload
@@ -114,7 +117,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
     # TODO: instead of truncating support multiline text, need custom wrapping and cleanup then
     withLock spinny.lock:
       eraseLine spinny.file
-      spinny.file.write hwylConsole.toString((spinny.frame & " " & spinny.text).truncate(terminalWidth())) # needs to be truncated
+      spinny.file.write hwylConsole.toString((spinny.frame & " " & spinny.text).truncate(terminalWidth() + 2)) # needs to be truncated
       flushFile spinny.file
 
     sleep spinny.interval
@@ -125,6 +128,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
       frameCounter += 1
 
 proc start*(spinny: Spinny) =
+  hideCursor()
   initLock spinny.lock
   spinny.running = true
   spinnyChannel.open()
@@ -134,15 +138,15 @@ proc stop(spinny: Spinny, kind: EventKind, payload = "") =
   spinnyChannel.send(SpinnyEvent(kind: kind, payload: bb(payload)))
   spinnyChannel.send(SpinnyEvent(kind: Stop))
   joinThread spinny.t
-  eraseLine spinny.file
   deinitLock spinny.lock
+  eraseLine spinny.file
   flushFile spinny.file
+  showCursor()
 
 proc stop*(spinny: Spinny) =
   spinny.stop(Stop)
 
-template useSpinner(spinner: Spinny, body: untyped) =
-  # NOTE: it it necessary to inject the spinner here?
+template useSpinner*(spinner: Spinny, body: untyped) =
   if isatty(spinner.file): # don't spin if it's not a tty
     try:
       start spinner

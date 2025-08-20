@@ -11,5 +11,5 @@
 
 ]##
 
-import hwylterm/[spin, bbansi, confirm]
-export spin, bbansi, confirm
+import hwylterm/[spin, bbansi, confirm, progress]
+export spin, bbansi, confirm, progress

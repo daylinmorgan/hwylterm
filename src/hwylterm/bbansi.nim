@@ -155,6 +155,9 @@ func toAnsiCode*(mode: BbMode, s: string): string =
     result.add codes.join ";"
     result.add "m"
 
+  when defined(assertAnsi):
+    assert result != "", "unknown code: `" & s & "`"
+
 proc toAnsiCode*(c: Console, s: string): string {.inline} = toAnsiCode(c.mode, s)
 proc toAnsiCode*(s: string): string {.inline.} = toAnsiCode(hwylConsole.mode, s)
 
@@ -347,7 +350,7 @@ func len*(bbs: BbString): int =
 func toString(bbs: Bbstring, mode: BbMode): string =
   if mode == Off:
     return bbs.plain
-
+  
   for span in bbs.spans:
     var codes = ""
     if span.styles.len > 0:
