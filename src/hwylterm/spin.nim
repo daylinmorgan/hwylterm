@@ -23,7 +23,6 @@ type
     SymbolChange
     TextChange
     Echo
-    Write
 
   SpinnyEvent = object
     kind: EventKind
@@ -70,9 +69,6 @@ proc setText*(spinny: Spinny, text: string | BbString) =
 proc echo*(spinny: Spinny, text: string | BbString) =
   spinnyChannel.send(SpinnyEvent(kind: Echo, payload: bb(text)))
 
-proc write*(spinny: Spinny, text: string | BbString) =
-  spinnyChannel.send(SpinnyEvent(kind: Write, payload: bb(text)))
-
 proc spinnyLoop(spinny: Spinny) {.thread.} =
   var frameCounter = 0
   var lastTextEvent: BbString # Variable to hold the last text change
@@ -101,15 +97,9 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
         textUpdatePending = true
       of Echo:
         withLock spinny.lock:
-          eraseLine spinny.file
-          flushFile spinny.file
-          writeLine(stdout, $msg.payload)
-          flushFile stdout
-      of Write:
-        withLock spinny.lock:
-          eraseLine spinny.file
-          flushFile spinny.file
-          writeLine spinny.file, $msg.payload
+            eraseLine spinny.file
+            writeLine spinny.file, $(msg.payload)
+            flushFile spinny.file
 
     # After draining the channel, apply the last pending text change
     if textUpdatePending:
@@ -191,5 +181,5 @@ when isMainModule:
   if params.len > 0: delay = parseInt(params[0])
   for kind, _ in Spinners:
     with(kind, $kind):
-      echo $kind
+      echo spinner, $kind
       sleep 1 * delay
