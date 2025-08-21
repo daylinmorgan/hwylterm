@@ -128,7 +128,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
       frameCounter += 1
 
 proc start*(spinny: Spinny) =
-  hideCursor()
+  hideCursor(spinny.file)
   initLock spinny.lock
   spinny.running = true
   spinnyChannel.open()
@@ -141,7 +141,7 @@ proc stop(spinny: Spinny, kind: EventKind, payload = "") =
   deinitLock spinny.lock
   eraseLine spinny.file
   flushFile spinny.file
-  showCursor()
+  showCursor(spinny.file)
 
 proc stop*(spinny: Spinny) =
   spinny.stop(Stop)
