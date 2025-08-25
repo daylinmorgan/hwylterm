@@ -188,6 +188,13 @@ type
   KVString* = KV[string, string]
 
 
+iterator items*[X,Y](kvs: seq[KV[X,Y]]): (X, Y) =
+  var i = 0
+  while i < kvs.len:
+    let kv = kvs[i]
+    yield (kv.key, kv.val)
+    inc i
+
 proc `$`*(t: typedesc[KVString]): string =
   result.add "k(string):v(string)"
 
