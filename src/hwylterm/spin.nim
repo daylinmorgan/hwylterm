@@ -9,7 +9,6 @@ type
     t: Thread[Spinny]
     lock: Lock
     text: BbString
-    running: bool
     frames: seq[string]
     bbFrames: seq[BbString]
     frame: BbString
@@ -29,6 +28,9 @@ type
     kind: EventKind
     payload: BbString
 
+proc running*(s: Spinny): bool {.inline.} =
+  s.t.running
+
 var spinnyChannel: Channel[SpinnyEvent]
 
 const defaultSpinnerKind* =
@@ -40,7 +42,6 @@ proc newSpinny*(text: Bbstring, s: Spinner): Spinny =
   let style = "bold blue"
   result = Spinny(
     text: text,
-    # running: true,
     frames: s.frames,
     bbFrames: mapIt(s.frames, bb(bbEscape(it), style)),
     customSymbol: false,
@@ -75,7 +76,7 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
   var frameCounter = 0
   var lastTextEvent: BbString # Variable to hold the last text change
 
-  while spinny.running:
+  while true:
     var textUpdatePending = false
     while true:
       let (dataAvailable, msg) = spinnyChannel.tryRecv()
@@ -88,8 +89,11 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
         # A Stop event should immediately stop the spinner
         spinnyChannel.close()
         spinnyChannel = default(typeof(spinnyChannel))
-        spinny.running = false
-        return # Use `return` to exit the thread immediately
+        withLock spinny.lock:
+          eraseLine spinny.file
+          flushFile spinny.file
+        return
+        # return # Use `return` to exit the thread immediately
       of SymbolChange:
         spinny.customSymbol = true
         spinny.frame = msg.payload
@@ -130,21 +134,16 @@ proc spinnyLoop(spinny: Spinny) {.thread.} =
 proc start*(spinny: Spinny) =
   hideCursor(spinny.file)
   initLock spinny.lock
-  spinny.running = true
   spinnyChannel.open()
   createThread(spinny.t, spinnyLoop, spinny)
 
-proc stop(spinny: Spinny, kind: EventKind, payload = "") =
-  spinnyChannel.send(SpinnyEvent(kind: kind, payload: bb(payload)))
+
+proc stop*(spinny: Spinny) =
+  if not spinny.running: return
   spinnyChannel.send(SpinnyEvent(kind: Stop))
   joinThread spinny.t
   deinitLock spinny.lock
-  eraseLine spinny.file
-  flushFile spinny.file
   showCursor(spinny.file)
-
-proc stop*(spinny: Spinny) =
-  spinny.stop(Stop)
 
 template useSpinner*(spinner: Spinny, body: untyped) =
   if isatty(spinner.file): # don't spin if it's not a tty
@@ -187,3 +186,4 @@ when isMainModule:
     with(kind, $kind):
       echo spinner, $kind
       sleep 1 * delay
+
