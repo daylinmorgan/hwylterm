@@ -1132,7 +1132,7 @@ proc hwylCliError*(msg: BbString) =
   quit $(bb("error ", "red") & msg)
 
 proc hwylCliError*(msg: string) =
-  quit $(bb("error ", "red") & bb(msg))
+  quit $bb("error ", "red") & msg
 
 func defaultUsage(cfg: CliCfg): NimNode =
   # TODO: attempt to handle pos args
@@ -1177,7 +1177,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
 proc checkVal(p: OptParser) =
   if p.val == "":
     hwylCliError(
-      "expected value for flag: [b]" & p.key
+      "expected value for flag: " & p.key.bb("bold")
     )
 
 proc parse*(p: OptParser, target: var bool) =
@@ -1193,7 +1193,7 @@ proc parse*(p: OptParser, target: var int) =
     target = parseInt(p.val)
   except:
     hwylCliError(
-      "failed to parse value for [b]" & p.key & "[/] as integer: [b]" & p.val
+      bbfmt"failed to parse value for [b]{p.key}[/] as integer: [b]{p.val}[/]"
     )
 
 macro enumNames(a: typed): untyped =
@@ -1210,7 +1210,7 @@ proc parse*[E: enum](p: OptParser, target: var E) =
   except:
     let choices = enumNames(E).join(",")
     hwylCliError(
-      "failed to parse value for [b]" & p.key & "[/] as enum: [b]" & p.val & "[/] expected one of: " & choices
+      bbfmt"failed to parse value for [b]{p.key}[/] as enum: [b]{p.val}[/] expected one of: " & choices
     )
 
 proc parse*(p: OptParser, target: var float) =
@@ -1219,7 +1219,7 @@ proc parse*(p: OptParser, target: var float) =
     target = parseFloat(p.val)
   except:
     hwylCliError(
-      "failed to parse value for [b]" & p.key & "[/] as float: [b]" & p.val
+      bbfmt"failed to parse value for [b]{p.key}[/] as float: [b]{p.val}[/]"
     )
 
 proc parse*[T](p: var OptParser, target: var seq[T]) =
@@ -1307,7 +1307,7 @@ func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): N
 
     caseStmt.add branch
 
-  caseStmt.add nnkElse.newTree(quote do: hwylCliError("unknown flag: [b]" & hwylKey))
+  caseStmt.add nnkElse.newTree(quote do: hwylCliError(bbfmt"unknown flag: [b]{hwylkey}"))
 
   result = nnkStmtList.newTree(caseStmt)
 
@@ -1376,20 +1376,20 @@ func parseArgs[T](p: OptParser, target: var seq[T]) =
 
 proc parseArgs*(arg: string, target: var float) =
   try: target = parseFloat(arg)
-  except: hwylCliError("failed to parse as float: [b]" & arg)
+  except: hwylCliError(bbfmt"failed to parse as float: [b]{arg}")
 
 func parseArgs*(arg: string, target: var string) =
   target = arg
 
 proc parseArgs*(arg: string, target: var int) =
   try: target = parseInt(arg)
-  except: hwylCliError("failed to parse as integer: [b]" & arg)
+  except: hwylCliError(bbfmt"failed to parse as integer: [b]{arg}")
 
 proc parseArgs*[E: enum](arg: string, target: var E) =
   try: target = parseEnum[E](arg)
   except:
     let choices = enumNames(E).join(",")
-    hwylCliError("failed to parse as enum: [b]" & arg & "[/], expected one of: " & choices)
+    hwylCliError(bbfmt"failed to parse as enum: [b]{arg}[/], expected one of: " & choices)
 
 proc parseArgs*[T](arg: string, target: var seq[T]) =
   var val: T
@@ -1485,7 +1485,7 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
   elif cfg.args.len == 0:
     body.add quote do:
       if result.len > 0:
-        hwylCliError("got unexpected positionals args: [b]" & result.join(" "))
+        hwylCliError("got unexpected positionals args: " & result.join(" ").bb("bold"))
 
   elif cfg.args.len > 0:
     genPosArgHandler cfg, body
@@ -1496,7 +1496,7 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
   let subcmd = ident"subcmd"
   let subcmdOptions = cfg.subcommands.mapIt(
     it.subName.bbMarkup("b")
-  ).join(", ")
+  ).join(", ").bb
   result = nnkStmtList.newTree()
 
   var subCommandCase = nnkCaseStmt.newTree()
@@ -1517,7 +1517,7 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
     quote do:
       hwylCliError(
         "unknown subcommand: " &
-        `subcmd`.bbMarkup("b") &
+        `subcmd`.bb("b") &
         " expected one of: " &
         `subcmdOptions`
       )
@@ -1532,7 +1532,7 @@ func positionalArgsOfBranch(cfg: CliCfg): NimNode =
   # TODO: utilize the NoPositional setting here?
   # if cfg.args.len == 0 and cfg.subcommands.len == 0:
   #   result.add quote do:
-  #     hwylCliError("unexpected positional argument: [b]" & p.key)
+  #     hwylCliError("unexpected positional argument: " & p.key.bb("bold"))
   # else:
   result.add quote do:
     inc nArgs
