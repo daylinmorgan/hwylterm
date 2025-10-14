@@ -62,6 +62,9 @@ proc setHwylConsoleFile*(file: File) =
   hwylConsole.file = file
   hwylConsole.mode = checkColorSupport(file)
 
+proc setHwylConsole*(c: Console) =
+  hwylConsole = c
+
 func firstCapital(s: string): string = s.toLowerAscii().capitalizeAscii()
 func normalizeStyle(style: string): string = style.replace("_","").toLowerAscii().capitalizeAscii()
 func isHex(s: string): bool = (s.startswith "#") and (s.len == 7)
