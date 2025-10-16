@@ -14,7 +14,7 @@ import ./bbansi/[styles, colors]
 
 type
   BbMode* = enum
-    On, NoColor, Off
+    On, NoColor, Off, Markup
   ColorSystem = enum
     TrueColor, EightBit, Standard, None
   Console = object
@@ -27,6 +27,8 @@ proc checkColorSupport(file = stdout): BbMode =
     return On
   when defined(bbansiOff):
     return Off
+  when defined(bbMarkup):
+    return Markup
   when defined(bbansiNoColor):
     return NoColor
   else:
@@ -191,6 +193,7 @@ type
     spans*: seq[BbSpan]
 
 func bbMarkup*(s: string, style: string): string =
+  if style == "": return s
   ## enclose a string in bbansi markup for the given style
   result.add "["
   result.add style
@@ -314,8 +317,8 @@ func bbImpl(s: string): BbString =
 proc bb*(s: string): BbString =
   bbImpl(s)
 
-proc bb*(s: static string): BbString  {.compileTime.}=
-  bbImpl(s)
+# proc bb*(s: static string): BbString  {.compileTime.}=
+#   bbImpl(s)
 
 proc bb*(s: string, style: string): BbString =
   bb(bbMarkup(s, style))
@@ -330,15 +333,16 @@ proc bb*(s: string, style: Color256): BbString =
 # proc bb*(s: static string, style: static string): BBString {.compileTime.} =
 #   bbImpl(bbMarkup(s, style))
 
+# # BUG: using static causes error for vm
+template bbfmt*(pattern: static string): BbString =
+  bbImpl(fmt(pattern))
+
 proc bb*(s: BbString): BbString = s
 
 func `&`*(x: BbString, y: string): BbString =
   result = x
   result.plain &= y
   result.spans.add BbSpan(styles: @[], slice: [x.plain.len, result.plain.len - 1])
-
-template bbfmt*(pattern: static string): BbString =
-  bbImpl(fmt(pattern))
 
 proc `&`*(x: string, y: BbString): BbString =
   result.plain = x & y.plain
@@ -350,10 +354,16 @@ proc `&`*(x: string, y: BbString): BbString =
 func len*(bbs: BbString): int =
   bbs.plain.len
 
+func toMarkup(b: BbString): string =
+  for span in b.spans:
+    result.add b.plain[span.slice[0]..span.slice[1]].bbMarkup(span.styles.join(" "))
+
 func toString(bbs: Bbstring, mode: BbMode): string =
   if mode == Off:
     return bbs.plain
-  
+  elif mode == Markup:
+    return bbs.toMarkup()
+
   for span in bbs.spans:
     var codes = ""
     if span.styles.len > 0:
@@ -440,10 +450,13 @@ proc hecho*(args: varargs[string, `$`]) {.raises: [IOError]} =
   hwylConsole.file.write('\n')
   hwylConsole.file.flushFile
 
+{.pop raises: [].}
+
 # NOTE: could move to standlone modules in the tools/ directory
 when isMainModule:
   import ./[hwylcli]
   const version = staticExec "git describe --tags --always --dirty=-dev"
+
   proc showTestCard() =
     for style in [
       "bold", "faint", "italic", "underline", "blink", "reverse", "conceal", "strike"
