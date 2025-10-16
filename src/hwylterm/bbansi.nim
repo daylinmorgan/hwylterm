@@ -34,6 +34,8 @@ proc checkColorSupport(file = stdout): BbMode =
   else:
     if getEnv("HWYLTERM_FORCE_COLOR") != "":
       return On
+    elif getEnv("HWYLTERM_FORCE_MARKUP") != "":
+      return Markup
     elif getEnv("NO_COLOR") != "":
       return NoColor
     elif (getEnv("TERM") in ["dumb", "unknown"]) or not isatty(file):

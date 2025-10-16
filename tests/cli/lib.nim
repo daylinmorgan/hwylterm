@@ -1,4 +1,4 @@
-import std/[os, osproc, strutils, times, unittest, terminal]
+import std/[os, osproc, strutils, times, unittest, terminal, strtabs]
 
 const pathToSrc = currentSourcePath().parentDir()
 const binDir = pathToSrc / "bin"
@@ -8,11 +8,6 @@ let hwylCliWriteTime =  getFileInfo(hwylCliSrc).lastWriteTime
 
 if not dirExists(binDir):
   createDir(binDir)
-
-proc runTestCli*(module: string, args: string, code: int = 0): (string, int) =
-  let cmd = binDir / module & " " & args
-  let (output, code) = execCmdEx(cmd)
-  result = (output.strip(), code)
 
 # poor man's progress meter
 proc status(s: string) =
@@ -24,7 +19,7 @@ proc preCompileWorkingModule*(module: string) =
   let exe = binDir / module
   let srcModule = pathToSrc / "clis" / (module & ".nim")
   if not exe.fileExists or getFileInfo(exe).lastWriteTime < max(getFileInfo(srcModule).lastWriteTime, hwylCliWriteTime) or defined(forceSetup):
-    let cmd = "nim c -d:bbMarkup -o:$1 $2" % [exe, srcModule]
+    let cmd = "nim c -o:$1 $2" % [exe, srcModule]
     let (output, code) = execCmdEx(cmd)
     if code != 0:
       echo "cmd: ", cmd
@@ -70,11 +65,17 @@ iterator fixtures*(fixturePath: string): Fixture =
     if path.endsWith(".args"):
       yield loadFixtureWithOutput(path)
 
-template test*(f: Fixture) =
+proc run*(f: Fixture, markup= false): (string, int) =
   preCompileWorkingModule(f.module)
+  let cmd = binDir / f.module & " " & f.args
+  let key = if markup: "HWYLTERM_FORCE_MARKUP" else: "HWYLTERM_FORCE_COLOR"
+  let (output, code) = execCmdEx(cmd, env = newStringTable({key: "1"}))
+  result = (output.strip(), code)
+
+template test*(f: Fixture) =
   let normalizedOutput = f.output.strip().strip(leading = false, chars = {'\n'}).dedent()
   test (f.module & "|" & f.args):
-    let (actualOutput, code) = runTestCli(f.module, f.args)
+    let (actualOutput, code) = run(f)
     check code == (if f.ok: 0 else: 1)
     check normalizedOutput == actualOutput
 

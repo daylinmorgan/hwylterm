@@ -8,17 +8,17 @@ const binDir = pathToSrc / "bin"
 
 proc touchFixture(path: string) =
   let f = loadFixture(path)
-  # let module = parts[0]
-  # let args = readFile(path).strip()
   preCompileWorkingModule(f.module)
   echo f.module & " | " & f.args
-  let (output, code) = runTestCli(f.module, f.args)
+  let (output, code) = run(f)
+  # code should be the same ....
+  let (markup, _) = run(f, markup = true)
   if f.ok:
     if code != 0: quit "expected zero exit status"
   else:
     if code == 0: quit "expected non-zero exit status"
-  writeFile(path.replace(".args", ".markup"), output)
-  writeFile(path.replace(".args", ".output"), $bb(output))
+  writeFile(path.replace(".args", ".markup"), markup)
+  writeFile(path.replace(".args", ".output"), output)
 
 proc touchSuite(suitePath: string) =
   echo "updating suite: ", suitePath.splitPath.tail
