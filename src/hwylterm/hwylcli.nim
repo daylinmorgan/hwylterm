@@ -1462,7 +1462,7 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
     let name = newLit(f.name)
     body.add quote do:
       if `name` notin `flagSet`:
-        hwylCliError("expected a value for flag: " & `flagLit`)
+        hwylCliError("expected a value for flag: " & (`flagLit`).bb("bold"))
 
   for f in default:
     let
