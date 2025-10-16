@@ -142,20 +142,21 @@ when isMainModule:
     positionals:
       args seq[string]
     flags:
-      demo "show demo"
+      demo "show demo (select from a-zA-Z)"
       s|separator(string, "separator to split items")
+      height(6, int, "set height")
     run:
       var items: seq[string]
       if demo:
-        items &= LowercaseLetters.toSeq().mapIt($it)
+        items &= LowercaseLetters.toSeq().mapIt($it) & UppercaseLetters.toSeq().mapIt($it)
       else:
         if separator != "":
-          if args.len != 1: quit "only pass one positional arg when using --separator"
+          if args.len != 1: hwylCliError("only pass one positional arg (of items separated with separator) when using --separator")
           items = args[0].split(separator).mapIt(strip(it))
         else:
           items = args
 
-      let selected= choose(items)
+      let selected = choose(items, height)
       echo selected.join("\n")
 
 
