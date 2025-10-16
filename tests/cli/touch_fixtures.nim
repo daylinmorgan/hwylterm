@@ -1,4 +1,5 @@
 import std/[os, strutils]
+import hwylterm
 import ./lib
 
 const pathToSrc = currentSourcePath().parentDir()
@@ -16,7 +17,8 @@ proc touchFixture(path: string) =
     if code != 0: quit "expected zero exit status"
   else:
     if code == 0: quit "expected non-zero exit status"
-  writeFile(path.replace(".args", ".output"), output)
+  writeFile(path.replace(".args", ".markup"), output)
+  writeFile(path.replace(".args", ".output"), $bb(output))
 
 proc touchSuite(suitePath: string) =
   echo "updating suite: ", suitePath.splitPath.tail

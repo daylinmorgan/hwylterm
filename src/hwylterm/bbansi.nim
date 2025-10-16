@@ -356,7 +356,7 @@ func len*(bbs: BbString): int =
 
 func toMarkup(b: BbString): string =
   for span in b.spans:
-    result.add b.plain[span.slice[0]..span.slice[1]].bbMarkup(span.styles.join(" "))
+    result.add b.plain[span.slice[0]..span.slice[1]].bbEscape().bbMarkup(span.styles.join(" "))
 
 func toString(bbs: Bbstring, mode: BbMode): string =
   if mode == Off:
@@ -485,15 +485,19 @@ when isMainModule:
       -> [italic][red]some red[/red] but all italic[/italic]
     """
     version bbfmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]"
-    hidden debug, testCard
+    hidden debug, testCard, inferShort
     flags:
       debug "show debug"
-      testCard "show test card"
-      s|style(string, "set style for string")
+      testCard "show test card":
+        S NoShort
+      style(string, "set style for string")
+      file(string, "file path")
     run:
       if testCard: showTestCard()
-      for arg in args:
-        let styled = arg.bb(style)
-        echo styled
-        if debug:
-          echo debugBb(styled)
+      if file != "": echo readFile(file).bb()
+      else:
+        for arg in args:
+          let styled = arg.bb(style)
+          echo styled
+          if debug:
+            echo debugBb(styled)

@@ -24,7 +24,7 @@ proc preCompileWorkingModule*(module: string) =
   let exe = binDir / module
   let srcModule = pathToSrc / "clis" / (module & ".nim")
   if not exe.fileExists or getFileInfo(exe).lastWriteTime < max(getFileInfo(srcModule).lastWriteTime, hwylCliWriteTime) or defined(forceSetup):
-    let cmd = "nim c -d:bbAnsiOn -o:$1 $2" % [exe, srcModule]
+    let cmd = "nim c -d:bbMarkup -o:$1 $2" % [exe, srcModule]
     let (output, code) = execCmdEx(cmd)
     if code != 0:
       echo "cmd: ", cmd
