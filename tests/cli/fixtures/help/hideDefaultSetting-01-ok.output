@@ -1,0 +1,7 @@
+[1;38;5;6musage[0m:
+  [1msetting-hide-default[0m [flags]
+
+[1;38;5;6mflags[0m:
+     [38;5;5m--input[0m [2mstring[0m flag with default hidden
+     [38;5;5m--count[0m [2mCount [0m a count var with default
+  [38;5;3m-h[0m [38;5;5m--help [0m [2m      [0m show this help
