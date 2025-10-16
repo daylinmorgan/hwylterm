@@ -36,6 +36,11 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
       result.add "(" & f.defaultVal & ")"
       result.add "[/" & cli.styles.default & "]"
 
+func render*(cli: HwylCliHelp, flags: seq[HwylFlagHelp]): string =
+  result.add "flags".bbMarkup(cli.styles.header)
+  result.add ":\n"
+  result.add flags.mapIt(render(cli, it)).join("\n")
+
 hwylCli:
   name "custom-help"
   defaultFlagType string

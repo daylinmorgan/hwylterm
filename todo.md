@@ -27,7 +27,7 @@
   > app help (show all help?)
   > app help <subcmd> same as app <subcmd> --help
 - [ ] allow single positional to be optional
-- [ ] support flag grouping in help output:
+- [x] support flag grouping in help output:
     flags:
       -a some flag
     name flags:

@@ -145,6 +145,43 @@ flags:
   -h --help  show this help
 """
   )
+  okWithArgs(
+    "inheritFlags", "first --help",
+"""
+usage:
+  inherit-flags first [flags]
+
+command with it's own flag
+
+flags:
+  -h --help    show this help
+
+misc flags:
+     --first   first first flag
+
+global flags:
+     --always  in all subcommands
+"""
+  )
+  okWithArgs(
+    "inheritFlags", "third --help",
+"""
+usage:
+  inherit-flags third [flags]
+
+command with only 'misc1' flag
+
+flags:
+     --other   flag from hidden group
+  -h --help    show this help
+
+misc flags:
+     --misc1   first misc flag
+
+global flags:
+     --always  in all subcommands
+"""
+  )
 
 suite "hooks":
   okWithArgs(

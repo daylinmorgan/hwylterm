@@ -37,16 +37,26 @@ import std/[
 import ./[bbansi, parseopt3]
 export parseopt3, sets, bbansi
 
+
+type
+  HwylCliStyleSetting* = enum
+    Aliases, Required, Defaults, Types, FlagGroups
+
+const defaultStyleSettings = {Aliases, Required, Defaults, Types}
+
 type
   HwylFlagHelp* = tuple[
-    short, long, description, typeRepr, defaultVal: string; required: bool
+    short, long, description, typeRepr, defaultVal, group: string; required: bool,
   ]
   HwylSubCmdHelp* = tuple[
     name, aliases, desc: string
   ]
-  HwylCliStyleSetting = enum
-    Aliases, Required, Defaults, Types
+
+  BuiltinStyleKind* = enum
+    AllSettings, Minimal, WithoutColor, WithoutAnsi
+
   HwylCliStyles* = object
+    name* = "bold"
     header* = "bold cyan"
     flagShort* = "yellow"
     flagLong* = "magenta"
@@ -54,9 +64,10 @@ type
     default* = "faint"
     required* = "red"
     subcmd* = "bold"
+    args* = "bold italic"
     typeRepr = "faint"
     minCmdLen* = 8
-    settings*: set[HwylCliStyleSetting] = {Aliases, Required, Defaults, Types}
+    settings*: set[HwylCliStyleSetting] = defaultStyleSettings
 
   HwylCliLengths = object
     subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, typeRepr*, defaultVal*: int
@@ -68,13 +79,22 @@ type
     styles*: HwylCliStyles
     lengths*: HwylCliLengths
 
+
+const builtinStyles* = [
+    AllSettings: HwylCliStyles(settings: defaultStyleSettings + {FlagGroups}),
+    Minimal: HwylCliStyles(settings: {}),
+    # NoColor would be more ergonomic but clashes with BbMode
+    WithoutColor: HwylCliStyles(header: "bold", flagShort: "", flagLong: "", required: ""),
+    WithoutAnsi: HwylCliStyles(name: "", header: "", flagShort: "", flagLong: "", default: "", required: "", subcmd: "", args:"", typeRepr: ""),
+]
+
 # NOTE: do i need both strips?
 func firstLine(s: string): string =
   s.strip().dedent().strip().splitlines()[0]
 
 func newHwylCliHelp*(
-  header = "",
   usage = "",
+  header = "",
   footer = "",
   description = "",
   subcmds: openArray[HwylSubCmdHelp] = @[],
@@ -154,8 +174,40 @@ func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add " "
   result.add subcmd.desc.alignLeft(cli.lengths.subcmdDesc)
 
+func renderFlags(cli: HwylCliHelp, flags: seq[HwylFlagHelp]): string =
+  flags.mapIt(render(cli, it)).join("\n")
 
-# TODO: split this into separate procs to make overriding more fluid
+func flagsByGroup(flags: seq[HwylFlagHelp]): Table[string, seq[HwylFlagHelp]] =
+  for flag in flags:
+    let g = if flag.group.startsWith("_"): "" else: flag.group
+    if result.hasKeyOrPut(g, @[flag]):
+      result[g].add flag
+
+func cmpFlagGroups(a, b: string): int =
+  if a == "": return -1
+  if b == "": return 1
+  if a == "global": return 1
+  if b == "global": return -1
+  return cmp(a, b)
+
+proc render*(cli: HwylCliHelp, flags: seq[HwylFlagHelp]): string =
+  if FlagGroups notin cli.styles.settings:
+    result.add "flags".bbMarkup(cli.styles.header)
+    result.add ":\n"
+    result.add renderFlags(cli, flags)
+  else:
+    let grouped = flagsByGroup(flags)
+    let groups = grouped.keys().toSeq().sorted(cmpFlagGroups)
+    for i, grp in groups:
+      if i != 0: result.add "\n\n"
+      let flags = grouped[grp]
+      if grp != "":
+        result.add fmt"{grp} flags".bbMarkup(cli.styles.header)
+      else:
+        result.add fmt"flags".bbMarkup(cli.styles.header)
+      result.add ":\n"
+      result.add renderFlags(cli, flags)
+
 template render*(cli: HwylCliHelp): string =
   var parts: seq[string]
 
@@ -168,7 +220,7 @@ template render*(cli: HwylCliHelp): string =
   if cli.subcmds.len > 0:
     parts.add "subcommands".bbMarkup(cli.styles.header) & ":\n" & cli.subcmds.mapIt(render(cli,it)).join("\n")
   if cli.flags.len > 0:
-    parts.add "flags".bbMarkup(cli.styles.header) & ":\n" & cli.flags.mapIt(render(cli, it)).join("\n")
+    parts.add render(cli, cli.flags)
   if cli.footer != "":
     parts.add cli.footer
 
@@ -213,7 +265,7 @@ proc `$`(c: Count): string = $c.val
 
 type
   CliSetting* = enum
-    Propagate,  ## Include parent command settings in subcommand
+    Propagate,    ## Include parent command settings in subcommand
     GenerateOnly, ## Don't attach root `runProc()` node
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
@@ -245,7 +297,8 @@ type
     long*: string
     help*: NimNode
     group*: string
-    inherited*: bool
+    defined*: bool # if flag uses custom group it still
+                   # needs to be added to cli in postParse
     settings*: set[CliFlagSetting]
 
   Inherit = object
@@ -299,7 +352,7 @@ template `<<<`(n: NimNode) {.used.} =
 template `<<<`(n: untyped) {.used.} =
   debugEcho n, "....................", instantiationInfo().line
 
-func `<<<`(f: CliFlag) {.used.}=
+template `<<<`(f: CliFlag) {.used.}=
   var s: string
   let fields = [
     ("name", f.name),
@@ -425,6 +478,9 @@ func parseFlagStmtList(c: CliCfg, f: var CliFlag, node: NimNode) =
         f.node = n[1]
       of "settings", "S":
         parseCliFlagSettings c, f, n
+      of "group", "g":
+        f.group = n[1].strVal
+        f.defined = true # workaround postParse group implementation
       else:
         c.err "unexpected setting: " & id
     else:
@@ -484,6 +540,7 @@ func newFlag(cfg: var CliCfg , n: NimNode): CliFlag =
 
 type FlagKind = enum
   Command       ## flag "help"
+  CommandStmt   ## count "num": * 5
   InfixCommand  ## a | aflag "help"
   InfixCall     ## a | aflag("help")
   InfixStmt     ## a | aflag: ? "help"
@@ -518,7 +575,12 @@ func toFlagKind(c: CliCfg, n: NimNode): FlagKind =
     else:
       result = Call
   of nnkCommand:
-    result = Command
+    if n.len == 2:
+      result = Command
+    elif n.len > 2 and n[^1].kind == nnkStmtList:
+      result = CommandStmt
+    else:
+      c.err n, "failed to determine flag kind"
   else:
     c.unexpectedKind n
 
@@ -568,11 +630,18 @@ func parseCliFlag(
     f = c.newFlag n[0]
     f.help = n[1]
 
+  of CommandStmt:
+    f = c.newFlag n[0]
+    f.help = n[1]
+    parseFlagStmtList c, f, n[^1]
+
   if short != '\x00':
     f.short = short
 
   f.ident = f.ident or f.name.ident
-  f.group = group
+  if f.group == "":
+    f.group = group
+
   c.flagDefs.add f
 
 func inferShortFlags(cfg: var CliCfg) =
@@ -599,7 +668,7 @@ func postParse(c: var CliCfg) =
   for f in c.flagDefs.mitems:
     if f.typeNode == nil:
       f.typeNode = defaultTypeNode
-    if f.group in ["", "global"]:
+    if f.group in ["", "global"] or f.defined:
       c.flags.add f
 
   if c.args.len > 0:
@@ -640,12 +709,13 @@ func parseCliFlags(cfg: var  CliCfg, node: NimNode) =
       else: cfg.unexpectedKind n
 
     # flags:
-    #   input "some input"
+    #   input "use input"
     #   count:
     #     T int
     #     ? "a number"
+    #   output "some output":
+    #     T string
     of nnkCall, nnkCommand:
-      cfg.expectKind n, [nnkCommand, nnkCall]
       cfg.parseCliFlag n, group
 
     # flags:
@@ -710,8 +780,8 @@ func sliceStmts(c: CliCfg, node: NimNode): seq[
       start = i + 1
 
 
-# TODO: swap error stmts
-func inheritFrom(child: var CliCfg, parent: CliCfg) =
+
+func inheritFlags(child: var CliCfg, parent: CliCfg) =
   ## inherit flags/groups and settings from parent command
   var
     pflags: Table[string, CliFlag]
@@ -728,7 +798,7 @@ func inheritFrom(child: var CliCfg, parent: CliCfg) =
       pgroups[f.group].add f
     else:
       pgroups[f.group] = @[f]
- 
+
   if "global" in pgroups:
     groups.add "global"
 
@@ -748,6 +818,15 @@ func inheritFrom(child: var CliCfg, parent: CliCfg) =
       # so subcommands can continue the inheritance
       child.flagDefs.add pgroups[g]
 
+func inheritHelp(child: var CliCfg, parent: CliCfg) =
+  ## fall back to parent styles for anything not defined
+  for field, val1, val2 in fieldPairs(child.help, parent.help):
+    if val1 == nil:
+      val1 = val2
+
+func inheritFrom(child: var CliCfg, parent: CliCfg) =
+  inheritFlags child, parent
+  inheritHelp child, parent
   if Propagate in parent.settings:
     child.settings = child.settings + parent.settings
 
@@ -1068,7 +1147,7 @@ func flagToTuple(c: CliCfg, f: BuiltinFlag): NimNode =
   # under the hood when parsing type/val
 
   quote do:
-    (`short`, `long`, `help`, "", bbEscape($`defaultVal`), `required`)
+    (`short`, `long`, `help`, "", bbEscape($`defaultVal`), "", `required`)
 
 
 func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
@@ -1094,7 +1173,6 @@ func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
         let t = f.typeNode
         quote do: bbEscape($`t`)
 
-
   # BUG: if f.defaultVal is @[] `$` fails
   # but works with `newSeq[T]()`
   # could replace "defaultVal" with newSeq[T]()
@@ -1106,6 +1184,7 @@ func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
     f.help,
     typeNode,
     defaultVal,
+    newLit(f.group),
     required,
   )
 
@@ -1134,8 +1213,10 @@ proc hwylCliError*(msg: BbString) =
 proc hwylCliError*(msg: string) =
   quit $bb("error ", "red") & msg
 
-func defaultUsage(cfg: CliCfg): NimNode =
-  # TODO: attempt to handle pos args
+# TODO: this function should not be handling styling!!!
+# TODO: make this NimNode be a call to the defaultUsage below
+# make this a function that accepts CliHelpStyles and use that as the call to HwlCLIhel
+func defaultUsage(cfg: CliCfg, styles: NimNode): NimNode =
   var s = "[b]" & cfg.name & "[/]"
   if cfg.subcommands.len > 0:
     s.add " [bold italic]subcmd[/]"
@@ -1148,25 +1229,59 @@ func defaultUsage(cfg: CliCfg): NimNode =
 
       s.add"[/]"
   s.add " [[[faint]flags[/]]"
-  newLit(s)
+  # newLit(s)
+
+  let
+    name = cfg.name
+    hasSubcommands = cfg.subcommands.len > 0
+    args = cfg.args.mapIt((it.name, it.isSeq))
+
+  result = quote do:
+    hwylDefaultUsage(
+      name = `name`,
+      hasSubcommands = `hasSubcommands`,
+      args = `args`,
+      styles = `styles`
+    )
+
+func hwylDefaultUsage*(
+  name: string,
+  hasSubcommands: bool,
+  args: seq[tuple[name: string, isSeq: bool]],
+  styles: HwylCliStyles
+): string =
+  ## generate a default BbMarkup usage string
+  result.add name.bbMarkup(styles.name)
+
+  if hasSubcommands:
+    result.add " "
+    result.add "subcmd".bbMarkup(styles.args)
+  if args.len > 0:
+    for arg in args:
+      result.add " "
+      var argStr = arg.name
+      if arg.isSeq:
+        argStr.add "..."
+      result.add argStr.bbMarkUp(styles.args)
+  result.add " [[flags]"
 
 func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   let
     description = cfg.help.description or newLit""
     header = cfg.help.header or newLit""
     footer = cfg.help.footer or newLit""
-    usage  = cfg.help.usage or defaultUsage(cfg)
     helpFlags = cfg.flagsArray()
     subcmds = cfg.subCmdsArray()
     styles = cfg.help.styles or (quote do: HwylCliStyles())
+    usage  = cfg.help.usage or defaultUsage(cfg, styles)
 
   result = quote do:
     proc `printHelpName`() =
       let help =
         newHwylCliHelp(
+          usage = `usage`,
           header = `header`,
           footer = `footer`,
-          usage = `usage`,
           description = `description`,
           subcmds = `subcmds`,
           flags = `helpFlags`,
@@ -1353,7 +1468,6 @@ type
     NoMulti, ## No positionals use seq[[T]]
     First, ## First positional uses seq[[T]]
     Last, ## Last positional uses seq[[T]]
-
 
 func getMultiArgKind(cfg: CliCfg): MultiArgKind =
   if cfg.args.len == 1:

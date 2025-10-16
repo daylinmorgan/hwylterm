@@ -1,19 +1,28 @@
 import std/strformat
 import hwylterm, hwylterm/hwylcli
 
+
+let styles = HwylCliStyles(settings: {Aliases, Required, Defaults, Types, FlagGroups})
+
 hwylCli:
   name "inherit-flags"
+  help:
+    styles: builtinStyles[AllSettings]
   flags:
     [global]
     always "in all subcommands"
     [misc]
     misc1 "first misc flag"
     misc2 "second misc flag"
+    ["_hidden"]
+    other "flag from hidden group"
   subcommands:
     [first]
     ... "command with it's own flag"
     flags:
-      first "first first flag"
+      # manually defined groups
+      first "first first flag":
+        group misc
     run:
       echo fmt"{always=},{first=}"
 
@@ -28,5 +37,6 @@ hwylCli:
     ... "command with only 'misc1' flag"
     flags:
       ^misc1
+      ^["_hidden"]
     run:
       echo fmt"{always=},{misc1=}"
