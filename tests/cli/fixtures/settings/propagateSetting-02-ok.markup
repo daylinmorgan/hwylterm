@@ -1,0 +1,7 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]setting-propagate two[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+  [yellow]-i[/yellow] [magenta]--input[/magenta] [faint]string[/faint] input flag
+  [yellow]-c[/yellow] [magenta]--count[/magenta] [faint]Count [/faint] a count var with default
+  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] show this help

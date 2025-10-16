@@ -1,0 +1,10 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]custom-help[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+     [magenta]--input [/magenta]
+         input [faint](input.txt)[/faint]
+     [magenta]--output[/magenta]
+         output [faint](output.txt)[/faint]
+  [yellow]-h[/yellow] [magenta]--help  [/magenta]
+         show this help

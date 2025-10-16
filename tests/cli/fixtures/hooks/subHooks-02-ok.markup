@@ -1,0 +1,4 @@
+preSub from root!
+inside sub 'b a'
+postSub from root!
+inside sub 'b'

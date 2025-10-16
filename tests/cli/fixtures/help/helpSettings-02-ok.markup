@@ -1,0 +1,9 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]help-styles minimal[/bold] [[flags]
+
+show minimal help with no styling
+
+[bold cyan]flags[/bold cyan]:
+     [magenta]--input[/magenta] required input
+  [yellow]-k[/yellow]         predefined flag
+  [yellow]-h[/yellow] [magenta]--help [/magenta] show this help

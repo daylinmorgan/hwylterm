@@ -1,0 +1,11 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]help-styles all[/bold] [[flags]
+
+show all help styling settings
+
+[bold cyan]flags[/bold cyan]:
+  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] show this help
+
+[bold cyan]flags flags[/bold cyan]:
+     [magenta]--input[/magenta] [faint]string[/faint] required input [red](required)[/red]
+  [yellow]-k[/yellow]         [faint]string[/faint] predefined flag [faint](default: value)[/faint]

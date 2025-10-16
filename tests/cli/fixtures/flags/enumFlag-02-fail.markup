@@ -1,0 +1,1 @@
+[red]error [/red]failed to parse value for [b]color[/b] as enum: [b]black[/b] expected one of: red,blue,green

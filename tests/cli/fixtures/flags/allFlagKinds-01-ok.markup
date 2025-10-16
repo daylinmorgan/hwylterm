@@ -1,0 +1,13 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]flag-kinds[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+  [yellow]-a[/yellow]        [faint]      [/faint] kind: Command
+  [yellow]-b[/yellow] [magenta]--bbbb[/magenta] [faint]      [/faint] kind: InfixCommand
+     [magenta]--cccc[/magenta] [faint]      [/faint] kind: Stmt
+  [yellow]-d[/yellow] [magenta]--dddd[/magenta] [faint]      [/faint] kind: InfixStmt
+  [yellow]-e[/yellow]        [faint]string[/faint] kind: Call
+  [yellow]-f[/yellow] [magenta]--ffff[/magenta] [faint]      [/faint] kind: InfixCallStmt
+     [magenta]--gggg[/magenta] [faint]string[/faint] kind: CallStmt [faint](default: default)[/faint]
+  [yellow]-h[/yellow] [magenta]--hhhh[/magenta] [faint]      [/faint] kind: InfixCall
+     [magenta]--help[/magenta] [faint]      [/faint] show this help

@@ -1,0 +1,7 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]multiple-short-flags[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+  [yellow]-a[/yellow]         first short
+  [yellow]-b[/yellow]         second short
+  [yellow]-h[/yellow] [magenta]--help[/magenta]  show this help

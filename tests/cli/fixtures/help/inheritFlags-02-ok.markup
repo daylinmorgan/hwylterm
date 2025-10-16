@@ -1,0 +1,14 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]inherit-flags third[/bold] [[flags]
+
+command with only 'misc1' flag
+
+[bold cyan]flags[/bold cyan]:
+     [magenta]--other [/magenta]  flag from hidden group
+  [yellow]-h[/yellow] [magenta]--help  [/magenta]  show this help
+
+[bold cyan]misc flags[/bold cyan]:
+     [magenta]--misc1 [/magenta]  first misc flag
+
+[bold cyan]global flags[/bold cyan]:
+     [magenta]--always[/magenta]  in all subcommands

@@ -1,0 +1,7 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]setting-hide-default[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+     [magenta]--input[/magenta] [faint]string[/faint] flag with default hidden
+     [magenta]--count[/magenta] [faint]Count [/faint] a count var with default
+  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] show this help
