@@ -272,10 +272,12 @@ type
     NoNormalize,  ## Don't normalize flags and commands
     HideDefault,  ## Don't show default values
     InferShort    ## Autodefine short flags
+    InferEnv      ## Autodefine env vars for flags
 
   CliFlagSetting* = enum
     HideDefault,   ## Don't show default values
     NoShort,       ## Counter option to Parent's InferShort
+    NoEnv,         ## Counter option to Parent's InferEnv
     Required,      ## Flag must be used (or have default value)
 
   BuiltinFlag = object
@@ -297,6 +299,7 @@ type
     long*: string
     help*: NimNode
     group*: string
+    env*: NimNode
     defined*: bool # if flag uses custom group it still
                    # needs to be added to cli in postParse
     settings*: set[CliFlagSetting]
@@ -481,6 +484,8 @@ func parseFlagStmtList(c: CliCfg, f: var CliFlag, node: NimNode) =
       of "group", "g":
         f.group = n[1].strVal
         f.defined = true # workaround postParse group implementation
+      of "env", "E":
+        f.env = n[1]
       else:
         c.err "unexpected setting: " & id
 
@@ -502,8 +507,6 @@ func getShortChar(c: CliCfg, n: NimNode): char =
 
 func parseCliFlagCall(c: var CliCfg, f: var CliFlag, nodes: seq[NimNode]) =
 
-  # TODO: be more careful here?
-  # TODO: ignore positionals that are ident'_'
   template `<-`(target: untyped, node: NimNode) =
     if node != ident"_":
       target = node
@@ -528,7 +531,7 @@ func parseCliFlagCall(c: var CliCfg, f: var CliFlag, nodes: seq[NimNode]) =
   else:
     c.err "unexpected number of parameters for flag"
 
-func newFlag(cfg: var CliCfg , n: NimNode): CliFlag =
+func newFlag(cfg: var CliCfg, n: NimNode): CliFlag =
   cfg.expectKind n, nnkIdent, nnkStrLit, nnkAccQuoted
 
   case n.kind:
@@ -664,6 +667,18 @@ func inferShortFlags(cfg: var CliCfg) =
       f.short = c
       candidates.excl c
 
+func makeEnvVar(c: CliCfg, f: CliFlag): string =
+  proc norm(s: string): string =
+    s.toUpperAscii().replace(" ","_")
+  const hwylCliEnvFormat {.strdefine.} = "{cli}_{flag}"
+  let cli = norm(c.name)
+  let flag = norm(f.name)
+  fmt(hwylCliEnvFormat)
+
+func inferEnvFlags(c: var CliCfg) =
+  for f in c.flags.mitems:
+    if f.env == nil and NoEnv notin f.settings:
+      f.env = newLit(makeEnvVar(c, f))
 
 func postParse(c: var CliCfg) =
   if c.name == "": # this should be unreachable
@@ -933,6 +948,8 @@ func postPropagate(c: var CliCfg) =
 
   if InferShort in c.settings:
     inferShortFlags c
+  if InferEnv in c.settings:
+    inferEnvFlags c
 
 func propagate(c: var CliCfg) =
   for child in c.subcommands.mitems:
@@ -1395,6 +1412,14 @@ proc parse*[T](p: var OptParser, target: var KV[string, T]) =
   target.key = key
   parse(p, target.val)
 
+proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T) =
+  ## convience proc to reuse other parsers
+  let ogKV = (p.key, p.val)
+  defer: (p.key, p.val) = ogKV
+  p.key = key
+  p.val = val
+  parse(p, target)
+
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
   var caseStmt = nnkCaseStmt.newTree()
   if NoNormalize notin cfg.settings:
@@ -1567,17 +1592,22 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
   body.add quote do:
     result = @[]
 
+
 func addPostParseHook(cfg: CliCfg, body: NimNode) =
   ## generate block to set defaults and check for required flags
+  ## and check for env vars
+
   let flagSet = ident"flagSet"
   let subcmd = ident"subcmd"
-  var required, default: seq[CliFlag]
+  var required, default, env: seq[CliFlag]
 
   for f in cfg.flags:
     if cfg.isRequiredFlag(f):
       required.add f
     elif f.defaultVal != nil:
       default.add f
+    if f.env != nil:
+      env.add f
 
   for f in required:
     let flagLit = f.literalFlags
@@ -1595,6 +1625,16 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
       if `name` notin `flagSet`:
         `target` = `defaultVal`
 
+  for f in env:
+    let
+      name = newLit(f.name)
+      target = f.ident
+      envNode = f.env
+
+    body.add quote do:
+      if `name` notin `flagSet`:
+        if existsEnv(`envNode`):
+          parseKeyVal p, `name`, getEnv(`envNode`), `target`
 
   if hasSubcommands cfg:
     body.add quote do:
