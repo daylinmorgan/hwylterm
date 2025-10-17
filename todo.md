@@ -7,11 +7,10 @@
 
 ## improvements
 
-- [ ] addJoinStyle(); works like join except wraps each argument in a style
-- [ ] consider reducing illwill surface to only relevant IO (input) features
-- [ ] revamp spinner api (new threads module?)
+- [ ] addJoinStyle(); works like join except wraps each argument in a style first
+- [-] revamp spinner api (new threads module?)
 - [x] add Bbstring ~~indexing operations~~ strutils, that are span aware
-- [ ] console object with customizable options to apply formatting (like rich.console)
+- [-] console object with customizable options to apply formatting (like rich.console)
 
 ## cli generator
 
@@ -20,9 +19,8 @@
 - [x] BUG: flag can't be `key`
 - [ ] ShowHelp setting should also occur after "a hwylCliError"
       could be by default (see `program --help` for more info.)
-- [ ] consider support "more verbose" help i.e. -h vs --help giving different results (behind a setting LongHelp, would only change the render proc)
-- [ ] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
-      inject this code in the same place as the "default" setting
+- [ ] consider support "more verbose" help i.e. -h vs --help giving different results (behind a setting LongHelp, would only change the render proc used)
+- [x] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
 - [ ] consider default (or opt in) "help subcmd"
   > app help (show all help?)
   > app help <subcmd> same as app <subcmd> --help
@@ -38,7 +36,8 @@
 ## features
 
 - [x] make a basic choose one from list widget
-- [ ] tables/boxes?
+- [ ] tables
+- [ ] boxes
 - [x] confirmation proc
 - [x] basic progress bar
 - [x] support for 256 and truecolors
