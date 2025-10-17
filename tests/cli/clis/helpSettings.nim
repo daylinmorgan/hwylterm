@@ -9,11 +9,20 @@ hwylCli:
     [flags]
     input:
       T string
-      ? "required input"
+      ? """
+      required input
+      A long help that continues here
+      and spans multiple lines
+        the lines are dedented then reindented
+        [yellow]this is yellow....[/]
+      """
       S Required
     k:
       T string
-      ? "predefined flag"
+      ? """
+      predefined flag
+      k could be short for key idk
+      """
       * "value"
   subcommands:
     [all]
@@ -39,3 +48,9 @@ hwylCli:
     help:
       styles: builtinStyles[WithoutAnsi]
     flags: ^[flags]
+
+    [longHelp]
+    ... "-h != --help"
+    flags: ^[flags]
+    settings LongHelp
+

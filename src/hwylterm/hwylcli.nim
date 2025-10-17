@@ -78,6 +78,7 @@ type
     flags*: seq[HwylFlagHelp]
     styles*: HwylCliStyles
     lengths*: HwylCliLengths
+    longHelp*: bool
 
 
 const builtinStyles* = [
@@ -99,7 +100,8 @@ func newHwylCliHelp*(
   description = "",
   subcmds: openArray[HwylSubCmdHelp] = @[],
   flags: openArray[HwylFlagHelp] = @[],
-  styles = HwylCliStyles()
+  styles = HwylCliStyles(),
+  longHelp = false,
 ): HwylCliHelp =
   result.header = dedent(header).strip()
   result.footer = dedent(footer).strip()
@@ -114,6 +116,7 @@ func newHwylCliHelp*(
   result.flags = @flags
   result.styles = styles
   result.lengths.subcmd = styles.minCmdLen
+  result.longHelp = longHelp
 
   for f in flags:
     # template?
@@ -131,6 +134,7 @@ func newHwylCliHelp*(
     result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
 func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
+  # TODO: add wrapping for TerimanlWidth?
   result.add "  "
   if f.short != "":
     result.add ("-" & f.short.alignLeft(cli.lengths.shortArg)).bbMarkup(cli.styles.flagShort)
@@ -156,17 +160,35 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
       .bbMarkup(cli.styles.typeRepr)
 
   result.add " "
-  if f.description != "":
-    result.add f.description.bbMarkup(cli.styles.flagDesc)
 
-  if f.defaultVal != "" and Defaults in cli.styles.settings:
-    result.add " "
-    result.add ("(default: " & f.defaultVal & ")")
-      .bbMarkup(cli.styles.default)
+  if cli.longHelp:
+    if f.defaultVal != "" and Defaults in cli.styles.settings:
+      result.add " "
+      result.add ("(default: " & f.defaultVal & ")")
+        .bbMarkup(cli.styles.default)
 
-  if f.required and Required in cli.styles.settings:
-    result.add " "
-    result.add "(required)".bbMarkup(cli.styles.required)
+    if f.required and Required in cli.styles.settings:
+      result.add " "
+      result.add "(required)".bbMarkup(cli.styles.required)
+
+    let indentLen = 6
+
+    if f.description != "":
+      result.add "\n"
+      result.add f.description.dedent().indent(indentLen) #
+
+  else:
+    if f.description != "":
+      result.add f.description.splitLines().toSeq()[0].dedent().bbMarkup(cli.styles.flagDesc)
+
+    if f.defaultVal != "" and Defaults in cli.styles.settings:
+      result.add " "
+      result.add ("(default: " & f.defaultVal & ")")
+        .bbMarkup(cli.styles.default)
+
+    if f.required and Required in cli.styles.settings:
+      result.add " "
+      result.add "(required)".bbMarkup(cli.styles.required)
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
@@ -269,6 +291,7 @@ type
     GenerateOnly, ## Don't attach root `runProc()` node
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
+    LongHelp,     ## Show more info with --help than -h
     NoNormalize,  ## Don't normalize flags and commands
     HideDefault,  ## Don't show default values
     InferShort    ## Autodefine short flags
@@ -370,11 +393,12 @@ template `<<<`(f: CliFlag) {.used.}=
   s.add ")"
   <<< s
 
-# -- error reporting
 
-func err(c: CliCfg, msg: string) =
+template err(c: CliCfg, msg: string) =
   ## quit with error while generating cli
   error "hwylcli: \nfailed to generate '" & c.name & "' cli: \n" & msg
+
+# -- error reporting
 
 func prettyRepr(n: NimNode): string =
   let r = n.repr
@@ -446,7 +470,7 @@ func parseCliFlagSettings(c: CliCfg, f: var CliFlag, node: NimNode) =
 
 func getFlagParamNode(c: CliCfg, node: NimNode): NimNode =
   case node.kind
-  of nnkStrLit:
+  of nnkStrLit, nnkTripleStrLit:
     result = node
   of nnkStmtList:
     result = node[0]
@@ -888,13 +912,15 @@ func addBuiltinFlags(c: var CliCfg) =
     name = c.name.replace(" ", "")
     printHelpName = ident("print" & name & "Help")
  
+  # NOTE: should -h and --help have different messages?
+  # current implementation would require this to be handled in the 'render' of HywlCliHelp
   if NoHelpFlag notin c.settings:
     let helpNode = quote do:
       `printHelpName`(); quit 0
     c.builtinFlags.add BuiltinFlag(
       name: "help",
       long: "help",
-      help: newLit("show this help"),
+      help: newLit("print help"),
       short: if 'h' notin shorts: 'h' else: '\x00',
       node: helpNode
     )
@@ -1231,7 +1257,7 @@ func subCmdsArray(cfg: CliCfg): NimNode =
       (`cmd`, `aliases`, `desc`)
 
 # is this one necessary?
-
+#
 proc hwylCliError*(msg: BbString) =
   quit $(bb("error ", "red") & msg)
 
@@ -1299,7 +1325,9 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
     subcmds = cfg.subCmdsArray()
     styles = cfg.help.styles or (quote do: HwylCliStyles())
     usage  = cfg.help.usage or defaultUsage(cfg, styles)
+    longHelp = LongHelp in cfg.settings
 
+  # todo: pass on the LongHelp setting here somehow....
   result = quote do:
     proc `printHelpName`() =
       let help =
@@ -1311,6 +1339,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
           subcmds = `subcmds`,
           flags = `helpFlags`,
           styles = `styles`,
+          longHelp = `longHelp`
         )
       hecho help.render().bb()
 
