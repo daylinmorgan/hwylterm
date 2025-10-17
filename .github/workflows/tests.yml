@@ -24,3 +24,10 @@ jobs:
         run: |
           nim develop
           nim r tests/tester
+
+      - name: Compile tools
+        run: |
+          cd tools
+          nimble build
+
+
