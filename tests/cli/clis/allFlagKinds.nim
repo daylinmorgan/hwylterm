@@ -16,6 +16,7 @@ hwylCli:
     gggg(string, "kind: CallStmt"):
       * "default"
     h | hhhh("kind: InfixCall")
+    i: "kind: Stmt (but one line)"
   run:
     echo fmt"{a=}, {bbbb=}, {cccc=}, {dddd=}"
-    echo fmt"{e=}, {notffff=}, {gggg=}, {hhhh=}"
+    echo fmt"{e=}, {notffff=}, {gggg=}, {hhhh=}, {i=}"

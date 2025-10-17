@@ -453,9 +453,9 @@ func getFlagParamNode(c: CliCfg, node: NimNode): NimNode =
     result = node[1]
   else: c.unexpectedKind node
 
-# TODO: also accept the form `flag: "help"`
 func parseFlagStmtList(c: CliCfg, f: var CliFlag, node: NimNode) =
   c.expectKind node, nnkStmtList
+
   for n in node:
     case n.kind
     of nnkCall, nnkCommand, nnkPrefix:
@@ -483,6 +483,14 @@ func parseFlagStmtList(c: CliCfg, f: var CliFlag, node: NimNode) =
         f.defined = true # workaround postParse group implementation
       else:
         c.err "unexpected setting: " & id
+
+    # might be flag: "help"
+    of nnkStrLit:
+      if node.len != 1:
+        c.err node, "expect only a string literal, are you missing a '?/help'"
+      f.help = n
+
+
     else:
       c.unexpectedKind n
 
