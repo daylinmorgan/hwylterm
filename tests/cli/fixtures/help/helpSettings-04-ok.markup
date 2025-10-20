@@ -1,9 +1,9 @@
-usage:
-  help-styles noAnsi [[flags]
+[red]usage[/red]:
+  help-settings noAnsi [[flags]
 
 show noColor help
 
-flags:
+[red]flags[/red]:
      --input string required input (required)
   -k         string predefined flag (default: value)
   -h --help         print help

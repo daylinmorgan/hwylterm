@@ -1,9 +1,9 @@
-[1;38;5;6musage[0m:
-  [1mhelp-styles minimal[0m [flags]
+[38;5;1musage[0m:
+  [1mhelp-settings minimal[0m [flags]
 
 show minimal help with no styling
 
-[1;38;5;6mflags[0m:
+[38;5;1mflags[0m:
      [38;5;5m--input[0m required input
   [38;5;3m-k[0m         predefined flag
   [38;5;3m-h[0m [38;5;5m--help [0m print help

@@ -1,9 +1,9 @@
-[bold]usage[/bold]:
-  [bold]help-styles noColor[/bold] [[flags]
+[red]usage[/red]:
+  [bold]help-settings noColor[/bold] [[flags]
 
 show noColor help
 
-[bold]flags[/bold]:
+[red]flags[/red]:
      --input [faint]string[/faint] required input (required)
   -k         [faint]string[/faint] predefined flag [faint](default: value)[/faint]
   -h --help  [faint]      [/faint] print help

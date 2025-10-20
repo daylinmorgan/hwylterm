@@ -1,9 +1,9 @@
-[bold cyan]usage[/bold cyan]:
-  [bold]help-styles longHelp[/bold] [[flags]
+[red]usage[/red]:
+  [bold]help-settings longHelp[/bold] [[flags]
 
 -h != --help
 
-[bold cyan]flags[/bold cyan]:
+[red]flags[/red]:
      [magenta]--input[/magenta] [faint]string[/faint]  [red](required)[/red]
       required input
       A long help that continues here
