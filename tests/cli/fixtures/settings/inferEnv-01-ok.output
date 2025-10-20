@@ -1,1 +1,1 @@
-input=command line, count=(val: 5), shell=guess
+input=command line, count=(val: 5), shell=guess, yes=false
