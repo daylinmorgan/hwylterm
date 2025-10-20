@@ -3,6 +3,7 @@ import hwylterm, hwylterm/hwylcli
 
 putEnv("INFERENV_INPUT", "TEST")
 putEnv("INFERENV_COUNT", "5")
+putEnv("INFERENV_YES", "false")
 
 hwylCli:
   name "inferEnv"
@@ -21,6 +22,7 @@ hwylCli:
       S NoEnv
       T string
       * "guess"
+    yes:
+      ? "a boolean flag"
   run:
-    echo fmt"{input=}, {count=}, {shell=}"
-    discard
+    echo fmt"{input=}, {count=}, {shell=}, {yes=}"

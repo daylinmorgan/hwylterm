@@ -1528,7 +1528,11 @@ proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T, 
   p.val = val
   if isEnv and val.len > 0 and val[0] == ',':
       p.sep = ",="
-  parse(p, target)
+  when T is bool:
+    if parseBool(val):
+      parse(p, target)
+  else:
+    parse(p, target)
 
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
   var caseStmt = nnkCaseStmt.newTree()
