@@ -402,6 +402,7 @@ type
     defined*: bool # if flag uses custom group it still
                    # needs to be added to cli in postParse
     settings*: set[CliFlagSetting]
+    fromParent: bool # default/envs don't need to be set for a parent flag
 
   Inherit = object
     settings: set[CliSetting]
@@ -916,11 +917,11 @@ func inheritFlags(child: var CliCfg, parent: CliCfg) =
   groups &= child.inherit.groups
 
   for f in parent.flagDefs:
-    pflags[f.name] = f
-    if f.group in pgroups:
-      pgroups[f.group].add f
-    else:
-      pgroups[f.group] = @[f]
+    var parentF = f
+    parentF.fromParent = true
+    pflags[f.name] = parentF
+    if pgroups.hasKeyOrPut(f.group, @[parentF]):
+      pgroups[f.group].add parentF
 
   if "global" in pgroups:
     groups.add "global"
@@ -1519,12 +1520,14 @@ proc parse*[T](p: var OptParser, target: var KV[string, T]) =
   target.key = key
   parse(p, target.val)
 
-proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T) =
+proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T, isEnv = false) =
   ## convience proc to reuse other parsers
-  let ogKV = (p.key, p.val)
-  defer: (p.key, p.val) = ogKV
+  let ogKV = (p.key, p.val, p.sep)
+  defer: (p.key, p.val, p.sep) = ogKV
   p.key = key
   p.val = val
+  if isEnv and val.len > 0 and val[0] == ',':
+      p.sep = ",="
   parse(p, target)
 
 func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
@@ -1711,9 +1714,9 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
   for f in cfg.flags:
     if cfg.isRequiredFlag(f):
       required.add f
-    elif f.defaultVal != nil:
+    elif f.defaultVal != nil and not f.fromParent:
       default.add f
-    if f.env != nil:
+    if f.env != nil and not f.fromParent:
       env.add f
 
   for f in required:
@@ -1741,7 +1744,7 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
     body.add quote do:
       if `name` notin `flagSet`:
         if existsEnv(`envNode`):
-          parseKeyVal p, `name`, getEnv(`envNode`), `target`
+          parseKeyVal p, `name`, getEnv(`envNode`), `target`, true
 
   if hasSubcommands cfg:
     body.add quote do:

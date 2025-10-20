@@ -15,4 +15,4 @@ hwylCli:
       * 5
       ? "some number"
   run:
-    echo fmt"{input=} {outputs=}"
+    echo fmt"{input=} {outputs=}, {count=}"
