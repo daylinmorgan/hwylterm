@@ -40,9 +40,14 @@ export parseopt3, sets, bbansi
 
 type
   HwylCliStyleSetting* = enum
-    Aliases, Required, Defaults, Types, FlagGroups
+    Aliases,    ## show aliases, example "show (s)"
+    Required,   ## indicate if flag is required
+    Defaults,   ## show default value
+    Types,      ## show expected type for flag
+    FlagGroups, ## group flags together
+    NoEnv,      ## ignore env settings for style
 
-const defaultStyleSettings = {Aliases, Required, Defaults, Types}
+const defaultStyleSettings* = [Aliases, Required, Defaults, Types].toHashSet()
 
 type
   HwylFlagHelp* = tuple[
@@ -53,7 +58,10 @@ type
   ]
 
   BuiltinStyleKind* = enum
-    AllSettings, Minimal, WithoutColor, WithoutAnsi
+    AllSettings,  ## Use all help settings (besides NoEnv)
+    Minimal,      ## Use no extra help settings
+    WithoutColor, ## Default help settings without color
+    WithoutAnsi,  ## Default help settings without color or styling
 
   HwylCliStyles* = object
     name* = "bold"
@@ -67,7 +75,7 @@ type
     args* = "bold italic"
     typeRepr = "faint"
     minCmdLen* = 8
-    settings*: set[HwylCliStyleSetting] = defaultStyleSettings
+    settings*: HashSet[HwylCliStyleSetting] = defaultStyleSettings
 
   HwylCliLengths = object
     subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, typeRepr*, defaultVal*: int
@@ -81,17 +89,85 @@ type
     longHelp*: bool
 
 
-const builtinStyles* = [
-    AllSettings: HwylCliStyles(settings: defaultStyleSettings + {FlagGroups}),
-    Minimal: HwylCliStyles(settings: {}),
-    # NoColor would be more ergonomic but clashes with BbMode
-    WithoutColor: HwylCliStyles(header: "bold", flagShort: "", flagLong: "", required: ""),
-    WithoutAnsi: HwylCliStyles(name: "", header: "", flagShort: "", flagLong: "", default: "", required: "", subcmd: "", args:"", typeRepr: ""),
-]
+func `+`*[T](a: HashSet[T], b: set[T]): HashSet[T] =
+  a + toSeq(b).toHashSet()
+
+func `-`*[T](a: HashSet[T], b: set[T]): HashSet[T] =
+  a - toSeq(b).toHashSet()
 
 # NOTE: do i need both strips?
 func firstLine(s: string): string =
   s.strip().dedent().strip().splitlines()[0]
+
+func newHwylCliStyles*(
+    name = "bold",
+    header = "bold cyan",
+    flagShort = "yellow",
+    flagLong = "magenta",
+    flagDesc = "",
+    default = "faint",
+    required = "red",
+    subcmd = "bold",
+    args = "bold italic",
+    typeRepr = "faint",
+    minCmdLen = 8,
+    settings: HashSet[HwylCliStyleSetting] = defaultStyleSettings,
+): HwylCliStyles =
+
+  template `*`(field: untyped): untyped =
+    result.field = field
+
+  *name
+  *header
+  *flagShort
+  *flagLong
+  *flagDesc
+  *default
+  *required
+  *subcmd
+  *args
+  *typeRepr
+  *args
+  *minCmdLen
+  *settings
+
+  # style parsing should be a more detailed hwylCliError
+  if NoEnv notin settings:
+    template setEnvVal(k: string, val: untyped): untyped =
+      val = getEnv("HWYLCLISTYLES_" & k.toUpperAscii(), val)
+    for key, val in result.fieldPairs:
+      when key == "minCmdLen":
+        # NOTE: shouldnt need to parse twice...
+        let envVal = getEnv("HWYLCLISTYLES_MINCMDLEN")
+        if envVal != "":
+          val = parseInt(envVal)
+      elif key == "settings":
+        let envVal = getEnv("HWYLCLISTYLES_SETTINGS")
+        if envVal != "":
+          val = envVal.split(",").mapIt(parseEnum[HwylCliStyleSetting](it)).toHashSet()
+      when key notin ["settings", "minCmdLen"]:
+        setEnvVal(key, val)
+
+func fromBuiltinHelpStyles*(kind: BuiltinStyleKind): HwylCliStyles =
+  case kind
+  of AllSettings: newHwylCliStyles(settings =  defaultStyleSettings + {FlagGroups})
+  of Minimal: newHwylCliStyles(settings = initHashSet[HwylCliStyleSetting]())
+  of WithoutColor: newHwylCliStyles(header= "bold", flagShort= "", flagLong= "", required= "")
+  of WithoutAnsi: newHwylCliStyles(name= "", header= "", flagShort= "", flagLong= "", default= "", required= "", subcmd= "", args="", typeRepr= "")
+
+func withHelpSettings*(
+  settings: set[HwylCliStyleSetting] | HashSet[HwylCliStyleSetting]
+): HwylCliStyles =
+  let settings =
+    when settings is set[HwylCliStyleSetting]:
+      settings.toSeq().toHashSet()
+    else: settings
+
+  result = newHwylCliStyles(
+    settings = settings
+  )
+
+
 
 func newHwylCliHelp*(
   usage = "",
@@ -1323,7 +1399,8 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
     footer = cfg.help.footer or newLit""
     helpFlags = cfg.flagsArray()
     subcmds = cfg.subCmdsArray()
-    styles = cfg.help.styles or (quote do: HwylCliStyles())
+    # TODO: hwylCliStyles infer from Env?
+    styles = cfg.help.styles or (quote do: newHwylCliStyles())
     usage  = cfg.help.usage or defaultUsage(cfg, styles)
     longHelp = LongHelp in cfg.settings
 
@@ -1331,6 +1408,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   result = quote do:
     proc `printHelpName`() =
       let help =
+          # use getEnv call here?
         newHwylCliHelp(
           usage = `usage`,
           header = `header`,

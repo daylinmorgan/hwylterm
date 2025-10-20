@@ -1,10 +1,11 @@
-import std/strformat
+import std/[os, strformat]
 import hwylterm, hwylterm/hwylcli
 
-const noExtras = HwylCliStyles(settings: {})
+putEnv("HWYLCLISTYLES_HEADER","red")
+# putEnv("HWYLCLISTYLES_SETTINGS", "Aliases")
 
 hwylCli:
-  name "help-styles"
+  name "help-settings"
   flags:
     [flags]
     input:
@@ -28,29 +29,35 @@ hwylCli:
     [all]
     ... "show all help styling settings"
     help:
-      styles: builtinStyles[AllSettings]
+      styles: fromBuiltinHelpStyles(AllSettings)
     flags: ^[flags]
 
     [minimal]
     ... "show minimal help with no styling"
     help:
-      styles: builtinStyles[Minimal]
+      styles: fromBuiltinHelpStyles(Minimal)
     flags: ^[flags]
 
     [noColor]
     ... "show noColor help "
     help:
-      styles: builtinStyles[WithoutColor]
+      styles: fromBuiltinHelpStyles(WithoutColor)
     flags: ^[flags]
 
     [noAnsi]
     ... "show noColor help "
     help:
-      styles: builtinStyles[WithoutAnsi]
+      styles: fromBuiltinHelpStyles(WithoutAnsi)
     flags: ^[flags]
 
     [longHelp]
     ... "-h != --help"
     flags: ^[flags]
     settings LongHelp
+
+    [noEnv]
+    ... "ignore env styles"
+    flags: ^[flags]
+    help:
+      styles: newHwylCliStyles(settings = defaultStyleSettings + {HwylCliStyleSetting.NoEnv})
 

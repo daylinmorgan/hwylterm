@@ -1,13 +1,10 @@
 import std/strformat
 import hwylterm, hwylterm/hwylcli
 
-
-let styles = HwylCliStyles(settings: {Aliases, Required, Defaults, Types, FlagGroups})
-
 hwylCli:
   name "inherit-flags"
   help:
-    styles: builtinStyles[AllSettings]
+    styles: newHwylCliStyles(settings = defaultStyleSettings + {FlagGroups})
   flags:
     [global]
     always "in all subcommands"
