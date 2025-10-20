@@ -7,4 +7,4 @@
      [magenta]--output[/magenta]
          output [faint](output.txt)[/faint]
   [yellow]-h[/yellow] [magenta]--help  [/magenta]
-         show this help
+         print help

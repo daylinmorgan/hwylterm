@@ -11,4 +11,4 @@
      [magenta]--gggg[/magenta] [faint]string[/faint] kind: CallStmt [faint](default: default)[/faint]
   [yellow]-h[/yellow] [magenta]--hhhh[/magenta] [faint]      [/faint] kind: InfixCall
   [yellow]-i[/yellow]        [faint]      [/faint] kind: Stmt (but one line)
-     [magenta]--help[/magenta] [faint]      [/faint] show this help
+     [magenta]--help[/magenta] [faint]      [/faint] print help

@@ -4,7 +4,7 @@
 show all help styling settings
 
 [bold cyan]flags[/bold cyan]:
-  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] show this help
+  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] print help
 
 [bold cyan]flags flags[/bold cyan]:
      [magenta]--input[/magenta] [faint]string[/faint] required input [red](required)[/red]

@@ -4,4 +4,4 @@
 [bold cyan]flags[/bold cyan]:
   [yellow]-a[/yellow]         first short
   [yellow]-b[/yellow]         second short
-  [yellow]-h[/yellow] [magenta]--help[/magenta]  show this help
+  [yellow]-h[/yellow] [magenta]--help[/magenta]  print help

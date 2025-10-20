@@ -4,7 +4,7 @@
 command with it's own flag
 
 [bold cyan]flags[/bold cyan]:
-  [yellow]-h[/yellow] [magenta]--help  [/magenta]  show this help
+  [yellow]-h[/yellow] [magenta]--help  [/magenta]  print help
 
 [bold cyan]misc flags[/bold cyan]:
      [magenta]--first [/magenta]  first first flag

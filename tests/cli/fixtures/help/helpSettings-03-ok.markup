@@ -6,4 +6,4 @@ show noColor help
 [bold]flags[/bold]:
      --input [faint]string[/faint] required input (required)
   -k         [faint]string[/faint] predefined flag [faint](default: value)[/faint]
-  -h --help  [faint]      [/faint] show this help
+  -h --help  [faint]      [/faint] print help

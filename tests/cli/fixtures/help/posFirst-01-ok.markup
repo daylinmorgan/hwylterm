@@ -2,4 +2,4 @@
   [bold]positionals[/bold] [bold italic]first...[/bold italic] [bold italic]second[/bold italic] [bold italic]third[/bold italic] [[flags]
 
 [bold cyan]flags[/bold cyan]:
-  [yellow]-h[/yellow] [magenta]--help[/magenta]  show this help
+  [yellow]-h[/yellow] [magenta]--help[/magenta]  print help

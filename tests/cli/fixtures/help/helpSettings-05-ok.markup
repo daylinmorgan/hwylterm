@@ -1,0 +1,19 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]help-styles longHelp[/bold] [[flags]
+
+-h != --help
+
+[bold cyan]flags[/bold cyan]:
+     [magenta]--input[/magenta] [faint]string[/faint]  [red](required)[/red]
+      required input
+      A long help that continues here
+      and spans multiple lines
+        the lines are dedented then reindented
+        [yellow]this is yellow....[/yellow]
+      
+  [yellow]-k[/yellow]         [faint]string[/faint]  [faint](default: value)[/faint]
+      predefined flag
+      k could be short for key idk
+      
+  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] 
+      print help
