@@ -32,7 +32,8 @@ proc preCompileTestModules*() =
       modules.add srcModule.splitFile().name
 
   for i, module in modules:
-    status "compiling [$2/$3] $1" % [ module, $(i+1), $modules.len]
+    if isatty(stdout):
+      status "compiling [$2/$3] $1" % [ module, $(i+1), $modules.len]
     preCompileWorkingModule(module)
 
   eraseLine stdout
@@ -57,7 +58,6 @@ proc loadFixture*(path: string): Fixture =
 proc loadFixtureWithOutput(path: string): Fixture =
   result = loadFixture(path)
   result.output = readFile(path.replace(".args",".output")).strip()
-
 
 iterator fixtures*(fixturePath: string): Fixture =
   for (kind, path) in walkDir(fixturePath):

@@ -23,6 +23,7 @@ jobs:
       - name: Run Tests
         run: |
           nim develop
+          nim setupTests
           nim r tests/tester
 
       - name: Compile tools

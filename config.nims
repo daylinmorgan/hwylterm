@@ -4,6 +4,9 @@ import std/[strformat, strutils]
 task develop, "install cligen for development":
   exec "nimble install -l 'cligen@1.7.5'"
 
+task setupTests, "pre-compile test bins":
+  exec "nim r tests/cli/setup"
+
 proc docFixup(deployDir:string, pkgName: string) =
   ## apply renames to api docs
   withDir deployDir:
