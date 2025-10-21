@@ -1,4 +1,7 @@
 {.define: bbansiOn.}
+# these test cases can be generated using
+# tools/bbansi
+
 import std/[strutils, unittest]
 import hwylterm/bbansi
 
