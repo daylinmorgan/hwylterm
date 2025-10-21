@@ -183,6 +183,7 @@ func newHwylCliHelp*(
   result.footer = dedent(footer).strip()
   result.description = dedent(description).strip()
   if Aliases in styles.settings:
+    # TODO: subcmds should use long help?
     result.subcmds =
       subcmds.mapIt((it.name & " " & it.aliases, it.aliases, it.desc.firstLine))
   else:

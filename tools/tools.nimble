@@ -6,8 +6,8 @@ description   = "bringing some fun (hwyl) to the terminal"
 license       = "MIT"
 srcDir        = "../src"
 namedBin      = {
-  "hwylterm/bbansi" :"bbansi",
-  "hwylterm/chooser":"hwylchoose"
+  "tools/bbansi" :"bbansi",
+  "tools/hwylchoose" :"hwylchoose"
 }.toTable
 
 

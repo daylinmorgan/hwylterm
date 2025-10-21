@@ -392,13 +392,6 @@ func toString*(c: Console, s: BbString): string {.inline.} =
 proc `$`*(s: BbString): string =
   toString(hwylConsole, s)
 
-proc debugBb(bbs: BbString): string {.used.} =
-    echo "bbString("
-    echo "  plain: ", bbs.plain
-    echo "  spans: ", bbs.spans
-    echo "  escaped: ", escape($bbs)
-    echo ")"
-
 func align*(s: BbString, count: Natural, padding = ' '): Bbstring =
   if s.len < count:
     result = (padding.repeat(count - s.len)) & s
@@ -460,55 +453,3 @@ proc hecho*(args: varargs[string, `$`]) {.raises: [IOError]} =
     hwylconsole.file.write(x)
   hwylConsole.file.write('\n')
   hwylConsole.file.flushFile
-
-{.pop raises: [].}
-
-# NOTE: could move to standlone modules in the tools/ directory
-when isMainModule:
-  import ./[hwylcli]
-  const version = staticExec "git describe --tags --always --dirty=-dev"
-
-  proc showTestCard() =
-    for style in [
-      "bold", "faint", "italic", "underline", "blink", "reverse", "conceal", "strike"
-    ]:
-      echo style, " -> ", fmt"[{style}]****".bb
-    const colors =
-      ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"]
-    for color in colors:
-      echo color, " -> ", fmt"[{color}]****".bb
-    for color in colors:
-      echo "on ", color, " -> ", fmt"[on {color}]****".bb
-    quit(QuitSuccess)
-
-  hwylCli:
-    name "bbansi"
-    settings ShowHelp
-    positionals:
-      args seq[string]
-    help:
-      description """
-    bbansi "[[yellow] yellow text!"
-      -> [yellow] yellow text![/]
-    bbansi "[[bold red] bold red text[[/] plain text..."
-      -> [bold red] bold red text[/] plain text...
-    bbansi "[[red]some red[[/red] but all italic" --style:italic
-      -> [italic][red]some red[/red] but all italic[/italic]
-    """
-    version bbfmt"[yellow]bbansi version[/][red] ->[/] [bold]{version}[/]"
-    hidden debug, testCard, inferShort
-    flags:
-      debug "show debug"
-      testCard "show test card":
-        S NoShort
-      style(string, "set style for string")
-      file(string, "file path")
-    run:
-      if testCard: showTestCard()
-      if file != "": echo readFile(file).bb()
-      else:
-        for arg in args:
-          let styled = arg.bb(style)
-          echo styled
-          if debug:
-            echo debugBb(styled)
