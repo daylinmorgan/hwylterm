@@ -27,6 +27,9 @@ suite "basic":
     check "[bold]Bold[red] Bold Red[/red] Bold Only" ~=
       "\e[1mBold\e[0m\e[1;38;5;1m Bold Red\e[0m\e[1m Bold Only\e[0m"
 
+    check "[bold]daughter of [magenta]atlas[/magenta], [i]installer of packages[/i][/bold]" ~=
+      "[1mdaughter of [0m[1;38;5;5matlas[0m[1m, [0m[1;3minstaller of packages[0m"
+
   test "abbreviated":
     check "[b]Bold[/] Not Bold" ~= "\e[1mBold\e[0m Not Bold"
 

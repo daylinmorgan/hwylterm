@@ -248,9 +248,18 @@ template addToSpan(bbs: var BbString, pattern: string) =
   bbs.endSpan
   bbs.newSpan currStyl & @[pattern]
 
+proc dropStyles(spans: var seq[BbSpan], style: string): seq[string] =
+  for style in spans[^1].styles:
+    for s in style.split(" "):
+      if s notin style:
+        result.add s
+
 template closeStyle(bbs: var BbString, pattern: string) =
   let style = pattern[1 ..^ 1].strip()
-  if style in bbs.spans[^1].styles:
+  if bbs.spans[^1].slice[0] == bbs.plain.len:
+    bbs.endSpan
+    bbs.newSpan
+  elif style in bbs.spans[^1].styles:
     bbs.endSpan
     if bbs.spans.len == 0: return
     let newStyle = bbs.spans[^1].styles.filterIt(it != style) # use sets instead?
@@ -380,15 +389,15 @@ func toString(bbs: Bbstring, mode: BbMode): string =
 func toString*(c: Console, s: BbString): string {.inline.} =
   toString(s, c.mode)
 
+proc `$`*(s: BbString): string =
+  toString(hwylConsole, s)
+
 proc debugBb(bbs: BbString): string {.used.} =
     echo "bbString("
     echo "  plain: ", bbs.plain
     echo "  spans: ", bbs.spans
     echo "  escaped: ", escape($bbs)
     echo ")"
-
-proc `$`*(s: BbString): string =
-  toString(hwylConsole, s)
 
 func align*(s: BbString, count: Natural, padding = ' '): Bbstring =
   if s.len < count:
