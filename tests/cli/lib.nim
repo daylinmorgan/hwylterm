@@ -42,14 +42,25 @@ type
   Fixture* = object
     name*: string
     module*: string
+    path*: string
     args*: string
     ok*: bool
     output*: string
+
+proc markupPath*(f: Fixture): string {.inline.} =
+  f.path.replace(".args", ".markup")
+
+proc outputPath*(f: Fixture): string {.inline.} =
+  f.path.replace(".args", ".output")
+
+proc isMissing*(f: Fixture): bool =
+  result = (not fileExists(f.markupPath)) or (not fileExists(f.outputPath))
 
 proc loadFixture*(path: string): Fixture =
   let name = path.splitPath.tail.replace(".args", "")
   let parts = name.split("-")
   assert parts.len == 3
+  result.path = path
   result.name = name
   result.module = parts[0]
   result.ok = parts[2] == "ok"

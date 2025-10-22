@@ -6,8 +6,7 @@ const pathToSrc = currentSourcePath().parentDir()
 const fixturePath = pathToSrc / "fixtures"
 const binDir = pathToSrc / "bin"
 
-proc touchFixture(path: string) =
-  let f = loadFixture(path)
+proc touchFixture(f: Fixture) =
   preCompileWorkingModule(f.module)
   echo f.module & " | " & f.args
   let (output, code) = run(f)
@@ -17,14 +16,29 @@ proc touchFixture(path: string) =
     if code != 0: quit "expected zero exit status"
   else:
     if code == 0: quit "expected non-zero exit status"
-  writeFile(path.replace(".args", ".markup"), markup)
-  writeFile(path.replace(".args", ".output"), output)
+  writeFile(f.markupPath, markup)
+  writeFile(f.outputPath, output)
+
+proc findFixtures(path: string): seq[Fixture] =
+  for (kind, path) in walkDir(path, checkDir = true):
+    if kind == pcFile and path.endsWith(".args"):
+      result.add loadFixture(path)
 
 proc touchSuite(suitePath: string) =
   echo "updating suite: ", suitePath.splitPath.tail
-  for (kind, path) in walkDir(suitePath, checkDir = true):
-    if path.endsWith(".args"):
-      touchFixture(path)
+  for f in findFixtures(suitePath):
+    touchFixture(f)
+
+proc findSuites(path: string): seq[string] =
+  for (kind, path) in walkDir(path):
+    if kind == pcDir:
+      result.add path
+
+proc findMissing(path: string): seq[Fixture] =
+  for s in findSuites(path):
+    for f in findFixtures(s):
+      if f.isMissing():
+        result.add f
 
 when isMainModule:
   import hwylterm/parseopt3
@@ -34,13 +48,15 @@ when isMainModule:
 
 touch_fixtures
   --help          show this help
+  --missing
   --suite [name]
   --fixture [fixture]
+  --all
 """
     quit(0)
 
-  var suites: seq[string]
-  var fixtures: seq[string]
+  var fixtures: seq[Fixture]
+  var all: bool
 
   for kind, key, val in getopt():
     case kind
@@ -48,16 +64,20 @@ touch_fixtures
     of cmdLongOption, cmdShortOption:
       case key
       of "help", "h": writeHelp()
-      of "suite": suites.add val
-      of "fixture": fixtures.add val
+      of "suite":
+        fixtures.add findFixtures(val)
+      of "fixture":
+        fixtures.add loadFixture(val)
+      of "missing":
+        fixtures.add findMissing(fixturePath)
+      of "all": all = true
 
-  if (suites.len + fixtures.len) == 0:
+  if all:
     for (kind, path) in walkDir(fixturePath):
       if kind == pcDir:
         touchSuite(path)
 
-  for suite in suites:
-    touchSuite(pathToSrc / suite)
-
   for fixture in fixtures:
-    touchFixture(pathToSrc / fixture)
+    echo fixture
+    echo fixture.markupPath
+    touchFixture(fixture)
