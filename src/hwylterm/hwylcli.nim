@@ -88,7 +88,6 @@ type
     lengths*: HwylCliLengths
     longHelp*: bool
 
-
 func `+`*[T](a: HashSet[T], b: set[T]): HashSet[T] =
   a + toSeq(b).toHashSet()
 
