@@ -1,0 +1,8 @@
+some code that runs first
+[bold cyan]usage[/bold cyan]:
+  [bold]gen only[/bold] [bold italic]args...[/bold italic] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+  [yellow]-h[/yellow] [magenta]--help[/magenta]  print help
+this doesn't run, unless the user says so args=@["a", "b", "c"]
+this doesn't run, unless the user says so args=@["1", "2", "3"]
