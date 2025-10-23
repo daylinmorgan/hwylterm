@@ -210,8 +210,9 @@ func newHwylCliHelp*(
     result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
 func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
-  # TODO: add wrapping for TerimanlWidth?
-  result.add "  "
+  # TODO: add wrapping for TerimanlWidth? need wrapWords supporting bbMarkup and bbAnsi string
+
+  result.add " "
   if f.short != "":
     result.add ("-" & f.short.alignLeft(cli.lengths.shortArg)).bbMarkup(cli.styles.flagShort)
   else:
