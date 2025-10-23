@@ -231,14 +231,18 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
   if Types in cli.styles.settings:
     result.add " "
     # BUG alignLeft isn't accounting for these '[['
-    let offset = int(
-      (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
-    )
-    result.add f.typeRepr
-      .alignLeft(
-        cli.lengths.typeRepr + offset
+    if f.typeRepr != "":
+      let offset = int(
+        (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
       )
-      .bbMarkup(cli.styles.typeRepr)
+      result.add f.typeRepr
+        .alignLeft(
+          cli.lengths.typeRepr + offset
+        )
+        .bbMarkup(cli.styles.typeRepr)
+    else:
+      result.add " ".repeat(cli.lengths.typeRepr)
+
 
   result.add " "
 
