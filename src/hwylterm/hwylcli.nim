@@ -997,14 +997,13 @@ func addBuiltinFlags(c: var CliCfg) =
   let
     name = c.name.replace(" ", "")
     printHelpName = ident("print" & name & "Help")
- 
 
   if NoHelpFlag notin c.settings:
     let helpDesc =
       if LongHelp in c.settings:
         newLit("print help  [faint](see more with --help)[/]")
       else:
-        newLit("help")
+        newLit("print help")
 
     let helpNode =
       if LongHelp in c.settings:
