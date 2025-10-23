@@ -78,6 +78,4 @@ touch_fixtures
         touchSuite(path)
 
   for fixture in fixtures:
-    echo fixture
-    echo fixture.markupPath
     touchFixture(fixture)
