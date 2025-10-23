@@ -6,4 +6,4 @@ show minimal help with no styling
 [red]flags[/red]:
     [magenta]--input[/magenta] required input
     [magenta]--key  [/magenta] predefined flag
- [yellow]-h[/yellow] [magenta]--help [/magenta] help
+ [yellow]-h[/yellow] [magenta]--help [/magenta] print help

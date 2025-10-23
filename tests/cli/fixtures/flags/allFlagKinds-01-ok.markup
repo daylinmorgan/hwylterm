@@ -2,13 +2,13 @@
   [bold]flag-kinds[/bold] [[flags]
 
 [bold cyan]flags[/bold cyan]:
-  [yellow]-a[/yellow]        [faint]      [/faint] kind: Command
-  [yellow]-b[/yellow] [magenta]--bbbb[/magenta] [faint]      [/faint] kind: InfixCommand
-     [magenta]--cccc[/magenta] [faint]      [/faint] kind: Stmt
-  [yellow]-d[/yellow] [magenta]--dddd[/magenta] [faint]      [/faint] kind: InfixStmt
-  [yellow]-e[/yellow]        [faint]string[/faint] kind: Call
-  [yellow]-f[/yellow] [magenta]--ffff[/magenta] [faint]      [/faint] kind: InfixCallStmt
-     [magenta]--gggg[/magenta] [faint]string[/faint] kind: CallStmt [faint](default: default)[/faint]
-  [yellow]-h[/yellow] [magenta]--hhhh[/magenta] [faint]      [/faint] kind: InfixCall
-  [yellow]-i[/yellow]        [faint]      [/faint] kind: Stmt (but one line)
-     [magenta]--help[/magenta] [faint]      [/faint] print help
+ [yellow]-a[/yellow]               kind: Command
+ [yellow]-b[/yellow] [magenta]--bbbb[/magenta]        kind: InfixCommand
+    [magenta]--cccc[/magenta]        kind: Stmt
+ [yellow]-d[/yellow] [magenta]--dddd[/magenta]        kind: InfixStmt
+ [yellow]-e[/yellow]        [faint]string[/faint] kind: Call
+ [yellow]-f[/yellow] [magenta]--ffff[/magenta]        kind: InfixCallStmt
+    [magenta]--gggg[/magenta] [faint]string[/faint] kind: CallStmt [faint](default: default)[/faint]
+ [yellow]-h[/yellow] [magenta]--hhhh[/magenta]        kind: InfixCall
+ [yellow]-i[/yellow]               kind: Stmt (but one line)
+    [magenta]--help[/magenta]        print help

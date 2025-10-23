@@ -6,4 +6,4 @@ show noColor help
 [38;5;1mflags[0m:
     --input string required input (required)
     --key   string predefined flag (default: value)
- -h --help         help
+ -h --help         print help

@@ -4,10 +4,10 @@
 command with it's own flag
 
 [bold cyan]flags[/bold cyan]:
-  [yellow]-h[/yellow] [magenta]--help  [/magenta]  print help
+ [yellow]-h[/yellow] [magenta]--help  [/magenta]  print help
 
 [bold cyan]misc flags[/bold cyan]:
-     [magenta]--first [/magenta]  first first flag
+    [magenta]--first [/magenta]  first first flag
 
 [bold cyan]global flags[/bold cyan]:
-     [magenta]--always[/magenta]  in all subcommands
+    [magenta]--always[/magenta]  in all subcommands
