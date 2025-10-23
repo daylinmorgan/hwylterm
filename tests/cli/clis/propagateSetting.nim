@@ -2,7 +2,7 @@ import hwylterm, hwylterm/hwylcli
 
 hwylCli:
   name "setting-propagate"
-  settings Propagate, InferShort
+  settings InferShort, LongHelp
   flags:
     [misc]
     input:
@@ -15,6 +15,7 @@ hwylCli:
       ? "a count var with default"
   subcommands:
     [one]
+    settings IgnoreParent
     flags:
       ^[misc]
 

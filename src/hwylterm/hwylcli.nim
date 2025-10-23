@@ -378,7 +378,7 @@ proc `$`(c: Count): string = $c.val
 
 type
   CliSetting* = enum
-    Propagate,    ## Include parent command settings in subcommand
+    IgnoreParent  ## Don't propagate parent settings to subcommands
     GenerateOnly, ## Don't attach root `runProc()` node
     NoHelpFlag,   ## Remove the builtin help flag
     ShowHelp,     ## If cmdline empty show help
@@ -401,7 +401,7 @@ type
     help*: NimNode
     node: NimNode
     defaultVal: NimNode
-    settings*: set[CliFlagSetting]
+    settings*: HashSet[CliFlagSetting]
 
   CliFlag = object
     name*: string
@@ -416,11 +416,11 @@ type
     env*: NimNode
     defined*: bool # if flag uses custom group it still
                    # needs to be added to cli in postParse
-    settings*: set[CliFlagSetting]
+    settings*: HashSet[CliFlagSetting]
     fromParent: bool # default/envs don't need to be set for a parent flag
 
   Inherit = object
-    settings: set[CliSetting]
+    settings: HashSet[CliSetting]
     flags: seq[string]
     groups: seq[string]
 
@@ -440,7 +440,7 @@ type
     stopWords*: seq[string]
     help: CliHelp
     defaultFlagType: NimNode
-    settings*: set[CliSetting]
+    settings*: HashSet[CliSetting]
     subName*: string # used for help generator
     subcommands: seq[CliCfg]
     preSub*, postSub*, pre*, post*, run*: NimNode
@@ -886,7 +886,7 @@ func parseIdentLikeList(c: CliCfg, node: NimNode): seq[string] =
       result.add n.strVal
   else: c.unexpectedKind node
 
-func parseCliBody(body: NimNode, name: string = "", root: bool= false): CliCfg
+func parseCliBody(body: NimNode, name = "", root = false, settings = initHashSet[CliSetting]()): CliCfg
 
 func isSubMarker(node: NimNode): bool =
   if node.kind != nnkBracket: return false
@@ -966,14 +966,14 @@ func inheritHelp(child: var CliCfg, parent: CliCfg) =
 func inheritFrom(child: var CliCfg, parent: CliCfg) =
   inheritFlags child, parent
   inheritHelp child, parent
-  if Propagate in parent.settings:
-    child.settings = child.settings + parent.settings
 
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   cfg.expectKind node[1], nnkStmtList
+
   for (name, s) in cfg.sliceStmts(node[1]):
     var subCfg = parseCliBody(
-      nnkStmtList.newTree(node[1][s]), cfg.name & " " & name
+      nnkStmtList.newTree(node[1][s]), cfg.name & " " & name,
+      settings = cfg.settings
     )
     subCfg.subName = name
     cfg.stopWords.add name
@@ -997,6 +997,10 @@ func parseHiddenFlags(c: var CliCfg, node: NimNode) =
   else: assert false
 
 func addBuiltinFlags(c: var CliCfg) =
+
+  <<< c.name
+  <<< c.settings
+
   # duplicated with below :/
   let shorts = c.flags.mapIt(it.short).toHashSet()
 
@@ -1209,8 +1213,10 @@ func isNameNode(n: NimNode): bool =
   if n[0].strVal != "name": return false
   true
 
-func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
+func parseCliBody(body: NimNode, name = "", root = false, settings = initHashSet[CliSetting]()): CliCfg =
   # Try to grab name first for better error messages
+  #
+  # NOTE: settings was added here as a workaround...to handle settings and builtinFlags
   if name == "":
     let n = body.findChild(it.isNameNode())
     if n == nil: error "name is a required property"
@@ -1218,6 +1224,9 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
   else:
     result.name = name
   result.root = root
+
+  var subCommandNodes: seq[NimNode]
+
   for node in body:
     if node.kind notin [nnkCall, nnkCommand, nnkPrefix]:
       result.err node, "unexpected node kind: " & $node.kind
@@ -1240,7 +1249,7 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
       of "stopWords":
         result.stopWords = result.parseIdentLikeList(node)
       of "subcommands":
-        parseCliSubcommands(result, node)
+        subCommandNodes.add node
       of "hidden":
         parseHiddenFlags(result, node)
       of "run":
@@ -1256,7 +1265,13 @@ func parseCliBody(body: NimNode, name = "", root = false): CliCfg =
       else:
         result.err "unknown hwylCli setting: " & name
 
+  if IgnoreParent notin result.settings:
+    result.settings = result.settings + settings - toHashSet([IgnoreParent])
+
   postParse result
+
+  for node in subCommandNodes:
+    parseCliSubcommands(result, node)
 
   # TODO: validate "required" flags exist here?
   result.addBuiltinFlags()
