@@ -4,8 +4,8 @@
 show all help styling settings
 
 [red]flags[/red]:
-  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] print help
+ [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] help
 
 [red]flags flags[/red]:
-     [magenta]--input[/magenta] [faint]string[/faint] required input [red](required)[/red]
-  [yellow]-k[/yellow]         [faint]string[/faint] predefined flag [faint](default: value)[/faint]
+    [magenta]--input[/magenta] [faint]string[/faint] required input [red](required)[/red]
+    [magenta]--key  [/magenta] [faint]string[/faint] predefined flag [faint](default: value)[/faint]

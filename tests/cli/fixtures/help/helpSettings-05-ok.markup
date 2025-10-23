@@ -4,16 +4,16 @@
 -h != --help
 
 [red]flags[/red]:
-     [magenta]--input[/magenta] [faint]string[/faint]  [red](required)[/red]
-      required input
-      A long help that continues here
-      and spans multiple lines
-        the lines are dedented then reindented
-        [yellow]this is yellow....[/yellow]
-      
-  [yellow]-k[/yellow]         [faint]string[/faint]  [faint](default: value)[/faint]
-      predefined flag
-      k could be short for key idk
-      
-  [yellow]-h[/yellow] [magenta]--help [/magenta] [faint]      [/faint] 
-      print help
+    [magenta]--input[/magenta] [faint]string[/faint]  [red](required)[/red]
+        required input
+        A long help that continues here
+        and spans multiple lines
+          the lines are dedented then reindented
+          [yellow]this is yellow....[/yellow]
+        
+    [magenta]--key[/magenta] [faint]string[/faint]  [faint](default: value)[/faint]
+        predefined flag
+        k could be short for key idk
+        
+ [yellow]-h[/yellow] [magenta]--help[/magenta] [faint]      [/faint] 
+        print help  [faint](see more with --help)[/faint]

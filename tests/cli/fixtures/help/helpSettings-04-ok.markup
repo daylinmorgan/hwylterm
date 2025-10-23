@@ -4,6 +4,6 @@
 show noColor help
 
 [red]flags[/red]:
-     --input string required input (required)
-  -k         string predefined flag (default: value)
-  -h --help         print help
+    --input string required input (required)
+    --key   string predefined flag (default: value)
+ -h --help         help
