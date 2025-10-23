@@ -209,8 +209,10 @@ func newHwylCliHelp*(
     result.lengths.subcmd = max(result.lengths.subcmd, s.name.len)
     result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
+
+# break this up
 func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
-  # TODO: add wrapping for TerimanlWidth? need wrapWords supporting bbMarkup and bbAnsi string
+  # TODO: add wrapping for TerimnalWidth? need wrapWords supporting bbMarkup and bbAnsi string
 
   result.add " "
   if f.short != "":
@@ -230,21 +232,25 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
 
   if Types in cli.styles.settings:
     result.add " "
-    # BUG alignLeft isn't accounting for these '[['
-    if f.typeRepr != "":
-      let offset = int(
-        (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
-      )
-      result.add f.typeRepr
-        .alignLeft(
-          cli.lengths.typeRepr + offset
-        )
-        .bbMarkup(cli.styles.typeRepr)
+    if cli.longHelp:
+      if f.typeRepr != "":
+        result.add f.typeRepr.bbMarkup(cli.styles.typeRepr)
     else:
-      result.add " ".repeat(cli.lengths.typeRepr)
+      if f.typeRepr != "":
+        let offset = int(
+          # BUG alignLeft isn't accounting for these '[['
+          (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
+        )
+        result.add f.typeRepr
+          .alignLeft(
+            cli.lengths.typeRepr + offset
+          )
+          .bbMarkup(cli.styles.typeRepr)
+      else:
+        result.add " ".repeat(cli.lengths.typeRepr)
 
-
-  result.add " "
+  if not cli.longHelp:
+    result.add " "
 
   if cli.longHelp:
     if f.defaultVal != "" and Defaults in cli.styles.settings:
