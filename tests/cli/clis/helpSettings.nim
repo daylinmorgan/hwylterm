@@ -18,7 +18,7 @@ hwylCli:
         [yellow]this is yellow....[/]
       """
       S Required
-    k:
+    key:
       T string
       ? """
       predefined flag

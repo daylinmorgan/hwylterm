@@ -218,10 +218,14 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
     result.add " ".repeat(1 + cli.lengths.shortArg)
 
   result.add " "
-  if f.long != "":
-    result.add ("--" & f.long.alignLeft(cli.lengths.longArg)).bbMarkup(cli.styles.flagLong)
+  if cli.longHelp:
+    if f.long != "":
+      result.add ("--" & f.long).bbMarkup(cli.styles.flagLong)
   else:
-    result.add " ".repeat(2 + cli.lengths.longArg)
+    if f.long != "":
+      result.add ("--" & f.long.alignLeft(cli.lengths.longArg)).bbMarkup(cli.styles.flagLong)
+    else:
+      result.add " ".repeat(2 + cli.lengths.longArg)
 
   if Types in cli.styles.settings:
     result.add " "
@@ -247,7 +251,7 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
       result.add " "
       result.add "(required)".bbMarkup(cli.styles.required)
 
-    let indentLen = 6
+    let indentLen = 8
 
     if f.description != "":
       result.add "\n"
@@ -989,15 +993,26 @@ func addBuiltinFlags(c: var CliCfg) =
     name = c.name.replace(" ", "")
     printHelpName = ident("print" & name & "Help")
  
-  # NOTE: should -h and --help have different messages?
-  # current implementation would require this to be handled in the 'render' of HywlCliHelp
+
   if NoHelpFlag notin c.settings:
-    let helpNode = quote do:
-      `printHelpName`(); quit 0
+    let helpDesc =
+      if LongHelp in c.settings:
+        newLit("print help  [faint](see more with --help)[/]")
+      else:
+        newLit("help")
+
+    let helpNode =
+      if LongHelp in c.settings:
+        quote do:
+          `printHelpName`(hwylKey == "help"); quit 0
+      else:
+        quote do:
+          `printHelpName`(); quit 0
+
     c.builtinFlags.add BuiltinFlag(
       name: "help",
       long: "help",
-      help: newLit("print help"),
+      help: helpDesc,
       short: if 'h' notin shorts: 'h' else: '\x00',
       node: helpNode
     )
@@ -1400,14 +1415,12 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
     footer = cfg.help.footer or newLit""
     helpFlags = cfg.flagsArray()
     subcmds = cfg.subCmdsArray()
-    # TODO: hwylCliStyles infer from Env?
     styles = cfg.help.styles or (quote do: newHwylCliStyles())
     usage  = cfg.help.usage or defaultUsage(cfg, styles)
-    longHelp = LongHelp in cfg.settings
 
   # todo: pass on the LongHelp setting here somehow....
   result = quote do:
-    proc `printHelpName`() =
+    proc `printHelpName`(longHelp = false) =
       let help =
           # use getEnv call here?
         newHwylCliHelp(
@@ -1418,7 +1431,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
           subcmds = `subcmds`,
           flags = `helpFlags`,
           styles = `styles`,
-          longHelp = `longHelp`
+          longHelp = longHelp
         )
       hecho help.render().bb()
 
