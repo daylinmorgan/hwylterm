@@ -997,10 +997,6 @@ func parseHiddenFlags(c: var CliCfg, node: NimNode) =
   else: assert false
 
 func addBuiltinFlags(c: var CliCfg) =
-
-  <<< c.name
-  <<< c.settings
-
   # duplicated with below :/
   let shorts = c.flags.mapIt(it.short).toHashSet()
 
