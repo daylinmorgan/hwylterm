@@ -2,6 +2,6 @@
   [bold]setting-propagate one[/bold] [[flags]
 
 [bold cyan]flags[/bold cyan]:
- [yellow]-i[/yellow] [magenta]--input[/magenta] [faint]string[/faint] input flag [faint](default: the default)[/faint]
- [yellow]-c[/yellow] [magenta]--count[/magenta] [faint]Count [/faint] a count var with default [faint](default: 0)[/faint]
+    [magenta]--input[/magenta] [faint]string[/faint] input flag [faint](default: the default)[/faint]
+    [magenta]--count[/magenta] [faint]Count [/faint] a count var with default [faint](default: 0)[/faint]
  [yellow]-h[/yellow] [magenta]--help [/magenta]        print help
