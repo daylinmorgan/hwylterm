@@ -8,4 +8,5 @@ some code that runs first
 
 [bold cyan]flags[/bold cyan]:
  [yellow]-h[/yellow] [magenta]--help[/magenta]  print help
-args=@["a", "b", "c"]
+running subcmd 2
+input=test

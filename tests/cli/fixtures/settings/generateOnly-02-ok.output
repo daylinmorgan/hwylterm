@@ -8,4 +8,5 @@ some code that runs first
 
 [1;38;5;6mflags[0m:
  [38;5;3m-h[0m [38;5;5m--help[0m  print help
-args=@["a", "b", "c"]
+running subcmd 2
+input=test

@@ -1,26 +1,32 @@
-import std/strformat
+import std/[os, strformat]
 import hwylterm/hwylcli
 
 
 hwylCLi:
   name "gen only"
-  settings GenerateOnly
-  positionals:
-    args seq[string]
-  run:
-    echo fmt"this doesn't run, unless the user says so {args=}"
-
+  settings GenerateOnly, ShowHelp
+  subcommands:
+    [one]
+    positionals:
+      args seq[string]
+    run:
+      assert args == @["a", "b", "c"]
+      echo fmt"{args=}"
+ 
+    [two]
+    flags:
+      input(string, "someinput")
+    run:
+      echo "running subcmd 2"
+      echo fmt"{input=}"
 
 echo "some code that runs first"
 
 printGenOnlyHelp()
-
-# inherit commandLineArgs
-runGenOnly()
-assert args == @["a", "b", "c"]
-args = @[]
-# custom args
-runGenOnly(@["1","2","3"])
-assert args == @["1", "2", "3"]
-
+if paramCount() == 0:
+  let args = parseCmdLine("two --input test")
+  runGenOnly(args)
+else:
+  # use from parseCommandLine
+  runGenOnly()
 

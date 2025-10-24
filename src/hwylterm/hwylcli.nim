@@ -454,7 +454,6 @@ type
 
 func hasSubcommands(c: CliCfg): bool = c.subcommands.len > 0
 
-
 # template `<<<`(s: string) {.used.} =
 #   let pos = instantiationInfo()
 #   debugEcho "$1:$2" % [pos.filename, $pos.line]
@@ -1926,10 +1925,9 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     )
   )
 
-
-  if ShowHelp in cfg.settings:
+  if ShowHelp in cfg.settings and (cfg.args.len > 0 or cfg.subcommands.len > 0):
     parserBody.add quote do:
-      if commandLineParams().len == 0:
+      if `cmdLine`.len == 0:
         `printHelpName`(); quit 1
 
   addPostParseHook(cfg, parserBody)
