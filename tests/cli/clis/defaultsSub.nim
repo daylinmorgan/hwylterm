@@ -1,8 +1,8 @@
 import std/[os, strformat]
 import hwylterm, hwylterm/hwylcli
 
-putEnv("DEFAULTS-SUB_COUNT", "15")
-putEnv("DEFAULTS-SUB_OUTPUTS", ",a,b,c")
+putEnv("DEFAULTS_SUB_COUNT", "15")
+putEnv("DEFAULTS_SUB_OUTPUTS", ",a,b,c")
 
 hwylCli:
   name "defaults-sub"
