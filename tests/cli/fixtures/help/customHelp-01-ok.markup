@@ -1,3 +1,7 @@
+a header
+indentations
+  indentations more
+
 [bold cyan]usage[/bold cyan]:
   [bold]custom-help[/bold] [[flags]
 
