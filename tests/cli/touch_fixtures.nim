@@ -13,7 +13,9 @@ proc touchFixture(f: Fixture) =
   # code should be the same ....
   let (markup, _) = run(f, markup = true)
   if f.ok:
-    if code != 0: quit "expected zero exit status"
+    if code != 0:
+      echo output
+      quit "expected zero exit status"
   else:
     if code == 0: quit "expected non-zero exit status"
   writeFile(f.markupPath, markup)
