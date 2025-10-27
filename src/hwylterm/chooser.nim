@@ -94,7 +94,7 @@ proc draw(s: var State) =
 func getSelections[T](state: State, things: openArray[T]): seq[T] =
   if state.selections.len == 0:
     result.add things[state.pos]
-  for i in state.selections:
+  for i in state.selections.items():
     result.add things[i]
 
 

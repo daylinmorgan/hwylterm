@@ -178,9 +178,9 @@ func newHwylCliHelp*(
   styles = HwylCliStyles(),
   longHelp = false,
 ): HwylCliHelp =
-  result.header = dedent(header).strip()
-  result.footer = dedent(footer).strip()
-  result.description = dedent(description).strip()
+  result.header = header.dedent().strip(leading=false)
+  result.footer = footer.dedent().strip(leading=false)
+  result.description = dedent(description).strip(leading=false)
   if Aliases in styles.settings:
     # TODO: subcmds should use long help?
     result.subcmds =

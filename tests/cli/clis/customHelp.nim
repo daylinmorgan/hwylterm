@@ -1,5 +1,6 @@
 import std/[strutils,strformat, sequtils]
-import hwylterm, hwylterm/hwylcli
+import hwylterm
+import hwylterm/hwylcli except renderHeader
 
 
 # TODO: actually implement this in bbansi
@@ -44,6 +45,12 @@ func render*(cli: HwylCliHelp, flags: seq[HwylFlagHelp]): string =
 hwylCli:
   name "custom-help"
   defaultFlagType string
+  help:
+    header """
+     a header
+    indentations
+      indentations more
+    """
   flags:
     input:
       ? "input"
