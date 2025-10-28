@@ -1485,12 +1485,27 @@ macro enumNames(a: typed): untyped =
     assert ai.kind == nnkSym
     result.add newLit ai.strVal
 
+macro enumNamesWithValues(a: typed): untyped =
+  ## generate seq with enum names and values
+  ## type Direction = enum
+  ##   North = "north"
+  ##   South = "south"
+  ## enumNamesWithValues(Direction) == @["North(north)", "South(south)"]
+  result = newNimNode(nnkBracket)
+  for ai in a.getType[1][1..^1]:
+    assert ai.kind == nnkSym
+    let enumName = ai.strVal
+    # Generate code that gets the string value at compile time
+    result.add(quote do:
+      if $`ai` != `enumName`: `enumName` & "(" & $`ai` & ")" else: `enumName`
+    )
+
 proc parse*[E: enum](p: OptParser, target: var E) =
   checkVal p
   try:
     target = parseEnum[E](p.val)
   except:
-    let choices = enumNames(E).join(",")
+    let choices = enumNamesWithValues(E).toSeq().join(",")
     hwylCliError(
       bbfmt"failed to parse value for [b]{p.key}[/] as enum: [b]{p.val}[/] expected one of: " & choices
     )
