@@ -785,7 +785,7 @@ func inferShortFlags(cfg: var CliCfg) =
 
 func makeEnvVar(c: CliCfg, f: CliFlag): string =
   proc norm(s: string): string =
-    s.toUpperAscii().replace(" ","_")
+    s.toUpperAscii().replace(" ","_").replace("-","_")
   const hwylCliEnvFormat {.strdefine.} = "{cli}_{flag}"
   let cli = norm(c.name)
   let flag = norm(f.name)
