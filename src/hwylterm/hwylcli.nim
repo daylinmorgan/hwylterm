@@ -487,7 +487,7 @@ template `<<<`(f: CliFlag) {.used.}=
 
 template err(c: CliCfg, msg: string) =
   ## quit with error while generating cli
-  error "hwylcli: \nfailed to generate '" & c.name & "' cli: \n" & msg
+  error "hwylcli: \nfailed to generate '" & c.name & "' cli:\n" & msg
 
 # -- error reporting
 
@@ -918,7 +918,6 @@ func sliceStmts(c: CliCfg, node: NimNode): seq[
       start = i + 1
 
 
-
 func inheritFlags(child: var CliCfg, parent: CliCfg) =
   ## inherit flags/groups and settings from parent command
   var
@@ -1051,8 +1050,18 @@ func parseCliAlias(cfg: var CliCfg, node: NimNode) =
       cfg.alias.incl s
     else: cfg.unexpectedKind n
 
-func postPropagate(c: var CliCfg) =
-  ## verify the cli is valid
+func checkSubcommands(c: CliCfg) =
+  var aliases: Table[string, seq[string]]
+  for sub in c.subcommands:
+    for a in sub.alias:
+      if aliases.hasKeyOrPut(a, @[sub.name]):
+        aliases[a].add sub.name
+  if aliases.len > 0:
+    for a, sub in aliases.pairs:
+      if sub.len > 1:
+        c.err fmt"alias '{a}', is used for more than one subcommand: {sub}"
+
+func checkFlags(c: CliCfg) =
   var
     short: Table[char, CliFlag]
     long: Table[string, CliFlag]
@@ -1072,6 +1081,12 @@ func postPropagate(c: var CliCfg) =
       c.err "conflicting long flags for: " & f.name & " and " & conflict.name
     else:
       long[f.long] = f
+
+func postPropagate(c: var CliCfg) =
+  ## verify the cli is valid
+
+  checkFlags c
+  checkSubcommands c
 
   if InferShort in c.settings:
     inferShortFlags c
