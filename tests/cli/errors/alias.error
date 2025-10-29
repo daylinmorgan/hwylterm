@@ -1,0 +1,2 @@
+failed to generate 'err-alias' cli:
+alias 's', is used for more than one subcommand: @["err-alias suba", "err-alias subb"]

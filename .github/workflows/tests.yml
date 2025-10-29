@@ -24,7 +24,7 @@ jobs:
         run: |
           nim develop
           nim setupTests
-          nim r tests/tester
+          nim r -d:testErrors tests/tester
 
       - name: Compile tools
         run: |

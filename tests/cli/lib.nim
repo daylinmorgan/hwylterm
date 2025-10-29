@@ -1,6 +1,6 @@
 import std/[os, osproc, strutils, times, unittest, terminal, strtabs]
 
-const pathToSrc = currentSourcePath().parentDir()
+const pathToSrc* = currentSourcePath().parentDir()
 const binDir = pathToSrc / "bin"
 const hwylCliSrc = pathToSrc / "../../src/hwylterm/hwylcli.nim"
 
@@ -14,6 +14,16 @@ proc status(s: string) =
   eraseLine stdout
   stdout.write(s.alignLeft(terminalWidth()).substr(0, terminalWidth()-1))
   flushFile stdout
+
+proc compileFailingModule*(module: string): string =
+  let srcModule = pathToSrc / "errors" / (module & ".nim")
+  let cmd = "nim c -o:/dev/null $1" % [srcModule]
+  let (output, code) = execCmdEx(cmd)
+  if code == 0:
+    echo "cmd: ", cmd, "\noutput:", output
+    quit "expected error but compilation succeeded"
+
+  result = output
 
 proc preCompileWorkingModule*(module: string) =
   let exe = binDir / module
