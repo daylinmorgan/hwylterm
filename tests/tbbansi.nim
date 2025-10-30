@@ -5,7 +5,7 @@
 import std/[strutils, unittest]
 import hwylterm/bbansi
 
-proc `~=`(input: string, output: string): bool =
+template `~=`(input: string, output: string): bool =
   escape($bb(input)) == escape(output)
 
 suite "basic":
@@ -114,4 +114,11 @@ suite "strutils":
     y.add "yellow"
     check bb"[red]red[/]yellow" == y
 
+  test "wrapping":
+    check $"[bold]This is a [italic]long string[/italic] that will be wrapped I hope[/]".bb().wrapWords(20) == $"""[bold]This is a [italic]long
+string[/italic] that will be
+wrapped I hope[/]""".bb()
+    check $"[[bold]This is a [red]long string[/] with markup like text".bb().wrapWords(20) == $bb"""[[bold]This is a [red]long
+string[/] with markup
+like text"""
 
