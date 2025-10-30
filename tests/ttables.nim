@@ -1,0 +1,52 @@
+import std/unittest
+import hwylterm/tables
+import ./lib
+
+let table = HwylTable(
+  rows: @[
+    toRow("movie", "box office"),
+    toRow("avatar", bb"[red]2,923,706,026"),
+    toRow("Avengers: Endgame", bb"[bold]2,797,501,328")
+  ]
+)
+
+suite "basic":
+  test "render":
+    fixTest("table/basic", table.render())
+  test "add row":
+    var t2 = table
+    t2.addRow(toRow("a string", bb"[bold] a bold string"))
+    fixTest("table/basic-addrow", t2.render())
+
+  test "wrong # cols":
+    var t3 = table
+    t3.addRow("one column")
+    expect HwylTableError:
+      discard t3.render()
+
+    expect HwylTableError:
+      discard table.render(HwylTableStyle(colAlign: @[Left]))
+    expect HwylTableError:
+      discard table.render(HwylTableStyle(headerAlign: @[Left]))
+    
+
+suite "styles":
+  for sepType in HwylTableSepType:
+    test "septype|" & $sepType :
+      fixTest("table/styles/" & $sepType & "-sep", table.render(newHwylTableStyle(sepType = sepType)))
+
+  test "sep-style":
+    fixTest("table/styles/sep-style", table.render(HwylTableStyle(rowSep: true, sepStyle: "cyan")))
+
+
+suite "align":
+  for a in [Left, Right]: # TODO: swap with ColumnAlign (Center not supported yet)
+    test "align|" & $a: 
+      fixTest("table/align-" & $a, table.render(HwylTableStyle(colAlign: @[a, a])))
+
+  test "header-align":
+    fixTest("table/align-header", table.render(HwylTableStyle(headerAlign: @[Right,Left])))
+
+#
+#   test "align-diff":
+#     fixText("table/align-diff", table.render(HwylTableStyle(colAlign = @[Left, Right])))

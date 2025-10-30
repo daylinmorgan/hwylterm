@@ -236,6 +236,11 @@ func bbMarkup*(s: string, style: string): string =
 func bbEscape*(s: string): string {.inline.} =
   s.replace("[", "[[").replace("\\", "\\\\")
 
+
+func bbEscape*(s: BbString): BbString {.inline.} =
+  ## noop
+  s
+
 func shift(s: BbSpan, i: Natural): BbSpan =
   result = s
   inc(result.slice.a, i)
@@ -357,41 +362,6 @@ func bbImpl(s: string): BbString =
 proc bb*(s: string): BbString =
   bbImpl(s)
 
-# proc bb*(s: static string): BbString  {.compileTime.}=
-#   bbImpl(s)
-
-proc bb*(s: string, style: string): BbString =
-  bb(bbMarkup(s, style))
-
-proc bb*(s: string, style: Color256): BbString =
-  bb(s, $style)
-
-# error in vmgen when trying to define both the
-# runtime and compile time (aka static string versions below)?
-# proc bb*(s: static string, style: Color256): BbString =
-#   bb(s, $style)
-# proc bb*(s: static string, style: static string): BBString {.compileTime.} =
-#   bbImpl(bbMarkup(s, style))
-
-# # BUG: using static causes error for vm
-template bbfmt*(pattern: static string): BbString =
-  bbImpl(fmt(pattern))
-
-proc bb*(s: BbString): BbString =
-  s
-
-func `&`*(x: BbString, y: string): BbString =
-  result = x
-  result.plain &= y
-  result.spans.add BbSpan(styles: @[], slice: x.plain.len..(result.plain.len - 1))
-
-proc `&`*(x: string, y: BbString): BbString =
-  result.plain = x & y.plain
-  result.spans.add BbSpan(styles: @[], slice: 0..(x.len - 1))
-  let i = x.len
-  for span in y.spans:
-    result.spans.add span.shift(i)
-
 func len*(bbs: BbString): int =
   bbs.plain.len
 
@@ -424,18 +394,46 @@ func toString*(c: Console, s: BbString): string {.inline.} =
 proc `$`*(s: BbString): string =
   toString(hwylConsole, s)
 
-func align*(s: BbString, count: Natural, padding = ' '): Bbstring =
-  if s.len < count:
-    result = (padding.repeat(count - s.len)) & s
-  else:
-    result = s
+proc bb*(s: BBString, style: string): BbString =
+  ## apply a style to an existing BbString
+  ## note: current implementation preforms a roundtrip conversion to markup
+  s.toString(Markup).bbMarkup(style).bb()
 
-func alignLeft*(s: BbString, count: Natural, padding = ' '): Bbstring =
-  if s.len < count:
-    result = s & (padding.repeat(count - s.len))
-  else:
-    result = s
+# proc bb*(s: static string): BbString  {.compileTime.}=
+#   bbImpl(s)
 
+proc bb*(s: string, style: string): BbString =
+  bb(bbMarkup(s, style))
+
+proc bb*(s: Bbstring | string, style: Color256): BbString =
+  bb(s, $style)
+
+# error in vmgen when trying to define both the
+# runtime and compile time (aka static string versions below)?
+# proc bb*(s: static string, style: Color256): BbString =
+#   bb(s, $style)
+# proc bb*(s: static string, style: static string): BBString {.compileTime.} =
+#   bbImpl(bbMarkup(s, style))
+
+# # BUG: using static causes error for vm
+template bbfmt*(pattern: static string): BbString =
+  bbImpl(fmt(pattern))
+
+proc bb*(s: BbString): BbString =
+  ## noop
+  s
+
+func `&`*(x: BbString, y: string): BbString =
+  result = x
+  result.plain &= y
+  result.spans.add BbSpan(styles: @[], slice: x.plain.len..(result.plain.len - 1))
+
+proc `&`*(x: string, y: BbString): BbString =
+  result.plain = x & y.plain
+  result.spans.add BbSpan(styles: @[], slice: 0..(x.len - 1))
+  let i = x.len
+  for span in y.spans:
+    result.spans.add span.shift(i)
 func slice(s: BbString, span: BbSpan): string =
   s.plain[span.slice]
 
@@ -486,6 +484,29 @@ func add*(x: var Bbstring, y: string) =
   x.plain.add y
   x.spans.add BbSpan(styles: @[], slice: i..(i + y.len - 1))
 
+func join*(a: openArray[Bbstring], sep: BbString | string = ""): BbString =
+  if len(a) == 0: return bb""
+  add result, a[0]
+  for i in 1..high(a):
+    add result, sep
+    add result, a[i]
+
+func repeat*(s: BbString, count: Natural): BbString =
+  for i in 0..count-1:
+    result.add s
+
+func align*(s: BbString, count: Natural, padding = ' '): Bbstring =
+  if s.len < count:
+    result = (padding.repeat(count - s.len)) & s
+  else:
+    result = s
+
+func alignLeft*(s: BbString, count: Natural, padding = ' '): Bbstring =
+  if s.len < count:
+    result = s & (padding.repeat(count - s.len))
+  else:
+    result = s
+
 template echo*(c: Console, args: varargs[untyped]) =
   for x in @[args]:
     c.file.write(c.toString(x))
@@ -499,11 +520,3 @@ proc hecho*(args: varargs[string, `$`]) {.raises: [IOError].} =
     hwylconsole.file.write(x)
   hwylConsole.file.write('\n')
   hwylConsole.file.flushFile
-
-when isMainModule:
-  echo "[bold]This is a [italic]long string[/italic] that will be wrapped I hope[/]".wrapWordsBbMarkup(20)
-  echo $bb"""[[bold]This is a [red]long
-string[/] with markup
-like text"""
-
-  echo $"[[bold]This is a [red]long string[/red] with markup like text".bb().wrapWords(20)

@@ -2,14 +2,31 @@
 # these test cases can be generated using
 # tools/bbansi
 
-import std/[strutils, unittest]
+# TODO: use fixTest more here?
+
+import std/[strutils, strformat, unittest]
 import hwylterm/bbansi
+import ./lib
 
 template `~=`(input: string, output: string): bool =
   escape($bb(input)) == escape(output)
 
+proc dofixTests(prefix: string, a: openArray[string]) =
+  for i, s in a:
+    fixTest(fmt"{prefix}/{i+1:03}", bb(s))
+
+ 
+
 suite "basic":
   test "simple":
+    doFixTests("basic-simple"): [
+      "[red][/red]",
+      "[red]red text"
+    ]
+    # for i, s in ["[red][/red]"]:
+    #   fixTest(fmt"/{i+1:03}", bb(s))
+
+        
     check "[red][/red]" ~= ""
     check "[red]red text" ~= "\e[38;5;1mred text\e[0m"
     check "[red]Red Text" ~= "\e[38;5;1mRed Text\e[0m"
@@ -24,7 +41,6 @@ suite "basic":
   test "compile time":
     const s = bb"[red]red text"
     check s == bb"[red]red text"
-
 
   test "closing":
     check "[bold]Bold[red] Bold Red[/red] Bold Only" ~=

@@ -16,6 +16,7 @@ table.addColumn(name = "box office")
 table.addSep()
 table.addRow "Avatar", "2,923,706,026"
 table.addRow "Avengers: Endgame", "2,797,501,328"
+
 echo table
 ```
 resulting in:
