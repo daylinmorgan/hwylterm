@@ -1,0 +1,3 @@
+[bold]This is a [/bold][bold italic]long
+string[/bold italic][bold] that will be
+wrapped I hope[/bold]
