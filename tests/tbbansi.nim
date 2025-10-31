@@ -15,81 +15,70 @@ proc dofixTests(prefix: string, a: openArray[string]) =
   for i, s in a:
     fixTest(fmt"{prefix}/{i+1:03}", bb(s))
 
+proc dofixTests(prefix: string, a: openArray[BbString]) =
+  for i, s in a:
+    fixTest(fmt"{prefix}/{i+1:03}", s)
+
+
  
 
 suite "basic":
   test "simple":
     doFixTests("basic-simple"): [
-      "[red][/red]",
-      "[red]red text"
+      "[b]Bold[/] Not Bold",
+      "[red]red text",
+      "[yellow]Yellow Text",
+      "[bold red]Bold Red Text",
+      "[bold][red]5",
+      "[color(9)]red[/color(9)][color(2)]blue[/color(2)]",
+      "[red]Red Text[/]\nNext Line",
+      "[red on yellow]Red on Yellow",
+      "[#FF0000]red"
     ]
-    # for i, s in ["[red][/red]"]:
-    #   fixTest(fmt"/{i+1:03}", bb(s))
 
-        
-    check "[red][/red]" ~= ""
-    check "[red]red text" ~= "\e[38;5;1mred text\e[0m"
-    check "[red]Red Text" ~= "\e[38;5;1mRed Text\e[0m"
-    check "[yellow]Yellow Text" ~= "\e[38;5;3mYellow Text\e[0m"
-    check "[bold red]Bold Red Text" ~= "\e[1;38;5;1mBold Red Text\e[0m"
-    check "[red]5[/]" ~= "\e[38;5;1m5\e[0m"
-    check "[bold][red]5" ~= "\e[1;38;5;1m5\e[0m"
-    check "[bold]bold[/bold]" == "bold".bbMarkup("bold")
-    check "[color(9)]red[/color(9)][color(2)]blue[/color(2)]" ~= "\x1B[38;5;9mred\x1B[0m\x1B[38;5;2mblue\x1B[0m"
-    check "[color(256)]no color![/]" ~= "no color!"
+    check "[red]RED[/]".bb.len == 3
 
   test "compile time":
     const s = bb"[red]red text"
     check s == bb"[red]red text"
 
   test "closing":
-    check "[bold]Bold[red] Bold Red[/red] Bold Only" ~=
-      "\e[1mBold\e[0m\e[1;38;5;1m Bold Red\e[0m\e[1m Bold Only\e[0m"
-
-    check "[bold]daughter of [magenta]atlas[/magenta], [i]installer of packages[/i][/bold]" ~=
-      "[1mdaughter of [0m[1;38;5;5matlas[0m[1m, [0m[1;3minstaller of packages[0m"
-
-  test "abbreviated":
-    check "[b]Bold[/] Not Bold" ~= "\e[1mBold\e[0m Not Bold"
+    doFixTests("basic-closing"): [
+      "[bold]Bold[red] Bold Red[/red] Bold Only",
+      "[bold]daughter of [magenta]atlas[/magenta], [i]installer of packages[/i][/bold]"
+    ]
 
   test "noop":
-    check "No Style" ~= "No Style"
-    check "[unknown]Unknown Style" ~= "Unknown Style"
+    doFixTests("basic-noop"): [
+      "[red][/red]",
+      "[color(256)]no color![/]",
+      "[unknown]Unknown Style",
+      "No Style",
+    ]
 
   test "escaped":
-    check "[[red] ignored pattern" ~= "[red] ignored pattern"
-    check "\\[red] ignored pattern" ~= "[red] ignored pattern"
-
-  test "newlines":
-    check "[red]Red Text[/]\nNext Line" ~= "\e[38;5;1mRed Text\e[0m\nNext Line"
-
-  test "on color":
-    check "[red on yellow]Red on Yellow" ~= "\e[38;5;1;48;5;3mRed on Yellow\e[0m"
-
-  test "concat-ops":
-    check "[red]RED[/]".bb & " plain string" == "[red]RED[/] plain string".bb
-    check "[red]RED[/]".bb.len == 3
-    check bb("[blue]Blue[/]") & " " & bb("[red]Red[/]") ==
-        "[blue]Blue[/] [red]Red[/]".bb
-    check "a plain string" & "[blue] a blue string".bb ==
-        "a plain string[blue] a blue string".bb
-    var s = bb("[red]red")
-    s.add bb("[blue]blue")
-    check escape($s) == escape($bb("[red]red[/][blue]blue[/]"))
+    doFixTests("basic-escaped"): [
+      "[[red] ignored pattern",
+      "\\[red] ignored pattern"
+    ]
 
   test "spans":
     check bb("[red]red[/][blue]blue[/]").spans.len == 2
     check bb("[red]red[/red][blue]blue[/]").spans.len == 2
 
   test "style insensitive":
-    check "[red]no case sensitivity[/RED]" ~= "\e[38;5;1mno case sensitivity\e[0m"
-    check "[bright_red]should be BrightRed[/]" ~= "\e[38;5;9mshould be BrightRed\e[0m"
-    check "[BrightRed]should be BrightRed[/]" ~= "\e[38;5;9mshould be BrightRed\e[0m"
+    doFixTests("basic-style-insensitive"): [
+      "[red]no case sensitivity[/RED]",
+      "[bright_red]should be BrightRed[/]",
+      "[BrightRed]should be BrightRed[/]",
+    ]
 
   test "style full":
-    check "[red]Red[/red]".bb == bb("Red", "red")
-    check "[b][yellow]not yellow[/][/b]".bb == bb("[yellow]not yellow[/]", "b")
-    check "[9]color 9[/9]".bb == bb("color 9", 9) # syntax will change to [color(9)]
+    doFixTests("basic-style-full"): [
+      bb("Red", "red"),
+      bb("color 9", 9),
+      bb(bb"[yellow]yellow[/] not yellow", "b")
+    ]
 
   test "escape":
     check bbEscape("[info] brackets") == "[[info] brackets"
@@ -99,17 +88,21 @@ suite "basic":
     let x = 5
     check $bbfmt"[red]{x}" == "\e[38;5;1m5\e[0m"
 
-  test "hex":
-    check "[#FF0000]red" ~= "\e[38;2;255;0;0mred\e[0m"
-
 suite "strutils":
+  test "concat":
+    doFixTests("strutils-concat"): [
+      "[red]RED[/]".bb & " plain string",
+      bb("[blue]Blue[/]") & " " & bb("[red]Red[/]"),
+      "a plain string" & "[blue] a blue string".bb
+    ]
+
+    var s = bb("[red]red")
+    s.add bb("[blue]blue")
+    check escape($s) == escape($bb("[red]red[/][blue]blue[/]"))
+
   test "stripAnsi":
     check stripAnsi($bb"[red]red!") == "red!"
     check stripAnsi("\e[1mBold String!") == "Bold String!"
-
-  test "&":
-    check "plain string" & bb"[red]red string" == bb"plain string[red]red string"
-    check (bb"a [b]bold string") & " and plain string" == bb"a [b]bold string[/] and plain string"
 
   test "truncate":
     let tester = bb"[red]a red[/] [blue on red]blue on red part"
@@ -131,10 +124,8 @@ suite "strutils":
     check bb"[red]red[/]yellow" == y
 
   test "wrapping":
-    check $"[bold]This is a [italic]long string[/italic] that will be wrapped I hope[/]".bb().wrapWords(20) == $"""[bold]This is a [italic]long
-string[/italic] that will be
-wrapped I hope[/]""".bb()
-    check $"[[bold]This is a [red]long string[/] with markup like text".bb().wrapWords(20) == $bb"""[[bold]This is a [red]long
-string[/] with markup
-like text"""
+    doFixTests("strutils-wrapping"): [
+      "[bold]This is a [italic]long string[/italic] that will be wrapped I hope[/]".bb().wrapWords(20),
+      "[[bold]This is a [red]long string[/] with markup like text".bb().wrapWords(20),
+    ]
 
