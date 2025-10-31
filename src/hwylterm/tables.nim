@@ -1,4 +1,4 @@
-import std/[macros, sequtils, strformat]
+import std/[macros, sequtils, strformat,sets]
 import ./bbansi
 export bbansi
 
@@ -7,7 +7,6 @@ export bbansi
 import std/strutils except join
 
 type
-  # TODO: don't treat header as a special case...
   HwylTable* = object
     rows*: seq[seq[BbString]]
 
@@ -39,6 +38,7 @@ func addRow*(
   cols: varargs[string]
 ) =
   t.rows.add (@cols).mapIt(bb(bbEscape(it)))
+
 type
   HwylTableSepType* = enum
     None, Ascii, Box, BoxRounded
@@ -116,45 +116,17 @@ func getColAlign(style: HwylTableStyle, i: Natural): ColumnAlign =
   if style.colAlign.len == 0: return Left
   style.colAlign[i]
 
-
 func getHeaderAlign(style: HwylTableStyle, i: Natural): ColumnAlign =
   if style.headerAlign.len == 0: return getColAlign(style, i)
   style.headerAlign[i]
 
-# TODO: handle column alignment
-func renderCell*(
-  elem: Bbstring,
-  rowStyle: string,
-  width: Natural,
-  colAlign: ColumnAlign
-): BbString =
-
-  case colAlign
-  of Left:
-    result = elem.alignLeft(width)
-  of Center:
-    # need rune/markup aware centering in bbansi
-    assert false
-  of Right:
-    result = elem.align(width)
-
-  result = result.bb(rowStyle)
-
 func renderRow*(
   row: seq[BbString],
-  rowStyle: string,
   style: HwylTableStyle,
   colWidths: seq[int],
-  header = false
 ): BbString =
  let vSep = style.seps.vertical.bb(style.sepStyle)
- var cols: seq[Bbstring]
-
- for i, (elem, w) in zip(row, colWidths):
-    let align = if header: style.getHeaderAlign(i) else: style.getColAlign(i)
-    cols.add renderCell(elem, rowStyle, w, align)
-
- result = join(cols, " " & vsep & " ")
+ result = join(row, " " & vsep & " ")
  if style.border:
   result = (
     vSep & " " & result & " " & vSep
@@ -167,7 +139,7 @@ func renderRows*(
 ): BbString =
   var rows: seq[BbString]
   for i, r in t.rows[1..^1]:
-    rows.add renderRow(r, style.getRowStyle(i), style, colWidths)
+    rows.add renderRow(r, style, colWidths)
   if style.rowSep:
     result = bbansi.join(rows,"\n" & t.renderDiv(style, colWidths) & "\n")
   else:
@@ -178,7 +150,7 @@ func renderHeader*(
   style: HwylTableStyle,
   colWidths: seq[int],
 ): Bbstring =
-  result = renderRow(t.rows[0], style.headerStyle, style, colWidths, header= true)
+  result = renderRow(t.rows[0], style, colWidths)
 
 func getRowLengths*(
   t: HwylTable,
@@ -218,10 +190,8 @@ func bottomBorder*(
   result.add seps.bottomRight
   result = result.bb(style.sepStyle)
 
-# TODO: ensure  colAlign is either   @[] or  len == header/rows[0].len
-import std/sets
 
-proc validate*(t: HwylTable, style: HwylTableStyle) =
+proc validate*(t: HwylTable) =
   var nCols: HashSet[Natural]
   for i, row in t.rows:
     nCols.incl row.len
@@ -239,31 +209,85 @@ proc normStyle(style: HwylTableStyle, nCols: Natural): HwylTableStyle =
   result = style
 
 
+func transformCell(
+  elem: Bbstring,
+  rowStyle: string,
+  width: Natural,
+  colAlign: ColumnAlign
+): BbString =
 
-#[
-  Possible improvement strategy for code clarity
-  Generate a new table applying any and all styling/centering
-  and then render from that "adding border/seps as needed"
-]#
+  case colAlign
+  of Left:
+    result = elem.alignLeft(width)
+  of Center:
+    # need rune/markup aware centering in bbansi
+    assert false
+  of Right:
+    result = elem.align(width)
+
+  result = result.bb(rowStyle)
+
+proc transformRow(
+  cols: seq[BbString],
+  style: HwylTableStyle,
+  rowStyle: string,
+  widths: seq[int],
+  header = false
+): seq[BbString] =
+  for i in 0..<cols.len:
+    let align = if header: style.getHeaderAlign(i) else: style.getColAlign(i)
+    result.add cols[i].transformCell(rowStyle, widths[i], align)
+
+
+
+# will need to splitlines of the bbstrings then
+# make a markup aware line splitter?
+# [red]red text          & [blue] blue [/]
+# next line still red[/] & not blue
+#
+# [red]red text        [/red][blue] blue [/]
+# [red]next line still red[/]not blue
+
+# proc hconcat(
+#   a: openArray[BbString],
+#   sep: string | BbString
+# ): BbString =
+#
+#
 
 
 
 
+proc transform*(
+  t: HwylTable,
+  s: HwylTableStyle,
+  widths: seq[int]
+): HwylTable =
+  ## apply cell level styling and alignment
+  # TODO: expand these transformations as necessary, to truncate or wrap cells (if necessary, adding extra lines/whitespace)
 
+  var i = 0
+  if s.header:
+    result.addRow transformRow(t.rows[0], s, s.headerStyle, widths, header=true)
+    inc i
+
+  for j, row in t.rows[i..^1]:
+    result.addRow transformRow(row,s, s.getRowStyle(j), widths)
 
 proc render*(
   t: HwylTable,
   style = HwylTableStyle()
 ): BbString =
-  validate t, style
+  validate t
   let widths = t.getColWidths()
   let style = normStyle(style, widths.len)
+
+  let t = transform(t, style, widths)
   if style.border:
     result.add topBorder(widths, style)
     result.add "\n"
   if style.header:
-    let headerRow = t.renderHeader(style, widths)
-    result.add headerRow
+    result.add renderRow(t.rows[0], style, widths)
     result.add "\n"
     if style.headerSep:
       result.add t.renderDiv(style, widths)
@@ -281,27 +305,28 @@ when isMainModule:
       toRow("Avengers: Endgame", bb"[bold]2,797,501,328")
     ]
   )
-  t.addRow(toRow(
-    "hello", "no go :)"
-  ))
-
+  # t.addRow(toRow(
+  #   "hello", "no go :)"
+  # ))
+  #
   echo t.render()
-
-  for name, seps in HwylTableSepsByType:
-    echo name
-    echo t.render(HwylTableStyle(seps:seps))
-
-  echo t.render(HwylTableStyle(border:false))
-
-  echo t.render(HwylTableStyle(
-    rowStyles: @["italic", "faint"],
-    rowSep: true,
-    sepStyle: "cyan",
-    colAlign: @[Left, Right]
-  ))
-
-  try:
-    t.addRow(@["testing"])
-    discard t.render()
-  except:
-    echo getCurrentExceptionMsg()
+  echo t.render(HwylTableStyle(headerAlign: @[Right,Left]))
+  #
+  # for name, seps in HwylTableSepsByType:
+  #   echo name
+  #   echo t.render(HwylTableStyle(seps:seps))
+  #
+  # echo t.render(HwylTableStyle(border:false))
+  #
+  # echo t.render(HwylTableStyle(
+  #   rowStyles: @["italic", "faint"],
+  #   rowSep: true,
+  #   sepStyle: "cyan",
+  #   colAlign: @[Left, Right]
+  # ))
+  #
+  # try:
+  #   t.addRow(@["testing"])
+  #   discard t.render()
+  # except:
+  #   echo getCurrentExceptionMsg()

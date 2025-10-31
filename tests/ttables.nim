@@ -28,7 +28,6 @@ suite "basic":
       discard table.render(HwylTableStyle(colAlign: @[Left]))
     expect HwylTableError:
       discard table.render(HwylTableStyle(headerAlign: @[Left]))
-    
 
 suite "styles":
   for sepType in HwylTableSepType:
@@ -41,7 +40,7 @@ suite "styles":
 
 suite "align":
   for a in [Left, Right]: # TODO: swap with ColumnAlign (Center not supported yet)
-    test "align|" & $a: 
+    test "align|" & $a:
       fixTest("table/align-" & $a, table.render(HwylTableStyle(colAlign: @[a, a])))
 
   test "header-align":
