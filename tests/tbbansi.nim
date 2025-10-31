@@ -4,7 +4,7 @@
 
 # TODO: use fixTest more here?
 
-import std/[strutils, strformat, unittest]
+import std/[sequtils, strutils, strformat, unittest]
 import hwylterm/bbansi
 import ./lib
 
@@ -18,9 +18,6 @@ proc dofixTests(prefix: string, a: openArray[string]) =
 proc dofixTests(prefix: string, a: openArray[BbString]) =
   for i, s in a:
     fixTest(fmt"{prefix}/{i+1:03}", s)
-
-
- 
 
 suite "basic":
   test "simple":
@@ -128,4 +125,16 @@ suite "strutils":
       "[bold]This is a [italic]long string[/italic] that will be wrapped I hope[/]".bb().wrapWords(20),
       "[[bold]This is a [red]long string[/] with markup like text".bb().wrapWords(20),
     ]
+
+  test "slicing":
+    check bb"[red]long string[/]"[0..3] == bb"[red]long[/]"
+    expect IndexDefect:
+      discard bb"[red]long"[0..10]
+
+  test "linesplit":
+    check bb("[b]bold text\nwith [i]multiple[/i] lines").splitLines.toSeq() == @[bb"[b]bold text[/]", bb"[b]with [i]multiple[/i] lines" ]
+    check bb("[b]bold text\nwith [i]multiple[/i] lines").splitLines(keepEol=true).toSeq() ==
+      @[bb("[b]bold text\n[/]"), bb("[b]with [i]multiple[/i] lines")]
+
+
 

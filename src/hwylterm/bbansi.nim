@@ -434,7 +434,8 @@ proc `&`*(x: string, y: BbString): BbString =
   let i = x.len
   for span in y.spans:
     result.spans.add span.shift(i)
-func slice(s: BbString, span: BbSpan): string =
+
+func slice(s: BbString, span: BbSpan): string {.inline.} =
   s.plain[span.slice]
 
 func truncate*(s: Bbstring, len: Natural): Bbstring =
@@ -461,7 +462,7 @@ func wrapWords*(
 ): BbString =
   ## wrap a bbstring while preserving styling
   ##
-  ## note: the currently implementation uses a roundtrip conversion back to markup first for wrapping
+  ## note: the current implementation uses a roundtrip conversion back to markup first for wrapping
   s.toString(Markup).wrapWordsBbMarkup(maxLineWidth, splitLongWords, seps, newLine).bb()
 
 func `&`*(x: BbString, y: BbString): Bbstring =
@@ -520,3 +521,62 @@ proc hecho*(args: varargs[string, `$`]) {.raises: [IOError].} =
     hwylconsole.file.write(x)
   hwylConsole.file.write('\n')
   hwylConsole.file.flushFile
+
+
+iterator splitLines*(s: string, keepEol = false): string =
+  var first = 0
+  var last = 0
+  var eolpos = 0
+  while true:
+    while last < s.len and s[last] notin {'\c', '\l'}: inc(last)
+
+    eolpos = last
+    if last < s.len:
+      if s[last] == '\l': inc(last)
+      elif s[last] == '\c':
+        inc(last)
+        if last < s.len and s[last] == '\l': inc(last)
+
+    yield substr(s, first, if keepEol: last-1 else: eolpos-1)
+
+    # no eol characters consumed means that the string is over
+    if eolpos == last:
+      break
+
+    first = last
+
+func `[]`*[T, U: Ordinal](s: BbString, x: HSlice[T, U]): BbString =
+  if x.a < 0 or x.b > s.len:
+    raise newException(IndexDefect, "slice out of bounds: " & $x)
+
+  result.plain = newStringofCap(x.b - x.a)
+  for span in s.spans:
+    # skip spans before first index
+    if x.a > span.slice.b: continue
+    let
+      a = max(span.slice.a, x.a)
+      b = min(span.slice.b, x.b)
+    result.spans.add BbSpan(styles: span.styles, slice: (a-x.a)..(b-x.a))
+    result.plain.add s.plain[a..b]
+    if x.b <= span.slice.b: break
+
+iterator splitLines*(s: BbString, keepEol = false): BbString =
+  var first = 0
+  var last = 0
+  var eolpos = 0
+  while true:
+    while last < s.len and s.plain[last] notin {'\c', '\l'}: inc(last)
+
+    eolpos = last
+    if last < s.len:
+      if s.plain[last] == '\l': inc(last)
+      elif s.plain[last] == '\c':
+        inc(last)
+        if last < s.len and s.plain[last] == '\l': inc(last)
+
+    yield s[first..(if keepEol: last-1 else: eolpos-1)]
+
+    if eolpos == last:
+      break
+    first = last
+
