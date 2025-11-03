@@ -18,6 +18,7 @@ proc docFixup(deployDir:string, pkgName: string) =
       exec(r"sed -i -r 's/<(.*)>src\//<\1>/' $1" % file)
 
 task docs, "Deploy doc html + search index to public/ directory":
+  const extraModules = ["cligen", "chooser", "logging", "hwylcli", "parseopt3", "tables"]
   let
     deployDir = getCurrentDir() / "public"
     pkgName = "hwylterm"
@@ -26,7 +27,7 @@ task docs, "Deploy doc html + search index to public/ directory":
   when defined(clean):
     echo fmt"clearing {deployDir}"
     rmDir deployDir
-  for module in ["cligen", "chooser", "logging", "hwylcli", "parseopt3", "tables"]:
+  for module in extraModules:
     selfExec fmt"{docCmd} --docRoot:{getCurrentDir()}/src/ src/hwylterm/{module}"
   selfExec fmt"{docCmd} --project  --project src/{pkgName}.nim"
   docFixup(deployDir, pkgName)

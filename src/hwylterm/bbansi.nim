@@ -281,11 +281,6 @@ template addToSpan(bbs: var BbString, pattern: string) =
   bbs.endSpan
   bbs.newSpan currStyl & @[pattern]
 
-proc dropStyles(spans: var seq[BbSpan], style: string): seq[string] =
-  for style in spans[^1].styles:
-    for s in style.split(" "):
-      if s notin style:
-        result.add s
 
 template closeStyle(bbs: var BbString, pattern: string) =
   let style = pattern[1 ..^ 1].strip()
