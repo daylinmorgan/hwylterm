@@ -27,6 +27,30 @@ macro toRow*(items: varargs[untyped]): untyped =
     bracket.add(newCall(ident "bb", newCall(ident "bbEscape", item)))
   result.add(bracket)
 
+macro hwylTableBlock*(body: untyped): untyped =
+  ## create a table from a list of tuples
+  ## ```nim
+  ## let blockTable = hwylTableBlock:
+  ##   ["ID",  "Name"               ,  "Department"        ]
+  ##   ("1" ,bb"[bold]Alice Johnson",  "Engineering"       )
+  ##   ("2" ,  "Bob Smith"          ,bb"[blue]Marketing"   )
+  ##   ("3" ,bb"[bold]Carol White"  ,  "Sales"             )
+  ##   ("4" ,  "David Brown"        ,bb"[green]Engineering")
+  ## ```
+  result = newStmtList()
+
+  expectKind body, nnkStmtList
+  var rows = nnkBracket.newTree()
+  for row in body:
+    expectKind row, {nnkTupleConstr, nnkBracket}
+    rows.add newCall(ident"toRow", row.children.toSeq())
+
+  result.add nnkObjConstr.newTree(
+    ident"HwylTable",
+    newColonExpr(ident"rows", prefix(rows, "@"))
+  )
+
+
 func addRow*(
   t: var HwylTable,
   cols: varargs[BbString]
@@ -314,37 +338,3 @@ proc render*(
     result.add "\n"
     result.add bottomBorder(widths, style)
 
-when isMainModule:
-  var t = HwylTable(
-    rows: @[
-      toRow("movie", "box office"),
-      toRow("avatar", bb"[red]2,923,706,026"),
-      toRow("Avengers: Endgame", bb"[bold]2,797,501,328")
-    ]
-  )
-  # t.addRow(toRow(
-  #   "hello", "no go :)"
-  # ))
-
-  echo t.render()
-  echo t.render(HwylTableStyle(headerAlign: @[Right,Left], colSep: false))
-  echo t.render(HwylTableStyle(headerAlign: @[Right,Left], colSep: false, border: false))
-
-  for name, seps in HwylTableSepsByType:
-    echo name
-    echo t.render(HwylTableStyle(seps:seps))
-
-  echo t.render(HwylTableStyle(border:false))
-
-  echo t.render(HwylTableStyle(
-    rowStyles: @["italic", "faint"],
-    rowSep: true,
-    sepStyle: "cyan",
-    colAlign: @[Left, Right]
-  ))
-
-  try:
-    t.addRow(@["testing"])
-    discard t.render()
-  except:
-    echo getCurrentExceptionMsg()
