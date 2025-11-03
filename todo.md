@@ -19,7 +19,7 @@
 - [x] BUG: flag can't be `key`
 - [ ] ShowHelp setting should also occur after "a hwylCliError"
       could be by default (see `program --help` for more info.)
-- [ ] consider support "more verbose" help i.e. -h vs --help giving different results (behind a setting LongHelp, would only change the render proc used)
+- [x] consider support "more verbose" help i.e. -h vs --help giving different results (behind a setting LongHelp, would only change the render proc used)
 - [x] add support for E/env param for flags to add custom env_var (in help (env: OPTIONAL_ENV_VAR))
 - [ ] consider default (or opt in) "help subcmd"
   > app help (show all help?)
