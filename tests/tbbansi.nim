@@ -97,6 +97,10 @@ suite "strutils":
     s.add bb("[blue]blue")
     check escape($s) == escape($bb("[red]red[/][blue]blue[/]"))
 
+    doFixTests("strutils-hconcat"): [
+      hconcat("[red]a red string\nwith multiple lines[/]".bb, "another string with one line".bb, sep = "|" )
+    ]
+
   test "stripAnsi":
     check stripAnsi($bb"[red]red!") == "red!"
     check stripAnsi("\e[1mBold String!") == "Bold String!"
@@ -135,6 +139,5 @@ suite "strutils":
     check bb("[b]bold text\nwith [i]multiple[/i] lines").splitLines.toSeq() == @[bb"[b]bold text[/]", bb"[b]with [i]multiple[/i] lines" ]
     check bb("[b]bold text\nwith [i]multiple[/i] lines").splitLines(keepEol=true).toSeq() ==
       @[bb("[b]bold text\n[/]"), bb("[b]with [i]multiple[/i] lines")]
-
-
+    check bb("[b]bold text\nwith [i]multiple[/i] lines\n").splitLines.toSeq() == @[bb"[b]bold text[/]", bb"[b]with [i]multiple[/i] lines", bb""]
 

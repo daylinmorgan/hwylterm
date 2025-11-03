@@ -479,12 +479,15 @@ func add*(x: var Bbstring, y: string) =
   x.plain.add y
   x.spans.add BbSpan(styles: @[], slice: i..(i + y.len - 1))
 
-func join*(a: openArray[Bbstring], sep: BbString | string = ""): BbString =
+proc join*(a: openArray[Bbstring], sep: BbString = bb""): BbString =
   if len(a) == 0: return bb""
   add result, a[0]
   for i in 1..high(a):
     add result, sep
     add result, a[i]
+
+proc join*(a: openArray[Bbstring], sep: string): BbString =
+  join(a, sep.bbEscape().bb())
 
 func repeat*(s: BbString, count: Natural): BbString =
   for i in 0..count-1:
@@ -531,6 +534,14 @@ func `[]`*[T, U: Ordinal](s: BbString, x: HSlice[T, U]): BbString =
     result.plain.add s.plain[a..b]
     if x.b <= span.slice.b: break
 
+func substr(s: BbString, first, last: int): BbString =
+  let
+    first = max(first, 0)
+    last = min(last, high(s.plain))
+    L = max(last - first + 1, 0)
+  if L > 0:
+    result = s[first..last]
+
 iterator splitLines*(s: BbString, keepEol = false): BbString =
   var first = 0
   var last = 0
@@ -545,9 +556,37 @@ iterator splitLines*(s: BbString, keepEol = false): BbString =
         inc(last)
         if last < s.len and s.plain[last] == '\l': inc(last)
 
-    yield s[first..(if keepEol: last-1 else: eolpos-1)]
+    yield substr(s, first ,if keepEol: last-1 else: eolpos-1)
 
     if eolpos == last:
       break
     first = last
 
+func hconcat*(a, b: BbString, sep = bb"", padding = bb" "): BbString =
+  ## horizontally concatenate two strings with padding
+  let
+    aSplit = a.splitLines().toSeq()
+    bSplit = b.splitLines().toSeq()
+    aLenMax = aSplit.mapIt(it.len).max()
+    bLenMax = bSplit.mapIt(it.len).max()
+
+  var lines: seq[BbString]
+  for i in 0..<max(aSplit.len, bSplit.len):
+    var line: BbString
+    if i < aSplit.len:
+      line.add aSplit[i].alignLeft(aLenMax)
+    else:
+      line.add padding.repeat(aLenMax)
+    line.add sep
+    if i < bSplit.len:
+      line.add bSplit[i].alignLeft(bLenMax)
+    else:
+      line.add padding.repeat(bLenMax)
+    lines.add line
+
+  result = join(lines,"\n")
+
+func hconcat*(a, b: BbString, sep: string, padding = " "): BbString =
+  ## See also:
+  ## * `func hconcat`_
+  hconcat(a, b ,sep = sep.bbEscape().bb(), padding = padding.bbEscape().bb())
