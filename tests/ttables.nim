@@ -37,6 +37,15 @@ suite "styles":
   test "sep-style":
     fixTest("table/styles/sep-style", table.render(HwylTableStyle(rowSep: true, sepStyle: "cyan")))
 
+  test "seps":
+    fixTest("table/styles/sep-no-colsep", table.render(HwylTableStyle(colSep: false)))
+    fixTest("table/styles/sep-no-border", table.render(HwylTableStyle(border: false)))
+
+  test "row-styles":
+    var t4 = table
+    t4.rows = t4.rows & t4.rows[1..^1]
+    fixTest("table/styles/row-styles", t4.render(HwylTableStyle(rowStyles: @["yellow", "on blue"])))
+
 
 suite "align":
   for a in [Left, Right]: # TODO: swap with ColumnAlign (Center not supported yet)
@@ -46,6 +55,8 @@ suite "align":
   test "header-align":
     fixTest("table/align-header", table.render(HwylTableStyle(headerAlign: @[Right,Left])))
 
+
+    
 #
 #   test "align-diff":
 #     fixText("table/align-diff", table.render(HwylTableStyle(colAlign = @[Left, Right])))

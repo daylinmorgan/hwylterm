@@ -62,11 +62,16 @@ const HwylTableSepsByType* = [
   BoxRounded: HwylTableSeps(topLeft: "╭", topRight: "╮", topMiddle: "┬", bottomLeft: "╰",
     bottomMiddle: "┴", bottomRight: "╯", centerLeft: "├", centerMiddle: "┼",
     centerRight: "┤", vertical: "│", horizontal: "─")
+  # TODO:
+  # BoxThick
+  # BoxDouble
 ]
 
 type
   ColumnAlign* = enum
     Left, Center, Right
+  # CellOverflow* = enum
+  #   Wrap, Truncate
 
   # TODO: docstrings
   HwylTableStyle* = object
@@ -78,7 +83,9 @@ type
     border* = true
     headerSep* = true
     rowSep* = false
+    colSep* = true
     sepStyle* = ""
+    # cellOverflow: CellOverflow = Wrap
     seps* = HwylTableSepsByType[BoxRounded]
 
 func newHwylTableStyle*(sepType: HwylTableSepType): HwylTableStyle =
@@ -89,11 +96,15 @@ func getRowStyle(s: HwylTableStyle, num: Natural): string =
   if s.rowStyles.len == 0: return ""
   s.rowStyles[num mod s.rowStyles.len]
 
-func colSep(style: HwylTableStyle): BbString =
-  let seps = style.seps
-  (seps.horizontal & seps.centerMiddle & seps.horizontal).bb()
+func vSep(style: HwylTableStyle, grid = false): string=
+  if grid:
+    if style.colSep: style.seps.horizontal & style.seps.centerMiddle & style.seps.horizontal
+    else: style.seps.horizontal
+  else:
+    if style.colSep: " " & style.seps.vertical & " "
+    else: " "
 
-func horizontalSep(style: HwylTableStyle, w: Natural): BbString =
+func hSep(style: HwylTableStyle, w: Natural): BbString =
   style.seps.horizontal.repeat(w).bb()
 
 func renderDiv*(
@@ -103,10 +114,10 @@ func renderDiv*(
 ): BbString =
   let seps =  style.seps
 
-  result.add style.horizontalSep(colWidths[0])
+  result.add style.hSep(colWidths[0])
   for i in 1..<colWidths.len:
-    result.add style.colsep
-    result.add style.horizontalSep(colWidths[i])
+    result.add style.vSep(grid = true)
+    result.add style.hSep(colWidths[i])
 
   if style.border:
     result = (seps.centerLeft & seps.horizontal & result & seps.horizontal & seps.centerRight)
@@ -125,9 +136,10 @@ func renderRow*(
   style: HwylTableStyle,
   colWidths: seq[int],
 ): BbString =
- let vSep = style.seps.vertical.bb(style.sepStyle)
- result = join(row, " " & vsep & " ")
+ result = join(row, style.vSep.bb(style.sepStyle))
+
  if style.border:
+  let vSep = style.seps.vertical.bb(style.sepStyle)
   result = (
     vSep & " " & result & " " & vSep
   )
@@ -169,13 +181,23 @@ func getColWidths*(
   for i in 0..<result.len:
     result[i] = rowLengths.mapIt(it[i]).max()
 
+func borderMiddleSep*(style: HwylTableStyle, top = false): string =
+  let middle =
+    if not style.colSep: style.seps.horizontal
+    else:
+      if top: style.seps.topMiddle else: style.seps.bottomMiddle
+  (style.seps.horizontal & middle & style.seps.horizontal)
+
+func borderMiddle*(colWidths: seq[int], style: HwylTableStyle, top = false): string =
+  strutils.join(colWidths.mapIt(style.seps.horizontal.repeat(it+(if style.colSep: 1 else: 0))), style.borderMiddleSep(top=top))
+
 proc topBorder*(
   colWidths: seq[int],
   style: HwylTableStyle
 ): BbString =
   let seps = style.seps
   result.add seps.topLeft
-  result.add strutils.join(colWidths.mapIt(seps.horizontal.repeat(it+2)),seps.topMiddle)
+  result.add borderMiddle(colWidths, style, top = true)
   result.add seps.topRight
 
   result = result.bb(style.sepStyle)
@@ -186,7 +208,7 @@ func bottomBorder*(
 ): BbString =
   let seps = style.seps
   result.add seps.bottomLeft
-  result.add strutils.join(colWidths.mapIt(seps.horizontal.repeat(it+2)),seps.bottomMiddle)
+  result.add borderMiddle(colWidths, style)
   result.add seps.bottomRight
   result = result.bb(style.sepStyle)
 
@@ -238,8 +260,6 @@ proc transformRow(
     let align = if header: style.getHeaderAlign(i) else: style.getColAlign(i)
     result.add cols[i].transformCell(rowStyle, widths[i], align)
 
-
-
 # will need to splitlines of the bbstrings then
 # make a markup aware line splitter?
 # [red]red text          & [blue] blue [/]
@@ -254,9 +274,6 @@ proc transformRow(
 # ): BbString =
 #
 #
-
-
-
 
 proc transform*(
   t: HwylTable,
@@ -308,25 +325,26 @@ when isMainModule:
   # t.addRow(toRow(
   #   "hello", "no go :)"
   # ))
-  #
+
   echo t.render()
-  echo t.render(HwylTableStyle(headerAlign: @[Right,Left]))
-  #
-  # for name, seps in HwylTableSepsByType:
-  #   echo name
-  #   echo t.render(HwylTableStyle(seps:seps))
-  #
-  # echo t.render(HwylTableStyle(border:false))
-  #
-  # echo t.render(HwylTableStyle(
-  #   rowStyles: @["italic", "faint"],
-  #   rowSep: true,
-  #   sepStyle: "cyan",
-  #   colAlign: @[Left, Right]
-  # ))
-  #
-  # try:
-  #   t.addRow(@["testing"])
-  #   discard t.render()
-  # except:
-  #   echo getCurrentExceptionMsg()
+  echo t.render(HwylTableStyle(headerAlign: @[Right,Left], colSep: false))
+  echo t.render(HwylTableStyle(headerAlign: @[Right,Left], colSep: false, border: false))
+
+  for name, seps in HwylTableSepsByType:
+    echo name
+    echo t.render(HwylTableStyle(seps:seps))
+
+  echo t.render(HwylTableStyle(border:false))
+
+  echo t.render(HwylTableStyle(
+    rowStyles: @["italic", "faint"],
+    rowSep: true,
+    sepStyle: "cyan",
+    colAlign: @[Left, Right]
+  ))
+
+  try:
+    t.addRow(@["testing"])
+    discard t.render()
+  except:
+    echo getCurrentExceptionMsg()
