@@ -522,29 +522,6 @@ proc hecho*(args: varargs[string, `$`]) {.raises: [IOError].} =
   hwylConsole.file.write('\n')
   hwylConsole.file.flushFile
 
-
-iterator splitLines*(s: string, keepEol = false): string =
-  var first = 0
-  var last = 0
-  var eolpos = 0
-  while true:
-    while last < s.len and s[last] notin {'\c', '\l'}: inc(last)
-
-    eolpos = last
-    if last < s.len:
-      if s[last] == '\l': inc(last)
-      elif s[last] == '\c':
-        inc(last)
-        if last < s.len and s[last] == '\l': inc(last)
-
-    yield substr(s, first, if keepEol: last-1 else: eolpos-1)
-
-    # no eol characters consumed means that the string is over
-    if eolpos == last:
-      break
-
-    first = last
-
 func `[]`*[T, U: Ordinal](s: BbString, x: HSlice[T, U]): BbString =
   if x.a < 0 or x.b > s.len:
     raise newException(IndexDefect, "slice out of bounds: " & $x)
