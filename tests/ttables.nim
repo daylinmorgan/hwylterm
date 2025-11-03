@@ -55,8 +55,13 @@ suite "align":
   test "header-align":
     fixTest("table/align-header", table.render(HwylTableStyle(headerAlign: @[Right,Left])))
 
-
-    
-#
-#   test "align-diff":
-#     fixText("table/align-diff", table.render(HwylTableStyle(colAlign = @[Left, Right])))
+  test "align-diff":
+    var table = HwylTable(
+      rows: @[
+        toRow("col 1", "col 2"),
+        toRow("aaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbb"),
+        toRow("c", "d")
+      ]
+    )
+    fixTest("table/align-colAlign", table.render(HwylTableStyle(colAlign: @[Left, Right])))
+    fixTest("table/align-colAlign-headerAlign", table.render(HwylTableStyle(colAlign: @[Left, Right], headerAlign: @[Right, Left])))
