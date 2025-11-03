@@ -1,8 +1,12 @@
-╭───────────────────┬───────────────╮
-│ [bold]movie            [/bold] │ [bold]box office   [/bold] │
-├───────────────────┼───────────────┤
-│ [yellow]avatar           [/yellow] │ [yellow red]2,923,706,026[/yellow red] │
-│ [on blue]Avengers: Endgame[/on blue] │ [on blue bold]2,797,501,328[/on blue bold] │
-│ [yellow]avatar           [/yellow] │ [yellow red]2,923,706,026[/yellow red] │
-│ [on blue]Avengers: Endgame[/on blue] │ [on blue bold]2,797,501,328[/on blue bold] │
-╰───────────────────┴───────────────╯
+╭────┬────────────────┬─────────────╮
+│ [bold]ID[/bold] │ [bold]Name         [/bold] │ [bold]Department [/bold] │
+├────┼───────────────┼─────────────┤
+│ [yellow]1 [/yellow] │ [yellow bold]Alice Johnson[/yellow bold] │ [yellow]Engineering[/yellow] │
+│ [on blue]2 [/on blue] │ [on blue]Bob Smith    [/on blue] │ [on blue blue]Marketing[/on blue blue][on blue]  [/on blue] │
+│ [yellow]3 [/yellow] │ [yellow bold]Carol White[/yellow bold][yellow]  [/yellow] │ [yellow]Sales      [/yellow] │
+│ [on blue]4 [/on blue] │ [on blue]David Brown  [/on blue] │ [on blue green]Engineering[/on blue green] │
+│ [yellow]1 [/yellow] │ [yellow bold]Alice Johnson[/yellow bold] │ [yellow]Engineering[/yellow] │
+│ [on blue]2 [/on blue] │ [on blue]Bob Smith    [/on blue] │ [on blue blue]Marketing[/on blue blue][on blue]  [/on blue] │
+│ [yellow]3 [/yellow] │ [yellow bold]Carol White[/yellow bold][yellow]  [/yellow] │ [yellow]Sales      [/yellow] │
+│ [on blue]4 [/on blue] │ [on blue]David Brown  [/on blue] │ [on blue green]Engineering[/on blue green] │
+╰────┴────────────────┴─────────────╯

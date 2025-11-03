@@ -4,9 +4,12 @@ import ./lib
 
 let table = HwylTable(
   rows: @[
-    toRow("movie", "box office"),
-    toRow("avatar", bb"[red]2,923,706,026"),
-    toRow("Avengers: Endgame", bb"[bold]2,797,501,328")
+    toRow("ID", "Name", "Department"),
+    toRow("1", bb"[bold]Alice Johnson", "Engineering"),
+    toRow("2", "Bob Smith", bb"[blue]Marketing"),
+    toRow("3", bb"[bold]Carol White", "Sales"),
+    toRow("4", "David Brown", bb"[green]Engineering")
+  
   ]
 )
 
@@ -15,7 +18,7 @@ suite "basic":
     fixTest("table/basic", table.render())
   test "add row":
     var t2 = table
-    t2.addRow(toRow("a string", bb"[bold] a bold string"))
+    t2.addRow(toRow("5", bb"[bold magenta]Andreas Rumpf", bb"[italic]Creator"))
     fixTest("table/basic-addrow", t2.render())
 
   test "wrong # cols":
@@ -28,6 +31,16 @@ suite "basic":
       discard table.render(HwylTableStyle(colAlign: @[Left]))
     expect HwylTableError:
       discard table.render(HwylTableStyle(headerAlign: @[Left]))
+
+  test "table macro":
+    let blockTable = hwylTableBlock:
+      ["ID",  "Name"               ,  "Department"        ]
+      ("1" ,bb"[bold]Alice Johnson",  "Engineering"       )
+      ("2" ,  "Bob Smith"          ,bb"[blue]Marketing"   )
+      ("3" ,bb"[bold]Carol White"  ,  "Sales"             )
+      ("4" ,  "David Brown"        ,bb"[green]Engineering")
+
+    check table == blockTable
 
 suite "styles":
   for sepType in HwylTableSepType:
@@ -50,10 +63,10 @@ suite "styles":
 suite "align":
   for a in [Left, Right]: # TODO: swap with ColumnAlign (Center not supported yet)
     test "align|" & $a:
-      fixTest("table/align-" & $a, table.render(HwylTableStyle(colAlign: @[a, a])))
+      fixTest("table/align-" & $a, table.render(HwylTableStyle(colAlign: @[a, a, a])))
 
   test "header-align":
-    fixTest("table/align-header", table.render(HwylTableStyle(headerAlign: @[Right,Left])))
+    fixTest("table/align-header", table.render(HwylTableStyle(headerAlign: @[Right, Right,Left])))
 
   test "align-diff":
     var table = HwylTable(
@@ -64,4 +77,7 @@ suite "align":
       ]
     )
     fixTest("table/align-colAlign", table.render(HwylTableStyle(colAlign: @[Left, Right])))
-    fixTest("table/align-colAlign-headerAlign", table.render(HwylTableStyle(colAlign: @[Left, Right], headerAlign: @[Right, Left])))
+    fixTest("table/align-colAlign-headerAlign", table.render(HwylTableStyle(colAlign: @[Right, Left], headerAlign: @[Left, Right])))
+
+
+

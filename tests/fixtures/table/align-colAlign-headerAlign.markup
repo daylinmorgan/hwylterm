@@ -1,6 +1,6 @@
 ╭──────────────────┬──────────────────────╮
-│ [bold]           col 1[/bold] │ [bold]col 2               [/bold] │
+│ [bold]col 1           [/bold] │ [bold]               col 2[/bold] │
 ├──────────────────┼──────────────────────┤
 │ aaaaaaaaaaaaaaaa │ bbbbbbbbbbbbbbbbbbbb │
-│ c                │                    d │
+│                c │ d                    │
 ╰──────────────────┴──────────────────────╯

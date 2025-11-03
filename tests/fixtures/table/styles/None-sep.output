@@ -1,6 +1,8 @@
                                      
-  [1mmovie            [0m   [1mbox office   [0m  
-                                     
-  avatar              [38;5;1m2,923,706,026[0m  
-  Avengers: Endgame   [1m2,797,501,328[0m  
+  [1mID[0m   [1mName         [0m   [1mDepartment [0m  
+                                    
+  1    [1mAlice Johnson[0m   Engineering  
+  2    Bob Smith       [38;5;4mMarketing[0m    
+  3    [1mCarol White[0m     Sales        
+  4    David Brown     [38;5;2mEngineering[0m  
                                      

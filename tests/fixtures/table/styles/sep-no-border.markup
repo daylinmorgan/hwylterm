@@ -1,4 +1,6 @@
-[bold]movie            [/bold] │ [bold]box office   [/bold]
-──────────────────┼──────────────
-avatar            │ [red]2,923,706,026[/red]
-Avengers: Endgame │ [bold]2,797,501,328[/bold]
+[bold]ID[/bold] │ [bold]Name         [/bold] │ [bold]Department [/bold]
+───┼───────────────┼────────────
+1  │ [bold]Alice Johnson[/bold] │ Engineering
+2  │ Bob Smith     │ [blue]Marketing[/blue]  
+3  │ [bold]Carol White[/bold]   │ Sales      
+4  │ David Brown   │ [green]Engineering[/green]
