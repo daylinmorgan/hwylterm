@@ -1,4 +1,4 @@
-import std/[os, osproc, strutils, times, unittest, terminal, strtabs]
+import std/[os, strutils, unittest]
 import hwylterm/bbansi {.all.}
 export bbansi
 
