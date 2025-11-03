@@ -1,0 +1,8 @@
+╭────┬────────────────┬──────────────┬────────╮
+│ [bold]ID[/bold] │ [bold]Name         [/bold] │ [bold]Department [/bold] │ [bold]salary[/bold] │
+├────┼───────────────┼─────────────┼────────┤
+│ 1  │ [bold]Alice Johnson[/bold] │ Engineering │ 100000 │
+│ 2  │ Bob Smith     │ [blue]Marketing[/blue]   │ 80000  │
+│ 3  │ [bold]Carol White[/bold]   │ Sales       │ 75000  │
+│ 4  │ David Brown   │ [green]Engineering[/green] │ 65000  │
+╰────┴────────────────┴──────────────┴────────╯

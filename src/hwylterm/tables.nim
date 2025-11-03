@@ -1,4 +1,4 @@
-import std/[macros, sequtils, strformat,sets]
+import std/[macros, sequtils, strformat, sets, tables]
 import ./bbansi
 export bbansi
 
@@ -12,6 +12,14 @@ type
 
   HwylTableError* = object of CatchableError
 
+func makeBbSeqNode(items: varargs[NimNode]): NimNode =
+  ## Helper proc to generate a `seq[BbString]` node
+  ## Wraps all arguments in `bb(bbEscape(item))`
+  var bracket = newNimNode(nnkBracket)
+  for item in items:
+    bracket.add(newCall(ident "bb", newCall(ident "bbEscape", item)))
+  result = prefix(bracket, "@")
+
 macro toRow*(items: varargs[untyped]): untyped =
   ## convience macro to generate a `seq[Bbstring]`
   ## essentially wraps all arguments in `bb(bbEscape(item))`
@@ -19,13 +27,25 @@ macro toRow*(items: varargs[untyped]): untyped =
   ## ```nim
   ##  toRow(bb"[red] a bb string", "a non bb string"))
   ## ```
+  makeBbSeqNode(items.children.toSeq())
 
-  result = newNimNode(nnkPrefix)
-  result.add(ident "@")
-  var bracket = newNimNode(nnkBracket)
-  for item in items:
-    bracket.add(newCall(ident "bb", newCall(ident "bbEscape", item)))
-  result.add(bracket)
+macro toCol*(items: varargs[untyped]): untyped =
+  ## convience macro to generate a `seq[Bbstring]`
+  ## essentially wraps all arguments in `bb(bbEscape(item))`
+  ## for a regular BbString these are both noops
+  ## ```nim
+  ##  toCol(bb"[red] a bb string", "a non bb string"))
+  ## ```
+  makeBbSeqNode(items.children.toSeq())
+
+macro toBbSeq*(items: varargs[untyped]): untyped =
+  ## convience macro to generate a `seq[Bbstring]`
+  ## essentially wraps all arguments in `bb(bbEscape(item))`
+  ## for a regular BbString these are both noops
+  ## ```nim
+  ##  toBbSeq(bb"[red] a bb string", "a non bb string"))
+  ## ```
+  makeBbSeqNode(items.children.toSeq())
 
 macro hwylTableBlock*(body: untyped): untyped =
   ## create a table from a list of tuples
@@ -50,7 +70,6 @@ macro hwylTableBlock*(body: untyped): untyped =
     newColonExpr(ident"rows", prefix(rows, "@"))
   )
 
-
 func addRow*(
   t: var HwylTable,
   cols: varargs[BbString]
@@ -62,6 +81,45 @@ func addRow*(
   cols: varargs[string]
 ) =
   t.rows.add (@cols).mapIt(bb(bbEscape(it)))
+
+func addCol*(
+  t: var HwylTable,
+  col: varargs[BbString]
+) =
+  if @col.len != t.rows.len:
+    raise newException(HwylTableError, fmt"Failed to add column, must have the same number of rows as table")
+  for i in 0..<t.rows.len:
+    t.rows[i].add col[i]
+
+func addCol*(
+  t: var HwylTable,
+  col: varargs[string]
+) =
+  if @col.len != t.rows.len:
+    raise newException(HwylTableError, fmt"Failed to add column, must have the same number of rows as table")
+  for i in 0..<t.rows.len:
+    t.rows[i].add col[i].bbEscape().bb()
+
+proc toHwylTable*[A, B](pairs: openArray[(A, B)]): HwylTable =
+  when B is string:
+    {.error: "Cannot coerce string to columns. Use seq or array instead.".}
+  if pairs.mapIt(it[1].len).toHashSet().len != 1:
+    raise newException(HwylTableError, fmt"Failed to generate table, columns must have the same number of rows")
+  let nCols = pairs.len
+  for i in 0..(pairs[0][1].len):
+    result.rows.add newSeq[BBString](ncols)
+  for i in 0..<pairs.len:
+    let (key,col) = pairs[i]
+    result.rows[0][i] = bb($key)
+    for j, row in col:
+      result.rows[j+1][i] = bb($row)
+
+
+proc toHwylTable*[A, B](t: Table[A, B]): HwylTable =
+  t.pairs.toSeq().toHwylTable()
+
+proc toHwylTable*[A, B](t: OrderedTable[A, B]): HwylTable =
+  t.pairs.toSeq().toHwylTable()
 
 type
   HwylTableSepType* = enum

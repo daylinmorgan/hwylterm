@@ -1,4 +1,4 @@
-import std/unittest
+import std/[tables, unittest]
 import hwylterm/tables
 import ./lib
 
@@ -9,7 +9,6 @@ let table = HwylTable(
     toRow("2", "Bob Smith", bb"[blue]Marketing"),
     toRow("3", bb"[bold]Carol White", "Sales"),
     toRow("4", "David Brown", bb"[green]Engineering")
-  
   ]
 )
 
@@ -17,9 +16,14 @@ suite "basic":
   test "render":
     fixTest("table/basic", table.render())
   test "add row":
-    var t2 = table
-    t2.addRow(toRow("5", bb"[bold magenta]Andreas Rumpf", bb"[italic]Creator"))
-    fixTest("table/basic-addrow", t2.render())
+    var trow = table
+    trow.addRow(toRow("5", bb"[bold magenta]Andreas Rumpf", bb"[italic]Creator"))
+    fixTest("table/basic-addrow", trow.render())
+  
+  test "add col":
+    var tcol = table
+    tcol.addCol(toCol("salary","100000", "80000", "75000", "65000"))
+    fixTest("table/basic-addcol", tcol.render())
 
   test "wrong # cols":
     var t3 = table
@@ -39,8 +43,12 @@ suite "basic":
       ("2" ,  "Bob Smith"          ,bb"[blue]Marketing"   )
       ("3" ,bb"[bold]Carol White"  ,  "Sales"             )
       ("4" ,  "David Brown"        ,bb"[green]Engineering")
-
     check table == blockTable
+
+  test "to table":
+    check HwylTable(rows: @[toRow("col 1", "col 2"), toRow("a", "b"), toRow("c", "d")]) ==
+      {"col 1": toCol("a", "c"), "col 2": toCol("b", "d")}.toHwylTable()
+    check {1: ["one"], 2: ["two"]}.toOrderedTable.toHwylTable() == HwylTable(rows: @[toRow("1", "2"), toRow("one", "two")])
 
 suite "styles":
   for sepType in HwylTableSepType:

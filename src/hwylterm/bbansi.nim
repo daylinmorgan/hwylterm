@@ -281,7 +281,6 @@ template addToSpan(bbs: var BbString, pattern: string) =
   bbs.endSpan
   bbs.newSpan currStyl & @[pattern]
 
-
 template closeStyle(bbs: var BbString, pattern: string) =
   let style = pattern[1 ..^ 1].strip()
   if bbs.spans[^1].slice.b == bbs.plain.len:
