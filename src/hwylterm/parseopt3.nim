@@ -238,7 +238,7 @@ proc doShort(p: var OptParser) =
     p.pos += 1
     p.off = 0
     return
-  if p.pos < p.cmd.len - 1:             # opt val = next param
+  if p.pos < p.cmd.len - 1 and not p.cmd[p.pos+1].startsWith("-"): # opt val = next param
     p.val = p.cmd[p.pos + 1]
     p.pos += 2
     p.off = 0
@@ -269,7 +269,7 @@ proc doLong(p: var OptParser) =
     p.message = "Expecting option key-val separator :|= after `" & p.key & "`"
     p.kind = cmdError
     return
-  if p.pos < p.cmd.len:                 # Take opt arg from next param
+  if p.pos < p.cmd.len and not p.cmd[p.pos].startsWith("-"):   # Take opt arg from next param if it's not a flag
     p.val = p.cmd[p.pos]
     p.pos += 1
   elif p.longNoVal.len != 0:
