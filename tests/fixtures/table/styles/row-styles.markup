@@ -1,4 +1,4 @@
-╭────┬────────────────┬─────────────╮
+╭────┬───────────────┬─────────────╮
 │ [bold]ID[/bold] │ [bold]Name         [/bold] │ [bold]Department [/bold] │
 ├────┼───────────────┼─────────────┤
 │ [yellow]1 [/yellow] │ [yellow bold]Alice Johnson[/yellow bold] │ [yellow]Engineering[/yellow] │
@@ -9,4 +9,4 @@
 │ [on blue]2 [/on blue] │ [on blue]Bob Smith    [/on blue] │ [on blue blue]Marketing[/on blue blue][on blue]  [/on blue] │
 │ [yellow]3 [/yellow] │ [yellow bold]Carol White[/yellow bold][yellow]  [/yellow] │ [yellow]Sales      [/yellow] │
 │ [on blue]4 [/on blue] │ [on blue]David Brown  [/on blue] │ [on blue green]Engineering[/on blue green] │
-╰────┴────────────────┴─────────────╯
+╰────┴───────────────┴─────────────╯

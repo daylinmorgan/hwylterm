@@ -264,14 +264,14 @@ func getColWidths*(
     result[i] = rowLengths.mapIt(it[i]).max()
 
 func borderMiddleSep*(style: HwylTableStyle, top = false): string =
-  let middle =
-    if not style.colSep: style.seps.horizontal
-    else:
-      if top: style.seps.topMiddle else: style.seps.bottomMiddle
-  (style.seps.horizontal & middle & style.seps.horizontal)
+  if not style.colSep: style.seps.horizontal
+  else:
+    if top: style.seps.topMiddle else: style.seps.bottomMiddle
 
 func borderMiddle*(colWidths: seq[int], style: HwylTableStyle, top = false): string =
-  strutils.join(colWidths.mapIt(style.seps.horizontal.repeat(it+(if style.colSep: 1 else: 0))), style.borderMiddleSep(top=top))
+  let padding = if style.colSep: 2 else: 1
+  let parts = colWidths.mapIt(style.seps.horizontal.repeat(it+padding))
+  strutils.join(parts, style.borderMiddleSep(top=top))
 
 proc topBorder*(
   colWidths: seq[int],
@@ -395,4 +395,27 @@ proc render*(
   if style.border:
     result.add "\n"
     result.add bottomBorder(widths, style)
+
+when isMainModule:
+  let table = HwylTable(
+    rows: @[
+      toRow("ID", "Name", "Department"),
+      toRow("1", bb"[bold]Alice Johnson", "Engineering"),
+      toRow("2", "Bob Smith", bb"[blue]Marketing"),
+      toRow("3", bb"[bold]Carol White", "Sales"),
+      toRow("4", "David Brown", bb"[green]Engineering")
+    ]
+  )
+  echo table.render()
+
+  let table2 = hwylTableBlock:
+    ("col 1", "col 2", "col 3", "col 4", "col 5")
+    ("val 1", "val 2", "val 3", "val 4", "val 5")
+  echo table2.render()
+
+  let table3 = hwylTableBlock:
+    ("col 1", "col 2")
+    ("val 1", "val 2")
+  echo table3.render(style = HwylTableStyle(colSep: false))
+
 
