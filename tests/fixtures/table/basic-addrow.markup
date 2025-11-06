@@ -1,4 +1,4 @@
-╭────┬────────────────┬─────────────╮
+╭────┬───────────────┬─────────────╮
 │ [bold]ID[/bold] │ [bold]Name         [/bold] │ [bold]Department [/bold] │
 ├────┼───────────────┼─────────────┤
 │ 1  │ [bold]Alice Johnson[/bold] │ Engineering │
@@ -6,4 +6,4 @@
 │ 3  │ [bold]Carol White[/bold]   │ Sales       │
 │ 4  │ David Brown   │ [green]Engineering[/green] │
 │ 5  │ [bold magenta]Andreas Rumpf[/bold magenta] │ [italic]Creator[/italic]     │
-╰────┴────────────────┴─────────────╯
+╰────┴───────────────┴─────────────╯

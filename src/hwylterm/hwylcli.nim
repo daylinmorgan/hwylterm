@@ -98,7 +98,7 @@ func `-`*[T](a: HashSet[T], b: set[T]): HashSet[T] =
 func firstLine(s: string): string =
   s.strip().dedent().strip().splitlines()[0]
 
-func newHwylCliStyles*(
+proc newHwylCliStyles*(
     name = "bold",
     header = "bold cyan",
     flagShort = "yellow",
@@ -147,14 +147,14 @@ func newHwylCliStyles*(
       when key notin ["settings", "minCmdLen"]:
         setEnvVal(key, val)
 
-func fromBuiltinHelpStyles*(kind: BuiltinStyleKind): HwylCliStyles =
+proc fromBuiltinHelpStyles*(kind: BuiltinStyleKind): HwylCliStyles =
   case kind
   of AllSettings: newHwylCliStyles(settings =  defaultStyleSettings + {FlagGroups})
   of Minimal: newHwylCliStyles(settings = initHashSet[HwylCliStyleSetting]())
   of WithoutColor: newHwylCliStyles(header= "bold", flagShort= "", flagLong= "", required= "")
   of WithoutAnsi: newHwylCliStyles(name= "", header= "", flagShort= "", flagLong= "", default= "", required= "", subcmd= "", args="", typeRepr= "")
 
-func withHelpSettings*(
+proc withHelpSettings*(
   settings: set[HwylCliStyleSetting] | HashSet[HwylCliStyleSetting]
 ): HwylCliStyles =
   let settings =
@@ -165,7 +165,6 @@ func withHelpSettings*(
   result = newHwylCliStyles(
     settings = settings
   )
-
 
 
 func newHwylCliHelp*(
