@@ -46,7 +46,8 @@ proc preCompileTestModules*() =
       status "compiling [$2/$3] $1" % [ module, $(i+1), $modules.len]
     preCompileWorkingModule(module)
 
-  eraseLine stdout
+  if isatty(stdout):
+    eraseLine stdout
 
 type
   Fixture* = object

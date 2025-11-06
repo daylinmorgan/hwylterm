@@ -27,7 +27,6 @@ jobs:
 
       - name: Run Tests
         run: |
-          nim develop
           nim setupTests
           nim r -d:testErrors tests/tester
 

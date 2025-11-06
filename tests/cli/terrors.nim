@@ -3,7 +3,7 @@ import ./lib
 
 template testFailingModule(name: string) =
   let output = compileFailingModule(name).strip()
-  let expectedEnd = readFile(pathToSrc / "errors" / "alias.error").strip()
+  let expectedEnd = readFile(pathToSrc / "errors" / "alias.error").replace("\r\n", "\n").strip()
   check output.endsWith(expectedEnd)
 
 let modules = collect:

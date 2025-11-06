@@ -19,7 +19,7 @@ suite "basic":
     var trow = table
     trow.addRow(toRow("5", bb"[bold magenta]Andreas Rumpf", bb"[italic]Creator"))
     fixTest("table/basic-addrow", trow.render())
-  
+
   test "add col":
     var tcol = table
     tcol.addCol(toCol("salary","100000", "80000", "75000", "65000"))

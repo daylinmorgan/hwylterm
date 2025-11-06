@@ -15,7 +15,7 @@ proc fixTest*(name: string, s: BbString) =
     writeFile(outpath, s.toString(On))
   else:
     check fileExists(outpath)
-    check $(s) == readFile(path & ".output")
+    check $(s) == readFile(path & ".output").replace("\r\n", "\n")
 
 when isMainModule:
   fixTest("simple", bb"[red]red text")
