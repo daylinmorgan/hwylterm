@@ -1491,14 +1491,14 @@ proc parse*(p: OptParser, target: var int) =
       bbfmt"failed to parse value for [b]{p.key}[/] as integer: [b]{p.val}[/]"
     )
 
-macro enumNames(a: typed): untyped =
-  ## unexported macro copied from std/enumutils
+macro enumNames*(a: typed): untyped =
+  ## generates a sequence of strings representing enum names
   result = newNimNode(nnkBracket)
   for ai in a.getType[1][1..^1]:
     assert ai.kind == nnkSym
     result.add newLit ai.strVal
 
-macro enumNamesWithValues(a: typed): untyped =
+macro enumNamesWithValues*(a: typed): untyped =
   ## generate seq with enum names and values
   ## type Direction = enum
   ##   North = "north"
