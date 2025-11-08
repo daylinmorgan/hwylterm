@@ -209,77 +209,80 @@ func newHwylCliHelp*(
     result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
 
-# break this up
-func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
-  # TODO: add wrapping for TerimnalWidth? need wrapWords supporting bbMarkup and bbAnsi string
-  # NOTE: wrapWords has been implemeted for bbMarkup strings
-
-  result.add " "
+func renderShort(cli: HwylCLiHelp, f: HwylFlagHelp): string =
   if f.short != "":
     result.add ("-" & f.short.alignLeft(cli.lengths.shortArg)).bbMarkup(cli.styles.flagShort)
   else:
     result.add " ".repeat(1 + cli.lengths.shortArg)
 
-  result.add " "
+func renderLong(cli: HwylCliHelp, f: HwylFlagHelp): string =
   if cli.longHelp:
-    if f.long != "":
-      result.add ("--" & f.long).bbMarkup(cli.styles.flagLong)
+    result.add ("--" & f.long).bbMarkup(cli.styles.flagLong)
   else:
     if f.long != "":
       result.add ("--" & f.long.alignLeft(cli.lengths.longArg)).bbMarkup(cli.styles.flagLong)
     else:
       result.add " ".repeat(2 + cli.lengths.longArg)
 
+func renderType(cli: HwylCliHelp, f: HwylFlagHelp): string =
+  if cli.longHelp:
+    if f.typeRepr != "":
+      result.add f.typeRepr.bbMarkup(cli.styles.typeRepr)
+  else:
+    if f.typeRepr != "":
+      let offset = int(
+        # BUG alignLeft isn't accounting for these '[['
+        (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
+      )
+      result.add f.typeRepr
+        .alignLeft(
+          cli.lengths.typeRepr + offset
+        )
+        .bbMarkup(cli.styles.typeRepr)
+    else:
+      result.add " ".repeat(cli.lengths.typeRepr)
+
+# should this be two separate procs?
+func renderDefaultRequired(cli: HwylCliHelp, f: HwylFlagHelp): string =
+  if f.defaultVal != "" and Defaults in cli.styles.settings:
+    result.add " "
+    result.add ("(default: " & f.defaultVal & ")")
+      .bbMarkup(cli.styles.default)
+
+  if f.required and Required in cli.styles.settings:
+    result.add " "
+    result.add "(required)".bbMarkup(cli.styles.required)
+
+func renderDesc(cli: HwylCliHelp, f: HwylFlagHelp): string =
+  if f.description == "": return
+  if cli.longHelp:
+    result.add "\n"
+    result.add f.description.dedent().strip(leading=false).indent(8)
+  else:
+    result.add f.description.splitLines().toSeq()[0].dedent().bbMarkup(cli.styles.flagDesc)
+
+func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
+  # TODO: add wrapping for TerimnalWidth? need wrapWords supporting bbMarkup and bbAnsi string
+  # NOTE: wrapWords has been implemeted for bbMarkup strings
+
+  result.add " "
+  result.add renderShort(cli, f)
+  result.add " "
+  result.add renderLong(cli, f)
+
   if Types in cli.styles.settings:
     result.add " "
-    if cli.longHelp:
-      if f.typeRepr != "":
-        result.add f.typeRepr.bbMarkup(cli.styles.typeRepr)
-    else:
-      if f.typeRepr != "":
-        let offset = int(
-          # BUG alignLeft isn't accounting for these '[['
-          (f.typeRepr.len - f.typeRepr.replace("[[","").len) / 2
-        )
-        result.add f.typeRepr
-          .alignLeft(
-            cli.lengths.typeRepr + offset
-          )
-          .bbMarkup(cli.styles.typeRepr)
-      else:
-        result.add " ".repeat(cli.lengths.typeRepr)
+    result.add renderType(cli, f)
 
   if not cli.longHelp:
     result.add " "
 
   if cli.longHelp:
-    if f.defaultVal != "" and Defaults in cli.styles.settings:
-      result.add " "
-      result.add ("(default: " & f.defaultVal & ")")
-        .bbMarkup(cli.styles.default)
-
-    if f.required and Required in cli.styles.settings:
-      result.add " "
-      result.add "(required)".bbMarkup(cli.styles.required)
-
-    let indentLen = 8
-
-    if f.description != "":
-      result.add "\n"
-      result.add f.description.dedent().strip(leading=false).indent(indentLen)
-
+    result.add renderDefaultRequired(cli, f)
+    result.add renderDesc(cli, f)
   else:
-    if f.description != "":
-      result.add f.description.splitLines().toSeq()[0].dedent().bbMarkup(cli.styles.flagDesc)
-
-    if f.defaultVal != "" and Defaults in cli.styles.settings:
-      result.add " "
-      result.add ("(default: " & f.defaultVal & ")")
-        .bbMarkup(cli.styles.default)
-
-    if f.required and Required in cli.styles.settings:
-      result.add " "
-      result.add "(required)".bbMarkup(cli.styles.required)
+    result.add renderDesc(cli, f)
+    result.add renderDefaultRequired(cli, f)
 
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
