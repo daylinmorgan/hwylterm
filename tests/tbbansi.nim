@@ -128,6 +128,10 @@ suite "strutils":
     doFixTests("strutils-wrapping"): [
       "[bold]This is a [italic]long string[/italic] that will be wrapped I hope[/]".bb().wrapWords(20),
       "[[bold]This is a [red]long string[/] with markup like text".bb().wrapWords(20),
+      """
+      [[bold]This is a [red]long string[/] with markup like text where the lines
+      are different lenghts but I'm not sure what should happen
+      """.dedent().strip().bb().wrapWords(45),
     ]
 
   test "slicing":
