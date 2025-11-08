@@ -212,6 +212,7 @@ func newHwylCliHelp*(
 # break this up
 func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
   # TODO: add wrapping for TerimnalWidth? need wrapWords supporting bbMarkup and bbAnsi string
+  # NOTE: wrapWords has been implemeted for bbMarkup strings
 
   result.add " "
   if f.short != "":
@@ -265,7 +266,7 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
 
     if f.description != "":
       result.add "\n"
-      result.add f.description.dedent().indent(indentLen) #
+      result.add f.description.dedent().strip(leading=false).indent(indentLen)
 
   else:
     if f.description != "":
