@@ -257,6 +257,9 @@ template endSpan(bbs: var BbString) =
   if bbs.plain.len == bbs.spans[^1].slice.a:
     bbs.spans.delete(bbs.spans.len - 1)
   elif bbs.plain.len >= 1:
+    if bbs.spans.len > 1 and bbs.spans[^2].styles == bbs.spans[^1].styles:
+        bbs.spans.delete(bbs.spans.len - 1)
+
     bbs.spans[^1].slice.b = bbs.plain.len - 1
 
   # assert bbs.spans[^1].slice.a <= bbs.spans[^1].slice.b
