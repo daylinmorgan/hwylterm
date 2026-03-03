@@ -273,7 +273,9 @@ template resetSpan(bbs: var BbString) =
 
 template closeLastStyle(bbs: var BbString) =
   bbs.endSpan
-  let newStyle = bbs.spans[^1].styles[0 ..^ 2] # drop the latest style
+  var newStyle: seq[string]
+  if bbs.spans.len > 0 and bbs.spans[^1].styles.len >= 1:
+    newStyle = bbs.spans[^1].styles[0 ..^ 2] # drop the latest style
   bbs.newSpan newStyle
 
 template addToSpan(bbs: var BbString, pattern: string) =

@@ -47,7 +47,7 @@ suite "basic":
 
   test "noop":
     doFixTests("basic-noop"): [
-      "[red][/red]",
+      "[red][/]not red",
       "[color(256)]no color![/]",
       "[unknown]Unknown Style",
       "No Style",
