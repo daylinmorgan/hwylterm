@@ -311,6 +311,8 @@ func bbImpl(s: string): BbString =
     pattern: string
     i = 0
 
+  result.plain = newStringofCap(s.len)
+
   template next() =
     result.plain.add s[i]
     inc i
@@ -595,3 +597,4 @@ func hconcat*(a, b: BbString, sep: string, padding = " "): BbString =
   ## See also:
   ## * `func hconcat`_
   hconcat(a, b ,sep = sep.bbEscape().bb(), padding = padding.bbEscape().bb())
+
