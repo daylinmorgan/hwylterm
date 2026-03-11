@@ -958,15 +958,14 @@ func inheritFlags(child: var CliCfg, parent: CliCfg) =
       # so subcommands can continue the inheritance
       child.flagDefs.add pgroups[g]
 
-func inheritHelp(child: var CliCfg, parent: CliCfg) =
+func inheritHelpStyles(child: var CliCfg, parent: CliCfg) =
   ## fall back to parent styles for anything not defined
-  for field, val1, val2 in fieldPairs(child.help, parent.help):
-    if val1 == nil:
-      val1 = val2
+  if child.help.styles == nil:
+    child.help.styles = parent.help.styles
 
 func inheritFrom(child: var CliCfg, parent: CliCfg) =
   inheritFlags child, parent
-  inheritHelp child, parent
+  inheritHelpStyles child, parent
 
 func parseCliSubcommands(cfg: var CliCfg, node: NimNode) =
   cfg.expectKind node[1], nnkStmtList
