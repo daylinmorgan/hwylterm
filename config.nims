@@ -19,6 +19,7 @@ proc fixUpDocs(name = "hwylterm") =
 
 when defined(docs):
   --index:on
+  --warning:"LanguageXNotSupported:off"
   --git.url:"https://github.com/daylinmorgan/hwylterm"
   --outdir:public
 

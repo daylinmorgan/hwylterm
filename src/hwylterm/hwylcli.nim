@@ -26,6 +26,8 @@
   ```
 
   For more example programs see the [tests directory](https://github.com/daylinmorgan/hwylterm/tree/main/tests/cli/clis).
+
+  .. include:: ./docs/hwylcli.md
 ]##
 
 import std/[
@@ -1503,10 +1505,12 @@ macro enumNames*(a: typed): untyped =
 
 macro enumNamesWithValues*(a: typed): untyped =
   ## generate seq with enum names and values
+  ## ```
   ## type Direction = enum
   ##   North = "north"
   ##   South = "south"
   ## enumNamesWithValues(Direction) == @["North(north)", "South(south)"]
+  ## ```
   result = newNimNode(nnkBracket)
   for ai in a.getType[1][1..^1]:
     assert ai.kind == nnkSym
