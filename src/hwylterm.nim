@@ -9,6 +9,8 @@
   - [logging](./hwylterm/logging.html)
   - [parseopt3](./hwylterm/parseopt3.html) borrowed from `cligen`
 
+
+  .. include:: ./docs/bbansi.md
 ]##
 
 import hwylterm/[spin, bbansi, confirm, progress]
