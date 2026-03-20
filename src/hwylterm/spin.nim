@@ -1,3 +1,6 @@
+## .. include:: ./docs/spin.md
+## .. importdoc:: ./spin/spinners
+
 # TODO: better integrate console with spinner
 import std/[os, locks, sequtils, strutils, terminal, unicode]
 import ./bbansi

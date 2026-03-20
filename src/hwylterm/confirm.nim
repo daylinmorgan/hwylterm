@@ -1,3 +1,5 @@
+## .. include:: ./docs/confirm.md
+
 import std/[strutils]
 import ./bbansi
 

@@ -7,6 +7,8 @@
   let items = ["a","b","c"]
   let item = choose(items)
   ```
+
+  .. include:: ./docs/chooser.md
 ]##
 
 import std/[enumerate, os, strutils, sequtils, sets, terminal]

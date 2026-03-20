@@ -1,3 +1,5 @@
+## .. include:: ./docs/progress.md
+
 import std/[math, terminal, strutils, strformat, sequtils]
 import ./[bbansi, spin]
 
