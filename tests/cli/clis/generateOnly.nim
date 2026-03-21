@@ -1,3 +1,4 @@
+## GenerateOnly lets you run arbitrary code before the CLI starts, then invoke the parser manually.
 import std/[os, strformat]
 import hwylterm/hwylcli
 

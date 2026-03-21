@@ -4,3 +4,6 @@ nimbledeps
 public/
 *.out
 bin/
+
+# auto-generated file
+docs/cli-examples.md

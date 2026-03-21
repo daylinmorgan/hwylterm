@@ -1,3 +1,4 @@
+## Single-letter flag names are automatically short-only — no long form is generated.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:

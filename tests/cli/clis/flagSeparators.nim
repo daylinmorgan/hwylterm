@@ -1,3 +1,4 @@
+## String flags accept both --flag value and --flag=value — either separator works.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:

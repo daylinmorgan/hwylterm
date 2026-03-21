@@ -23,17 +23,27 @@ when defined(docs):
   --git.url:"https://github.com/daylinmorgan/hwylterm"
   --outdir:public
 
+proc generatedDocs() =
+  if not dirExists("public/cli"):
+    selfExec "r tests/cli/gen_svgs"
+  if not fileExists("docs/cli-examples.md"):
+    echo "hello?"
+    selfExec "r tests/cli/gen_docs"
+
 task docs, "build docs with fixup":
   const extraModules = [
     "cligen", "chooser", "logging", "hwylcli", "parseopt3", "tables"
   ]
   when defined(clean):
-    echo "clearing output"; rmDir "public"
+    echo "clearing outputs"
+    rmDir "public"
+    rmFile "docs/cli-examples.md"
+  generatedDocs()
+  selfExec "md2html -d:docs docs/cli-examples.md"
   for module in extraModules:
     selfExec "doc -d:docs --docRoot:$1/src/ src/hwylterm/$2" % [ getCurrentDir(), module ]
   selfExec "doc -d:docs --project src/hwylterm.nim"
   fixUpDocs()
-
 
 when withDir(thisDir(), system.dirExists("nimbledeps")):
   --path:"./nimbledeps/pkgs2/cligen-1.7.5-f3ffe7329c8db755677d3ca377d02ff176cec8b1"

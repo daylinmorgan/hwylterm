@@ -1,3 +1,4 @@
+## The simplest possible hwylCli program — just a name and a run block.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:

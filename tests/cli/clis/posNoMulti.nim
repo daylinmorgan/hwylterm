@@ -1,3 +1,4 @@
+## Positionals with non-seq types accept exactly one value each and support type coercion.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

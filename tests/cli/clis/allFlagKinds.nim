@@ -1,3 +1,4 @@
+## The flag DSL supports multiple equivalent syntaxes — this shows all of them side by side.
 import std/strformat
 import hwylterm, hwylterm/hwylcli
 

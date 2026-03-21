@@ -20,6 +20,10 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: sigoden/install-binary@v1
+        with:
+          repo: wader/ansisvg
+
       - name: Build Docs
         run: |
           nim develop

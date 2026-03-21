@@ -1,3 +1,4 @@
+## Positional arguments can bind to a different variable name in the run block via ident.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

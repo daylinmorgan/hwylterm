@@ -1,3 +1,4 @@
+## preSub and postSub hooks run code around any subcommand dispatch, and can be nested per level.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

@@ -1,3 +1,4 @@
+## InferEnv automatically binds CMDNAME_FLAGNAME environment variables to their flags.
 import std/[strformat, os]
 import hwylterm, hwylterm/hwylcli
 

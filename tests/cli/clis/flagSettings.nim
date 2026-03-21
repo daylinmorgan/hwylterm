@@ -1,3 +1,4 @@
+## Individual flags can opt out of default help display, and Count gives an incrementing integer flag.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:

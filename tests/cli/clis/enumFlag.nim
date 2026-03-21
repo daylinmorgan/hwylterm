@@ -1,3 +1,4 @@
+## Nim enum types work directly as flag types, with automatic error messaging for invalid values.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

@@ -1,3 +1,4 @@
+## Global flags with defaults and env var inference flow through to subcommands unchanged.
 import std/[os, strformat]
 import hwylterm, hwylterm/hwylcli
 

@@ -1,3 +1,4 @@
+## InferShort generates a short flag from the first letter of each long flag name automatically.
 import std/strformat
 import hwylterm, hwylterm/hwylcli
 

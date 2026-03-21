@@ -1,3 +1,4 @@
+## HideDefault on the CLI hides all flag defaults from help at once, without per-flag annotation.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:

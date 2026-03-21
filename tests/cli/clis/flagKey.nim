@@ -1,3 +1,4 @@
+## Bool flags are the default type — no type annotation needed, just a name and help string.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:

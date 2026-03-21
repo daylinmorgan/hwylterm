@@ -1,3 +1,4 @@
+## Flags can carry default values of any supported type, shown in help output automatically.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

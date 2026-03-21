@@ -1,3 +1,4 @@
+## Subcommands each have their own flags, positionals, aliases, and can use hyphenated names.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

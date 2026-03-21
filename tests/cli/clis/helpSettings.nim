@@ -1,3 +1,4 @@
+## Builtin style presets let you switch the entire help appearance without manual style configuration.
 import std/[os, strformat]
 import hwylterm, hwylterm/hwylcli
 

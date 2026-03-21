@@ -1,3 +1,4 @@
+## Flag groups let subcommands selectively pull in flags from the parent using the ^ syntax.
 import std/strformat
 import hwylterm, hwylterm/hwylcli
 

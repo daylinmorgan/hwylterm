@@ -1,3 +1,4 @@
+## Key=value pair flags let you accept structured input like --flag key=value in a single argument.
 import hwylterm, hwylterm/hwylcli
 
 

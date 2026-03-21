@@ -1,3 +1,4 @@
+## The help renderer can be replaced entirely by overriding the render procs before the hwylCli macro.
 import std/[strutils,strformat, sequtils]
 import hwylterm
 import hwylterm/hwylcli except renderHeader

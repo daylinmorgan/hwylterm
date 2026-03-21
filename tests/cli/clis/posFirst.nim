@@ -1,3 +1,4 @@
+## A variadic positional can appear first, collecting values until the fixed positionals are satisfied from the right.
 import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 

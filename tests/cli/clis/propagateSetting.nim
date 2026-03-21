@@ -1,3 +1,4 @@
+## Settings flow down to subcommands by default; IgnoreParent opts out and per-subcommand settings extend or replace.
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:
