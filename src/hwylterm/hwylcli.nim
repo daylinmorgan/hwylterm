@@ -11,6 +11,7 @@
     name "example"
     flags:
       count:
+        T Count
         ? "# of times"
         - n
       input:
@@ -21,8 +22,12 @@
   ```
 
   ```
-  $ example -n 2 --input "testing"
+  $ example -nn --input "testing"
   > testing testing
+
+  $ example -n=3 --input "testing"
+  > testing testing testing
+
   ```
 
   For more example programs see the [tests directory](https://github.com/daylinmorgan/hwylterm/tree/main/tests/cli/clis).
