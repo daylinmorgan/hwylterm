@@ -1,0 +1,6 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]required-flag[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+    [magenta]--input[/magenta] [faint]string[/faint] a required flag! [red](required)[/red]
+ [yellow]-h[/yellow] [magenta]--help [/magenta]        print help
