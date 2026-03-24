@@ -37,8 +37,7 @@
 import std/[
   algorithm,
   macros, os, sequtils,
-  sets, strutils, strformat, tables,
-  sugar
+  sets, strutils, strformat, tables, sugar,
 ]
 import ./[bbansi, parseopt3]
 export parseopt3, sets, bbansi
@@ -360,6 +359,7 @@ type
     key*: X
     val*: Y
   KVString* = KV[string, string]
+  SomeSet*[T] = set[T] | sets.SomeSet[T]
 
 
 iterator items*[X,Y](kvs: seq[KV[X,Y]]): (X, Y) =
@@ -382,6 +382,8 @@ proc `$`*[X,Y](t: typedesc[seq[KV[X,Y]]]): string =
 
 proc `$`*(c: Count): string = $c.val
 
+proc `$`*[T](_: typedesc[SomeSet[T]]): string =
+  "set[" & $T & "]"
 
 # ----------------------------------------
 
@@ -1478,6 +1480,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
         )
       hecho help.render().bb()
 
+
 proc checkVal(p: OptParser) =
   if p.val == "":
     hwylCliError(
@@ -1543,7 +1546,9 @@ proc parse*(p: OptParser, target: var float) =
       bbfmt"failed to parse value for [b]{p.key}[/] as float: [b]{p.val}[/]"
     )
 
-proc parse*[T](p: var OptParser, target: var seq[T]) =
+type Collection*[T] = seq[T] | SomeSet[T]
+
+proc parse*[T](p: var OptParser, target: var Collection[T]) =
   checkVal p
   case p.sep
   of ",=", ",:":
@@ -1553,13 +1558,18 @@ proc parse*[T](p: var OptParser, target: var seq[T]) =
       if p.val == "": continue
       var parsed: T
       parse(p, parsed)
-      target.add parsed
+      when target is seq[T]:
+        target.add parsed
+      elif target is SomeSet[T]:
+        target.incl parsed
   of "=",":","":
    var parsed: T
    parse(p, parsed)
-   target.add parsed
+   when target is seq[T]:
+     target.add parsed
+   elif target is SomeSet[T]:
+     target.incl parsed
   else: assert false
-
 
 proc parse*(p: OptParser, target: var Count) =
   # if value set to that otherwise increment

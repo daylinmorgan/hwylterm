@@ -8,8 +8,8 @@ const pathToSrc = currentSourcePath().parentDir()
 const fixturePath = pathToSrc / "fixtures"
 
 for (kind,path) in walkDir(fixturePath):
-  if kind == pcDir:
-    suite "fixtures-" & path.splitPath.tail:
-      for fixture in fixtures(path):
-        test fixture
+  if kind != pcDir: continue
+  suite "fixtures-" & path.splitPath.tail:
+    for fixture in fixtures(path):
+      test fixture
 

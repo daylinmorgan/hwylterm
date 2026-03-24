@@ -1,0 +1,1 @@
+inputs=@["one", "two", "three"],modes={fun, sad},modes2={sleepy, sad},outputs=@[("first", "first.txt"), ("second", "second.txt")]

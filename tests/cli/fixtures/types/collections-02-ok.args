@@ -1,0 +1,1 @@
+--inputs one --inputs,=two,three --modes,=,fun,sad,fun --modes2 sad --modes2 sleepy --outputs,:first:first.txt,second:second.txt

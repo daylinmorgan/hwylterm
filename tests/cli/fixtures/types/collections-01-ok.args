@@ -1,0 +1,1 @@
+--inputs one --inputs two --inputs three --modes fun --modes sad --outputs:first:first.txt --outputs:second=second.txt
