@@ -377,10 +377,10 @@ proc `$`*[X,Y](t: typedesc[KV[X, Y]]): string =
   result.add ":"
   result.add "v(" & $Y & ")"
 
-proc `$`[X,Y](t: typedesc[seq[KV[X,Y]]]): string =
+proc `$`*[X,Y](t: typedesc[seq[KV[X,Y]]]): string =
   "seq[" & $(KV[X,Y]) & "]"
 
-proc `$`(c: Count): string = $c.val
+proc `$`*(c: Count): string = $c.val
 
 
 # ----------------------------------------
