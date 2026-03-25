@@ -1,4 +1,4 @@
-import std/[os, strutils, algorithm, tables, sequtils]
+import std/[algorithm, os, sequtils, strutils, tables, wordwrap]
 import ./lib
 
 const
@@ -12,6 +12,9 @@ proc docComment(src: string): string =
   for line in src.splitLines():
     if line.startsWith("## "):
       return line[3..^1]
+
+proc command(module, args: string): string =
+  wrapWords(module & " " & args, 100, splitLongWords=false, newLine = " \\\n  ")
 
 var byModule = initOrderedTable[string, seq[Fixture]]()
 for (kind, suitePath) in walkDir(fixturePath):
@@ -42,7 +45,7 @@ for module in modules:
     let suite = f.path.parentDir().splitPath().tail
     let parts = f.name.split("-")
     let svgPath = "cli/$1-$2-$3.svg" % [suite, parts[0], parts[1]]
-    doc.add "```cmd\n$1 $2\n```\n\n.. image:: $3\n\n" % [f.module, f.args, svgPath]
+    doc.add "```cmd\n$#\n```\n\n.. image:: $#\n\n" % [command(f.module, f.args), svgPath]
 
 writeFile(outPath, doc)
 echo "wrote ", outPath
