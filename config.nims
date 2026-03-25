@@ -27,7 +27,6 @@ proc generatedDocs() =
   if not dirExists("public/cli"):
     selfExec "r tests/cli/gen_svgs"
   if not fileExists("docs/cli-examples.md"):
-    echo "hello?"
     selfExec "r tests/cli/gen_docs"
 
 task docs, "build docs with fixup":
