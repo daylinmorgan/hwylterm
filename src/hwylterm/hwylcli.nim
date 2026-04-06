@@ -1745,47 +1745,59 @@ proc parseArgs*[T](args: seq[string], target: var seq[T]) =
   for arg in args:
     parseArgs(arg, target)
 
+proc tooManyArgsError(actual, expected: seq[string]) =
+  hwylCliError(
+    $(actual.len - expected.len) &
+    " unexepected positional arg(s): " &
+    actual[expected.len..^1].mapIt(it.bb("b")).join(", ")
+  )
 
-# TODO: rework conditionals and control flow here...
+proc notEnoughArgsError(actual, expected: seq[string]) =
+  hwylCliError(
+    "missing positional arg(s): " &
+    expected[actual.len..^1].mapIt(it.bb("b")).join(", ")
+  )
+
 func genPosArgHandler(cfg: CliCfg, body: NimNode) =
   ## generate code to handle positional arguments
-  let numArgs = cfg.args.len
   let maKind = cfg.getMultiArgKind()
+  let args = cfg.args.mapIt(it.name)
   case maKind:
   of NoMulti:
     body.add quote do:
-      if result.len > `numArgs`:
-        hwylCliError("unexepected positional args, got: " & $result.len & ", expected: " & $`numArgs`)
-      elif result.len < `numArgs`:
-        hwylCliError("missing positional args, got: " & $result.len & ", expected: " & $`numArgs`)
+      if result.len > `args`.len:
+        tooManyArgsError(result, `args`)
+      elif result.len < `args`.len:
+        notEnoughArgsError(result, `args`)
     for i, namedArg in cfg.args.mapIt(it.name.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
   of First:
     body.add quote do:
-      if result.len < `numArgs`:
-        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $`numArgs`)
+      if result.len < `args`.len:
+        notEnoughArgsError(result, `args`)
+
     for i, namedArg in cfg.args[1..^1].reversed().mapIt(it.ident):
       body.add quote do:
         parseArgs(result[^(1+`i`)], `namedArg`)
 
     let firstArg = cfg.args[0].ident
     body.add quote do:
-      parseArgs(result[0..^(`numArgs`)], `firstArg`)
+      parseArgs(result[0..^(`args`.len)], `firstArg`)
 
   of Last:
     body.add quote do:
-      if result.len < (`numArgs` - 1):
-        hwylCliError("missing positional args, got: " & $result.len & ", expected at least: " & $(`numArgs` - 1))
+      if result.len < (`args`.len - 1):
+        notEnoughArgsError(result, `args`)
     for i, namedArg in cfg.args[0..^2].mapIt(it.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
     let lastArg = cfg.args[^1].ident
     body.add quote do:
-      if result.len > `numArgs` - 1:
-        parseArgs(result[(`numArgs`-1).. ^1],`lastArg`)
+      if result.len > `args`.len - 1:
+        parseArgs(result[(`args`.len-1).. ^1],`lastArg`)
 
   body.add quote do:
     result = @[]
