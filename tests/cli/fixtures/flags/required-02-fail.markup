@@ -1,1 +1,2 @@
 [red]error [/red]expected a value for flag: [bold b]--input[/bold b]
+  see: [bold]required-flag --help[/bold] for more info

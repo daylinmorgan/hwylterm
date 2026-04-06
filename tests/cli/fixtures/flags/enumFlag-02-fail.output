@@ -1,1 +1,2 @@
 [38;5;1merror [0mfailed to parse value for [1mcolor[0m as enum: [1mblack[0m expected one of: red,blue,green
+  see: [1menumFlag --help[0m for more info

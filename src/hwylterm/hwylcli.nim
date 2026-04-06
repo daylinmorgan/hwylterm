@@ -1394,13 +1394,16 @@ func subCmdsArray(cfg: CliCfg): NimNode =
     result.add quote do:
       (`cmd`, `aliases`, `desc`)
 
-# is this one necessary?
 
-proc hwylCliError*(msg: BbString) =
-  quit $(bb("error ", "red") & msg)
-
-proc hwylCliError*(msg: string) =
-  quit $bb("error ", "red") & msg
+var hwylCliCurrentCmd*: string
+proc hwylCliError*[S: BbString | string](msg: S, showSuffix = true) =
+  ## Shows the error message and quits the program
+  ##
+  ## generated code will update hwylCliCurrentCmd_ to include in message whenever parsing args
+  var s = bb("error ", "red") & msg
+  if showSuffix and hwylCliCurrentCmd != "":
+    s.add "\n  see: " & (hwylCliCurrentCmd & " --help").bb("bold") & " for more info"
+  quit $s
 
 func defaultUsage(cfg: CliCfg, styles: NimNode): NimNode =
   let
@@ -1912,6 +1915,10 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
   var
     parserBody = nnkStmtList.newTree()
     stopWords = nnkBracket.newTree(newLit("--"))
+
+  let cmdName = newLit(cfg.name)
+  parserBody.add quote do:
+    hwylCliCurrentCmd = `cmdName`
 
   for w in cfg.stopWords:
     stopWords.add newLit(w)

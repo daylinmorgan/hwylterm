@@ -1,1 +1,2 @@
 [red]error [/red]got unexpected positionals args: [bold]b c[/bold]
+  see: [bold]subcommands b --help[/bold] for more info
