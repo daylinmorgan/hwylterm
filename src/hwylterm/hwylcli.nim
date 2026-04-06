@@ -1402,24 +1402,7 @@ proc hwylCliError*(msg: BbString) =
 proc hwylCliError*(msg: string) =
   quit $bb("error ", "red") & msg
 
-# TODO: this function should not be handling styling!!!
-# TODO: make this NimNode be a call to the defaultUsage below
-# make this a function that accepts CliHelpStyles and use that as the call to HwlCLIhel
 func defaultUsage(cfg: CliCfg, styles: NimNode): NimNode =
-  var s = "[b]" & cfg.name & "[/]"
-  if cfg.subcommands.len > 0:
-    s.add " [bold italic]subcmd[/]"
-  if cfg.args.len > 0:
-    for arg in cfg.args:
-      s.add " [bold italic]"
-      s.add arg.name
-      if arg.isSeq:
-        s.add "..."
-
-      s.add"[/]"
-  s.add " [[[faint]flags[/]]"
-  # newLit(s)
-
   let
     name = cfg.name
     hasSubcommands = cfg.subcommands.len > 0
