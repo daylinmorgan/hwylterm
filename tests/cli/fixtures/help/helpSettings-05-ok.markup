@@ -11,7 +11,11 @@
           the lines are dedented then reindented
           [yellow]this is yellow....[/yellow]
     [magenta]--key[/magenta] [faint]string[/faint] [faint](default: value)[/faint]
-        predefined flag
+        predefined help string
+        
         k could be short for key idk
+    [magenta]--other[/magenta] 
+        first line of help
+        some runtime generated help
  [yellow]-h[/yellow] [magenta]--help[/magenta] 
         print help  [faint](see more with --help)[/faint]

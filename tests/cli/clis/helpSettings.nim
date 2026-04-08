@@ -5,10 +5,22 @@ import hwylterm, hwylterm/hwylcli
 putEnv("HWYLCLISTYLES_HEADER","red")
 # putEnv("HWYLCLISTYLES_SETTINGS", "Aliases")
 
+const identHelp = """predefined help string
+
+k could be short for key idk
+"""
+
+proc helpRuntime(s: string): string = 
+  result = s & """
+
+some runtime generated help
+"""
+
+
 hwylCli:
   name "help-settings"
   flags:
-    [flags]
+    [group]
     input:
       T string
       ? """
@@ -21,44 +33,43 @@ hwylCli:
       S Required
     key:
       T string
-      ? """
-      predefined flag
-      k could be short for key idk
-      """
+      ? identHelp
       * "value"
+    other:
+      ? helpRuntime("first line of help")
   subcommands:
     [all]
     ... "show all help styling settings"
     help:
       styles: fromBuiltinHelpStyles(AllSettings)
-    flags: ^[flags]
+    flags: ^[group]
 
     [minimal]
     ... "show minimal help with no styling"
     help:
       styles: fromBuiltinHelpStyles(Minimal)
-    flags: ^[flags]
+    flags: ^[group]
 
     [noColor]
     ... "show noColor help "
     help:
       styles: fromBuiltinHelpStyles(WithoutColor)
-    flags: ^[flags]
+    flags: ^[group]
 
     [noAnsi]
     ... "show noColor help "
     help:
       styles: fromBuiltinHelpStyles(WithoutAnsi)
-    flags: ^[flags]
+    flags: ^[group]
 
     [longHelp]
     ... "-h != --help"
-    flags: ^[flags]
+    flags: ^[group]
     settings LongHelp
 
     [noEnv]
     ... "ignore env styles"
-    flags: ^[flags]
+    flags: ^[group]
     help:
       styles: newHwylCliStyles(settings = defaultStyleSettings + {HwylCliStyleSetting.NoEnv})
 

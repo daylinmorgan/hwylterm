@@ -573,7 +573,7 @@ func parseCliFlagSettings(c: CliCfg, f: var CliFlag, node: NimNode) =
 
 func getFlagParamNode(c: CliCfg, node: NimNode): NimNode =
   case node.kind
-  of nnkStrLit, nnkTripleStrLit:
+  of nnkStrLit, nnkTripleStrLit, nnkIdent, nnkCall:
     result = node
   of nnkStmtList:
     result = node[0]

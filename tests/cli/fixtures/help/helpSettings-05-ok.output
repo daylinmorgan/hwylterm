@@ -11,7 +11,11 @@
           the lines are dedented then reindented
           [38;5;3mthis is yellow....[0m
     [38;5;5m--key[0m [2mstring[0m [2m(default: value)[0m
-        predefined flag
+        predefined help string
+        
         k could be short for key idk
+    [38;5;5m--other[0m 
+        first line of help
+        some runtime generated help
  [38;5;3m-h[0m [38;5;5m--help[0m 
         print help  [2m(see more with --help)[0m

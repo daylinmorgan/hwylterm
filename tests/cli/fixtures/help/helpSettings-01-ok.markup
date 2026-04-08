@@ -6,6 +6,7 @@ show all help styling settings
 [red]flags[/red]:
  [yellow]-h[/yellow] [magenta]--help [/magenta]        print help
 
-[red]flags flags[/red]:
+[red]group flags[/red]:
     [magenta]--input[/magenta] [faint]string[/faint] required input [red](required)[/red]
-    [magenta]--key  [/magenta] [faint]string[/faint] predefined flag [faint](default: value)[/faint]
+    [magenta]--key  [/magenta] [faint]string[/faint] predefined help string [faint](default: value)[/faint]
+    [magenta]--other[/magenta]        first line of help
