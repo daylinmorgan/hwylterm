@@ -132,6 +132,24 @@ hwylCli:
       echo k, ":", v
 ```
 
+`object`'s can function the same as `KV` flags with known options
+
+```nim
+import hwylterm, hwylterm/hwylcli
+
+type
+  Person = object
+    name: string
+    age: int
+
+hwylCli:
+  name "objectflag"
+  flags:
+    person(Person, "a person")
+  run:
+    echo person
+```
+
 ### Flag settings
 
 Use `S <setting>` inside a flag block:

@@ -1590,6 +1590,29 @@ proc parse*[T](p: var OptParser, target: var KV[string, T]) =
   target.key = key
   parse(p, target.val)
 
+proc fieldNames(o: object): seq[string] =
+  for k, _ in o.fieldPairs:
+    result.add k
+
+proc checkFields(o: object, key: string) =
+  let options = o.fieldNames
+  if key notin options:
+    let typeName = $type(o)
+    let options = options.mapIt(it.bbMarkup("bold")).join(", ")
+    hwylCliError(
+      bbfmt"unexpected key: [b]{key}[/] for [b]{typeName}[/], must be one of: {options}"
+    )
+
+proc parse*(p: var OptParser, target: var object) =
+  let key = extractKey(p)
+  checkFields target, key
+  for name, field in target.fieldPairs:
+    if name == key:
+      var val: type(field)
+      parse(p, val)
+      field = val
+      return
+
 proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T, isEnv = false) =
   ## convience proc to reuse other parsers
   let ogKV = (p.key, p.val, p.sep)
