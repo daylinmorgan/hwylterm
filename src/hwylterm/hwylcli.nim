@@ -1688,7 +1688,7 @@ func setVars(cfg: CliCfg): NimNode =
     else: cfg.flags.filterIt(it.group != "global")
 
   result.add flags.mapIt(
-    nnkIdentDefs.newTree(it.ident, it.typeNode, newEmptyNode())
+    nnkIdentDefs.newTree(it.ident, it.typeNode, newCall("default", it.typeNode))
   )
   if cfg.args.len > 0:
     result.add cfg.args.mapIt(

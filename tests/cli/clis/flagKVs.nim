@@ -8,7 +8,8 @@ type
   Person = object
     name: string
     age: int
-    weight: float
+    weight: float = 150.5
+
 
 proc `$`(_:typedesc[seq[KVString]]): string =
   "k(str):v(str)..."

@@ -3,4 +3,4 @@ test:a
 test:b
 ("key with space", "a")
 ("key", "value with space")
-(name: "John", age: 25, weight: 150.0)
+(name: "John", age: 25, weight: 150.5)
