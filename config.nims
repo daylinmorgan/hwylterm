@@ -7,20 +7,11 @@ task develop, "install cligen for development":
 task setupTests, "pre-compile test bins":
   exec "nim r tests/cli/setup"
 
-proc fixUpDocs(name = "hwylterm") =
-  withDir "public":
-    mvFile(name & ".html", "index.html")
-    for file in walkDirRec(".", {pcFile}):
-      writeFile(file):
-        readFile(file).multiReplace({
-          name &  ".html": "index.html", # fix renamed file links
-          ">src/": ">"                  # drop 'src/' from titles
-        })
-
 when defined(docs):
   --index:on
   --warning:"LanguageXNotSupported:off"
   --git.url:"https://github.com/daylinmorgan/hwylterm"
+  --path:src
   --outdir:public
 
 proc generatedDocs() =
@@ -42,7 +33,8 @@ task docs, "build docs with fixup":
   for module in extraModules:
     selfExec "doc -d:docs --docRoot:$1/src/ src/hwylterm/$2" % [ getCurrentDir(), module ]
   selfExec "doc -d:docs --project src/hwylterm.nim"
-  fixUpDocs()
+  withDir "public": cpFile("hwylterm.html", "index.html")
+
 
 when withDir(thisDir(), system.dirExists("nimbledeps")):
   --path:"./nimbledeps/pkgs2/cligen-1.7.5-f3ffe7329c8db755677d3ca377d02ff176cec8b1"
