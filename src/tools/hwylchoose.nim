@@ -9,10 +9,9 @@
   ```
 ]##
 
-import std/[enumerate, os, strutils, sequtils, sets, terminal]
-
+import std/[enumerate, os, sequtils, sets, strutils, terminal]
 import ../hwylterm
-import ../hwylterm/[hwylcli, chooser]
+import ../hwylterm/[chooser, hwylcli]
 
 when isMainModule:
   hwylcli:

@@ -4,10 +4,9 @@
   use BB style markup to add color to strings using VT100 escape codes
 ]##
 
-import std/[
-  os, sequtils, strformat, strutils
-]
-import ../hwylterm, ../hwylterm/hwylcli
+import std/[os, sequtils, strformat, strutils]
+import ../hwylterm
+import ../hwylterm/hwylcli
 
 proc debugBb(bbs: BbString): string {.used.} =
     echo "bbString("
