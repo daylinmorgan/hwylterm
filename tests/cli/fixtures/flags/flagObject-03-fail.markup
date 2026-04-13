@@ -1,0 +1,2 @@
+[red]error [/red]unexpected key: [b]nonexistient[/b] for [b]Person[/b], must be one of: [bold]name[/bold], [bold]age[/bold], [bold]weight[/bold], [bold]roles[/bold]
+  see: [bold]flagObject --help[/bold] for more info

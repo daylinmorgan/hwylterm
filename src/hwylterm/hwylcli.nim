@@ -1468,7 +1468,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
       hecho help.render().bb()
 
 
-proc checkVal(p: OptParser) =
+proc checkVal*(p: OptParser) =
   if p.val == "":
     hwylCliError(
       "expected value for flag: " & p.key.bb("bold")
@@ -1567,7 +1567,7 @@ proc parse*(p: OptParser, target: var Count) =
   else:
     inc target.val
 
-proc extractKey(p: var OptParser): string =
+proc extractKey*(p: var OptParser): string =
   var i: int
   for c in p.val:
     if c notin {'=',':'}: inc i
@@ -1608,9 +1608,7 @@ proc parse*(p: var OptParser, target: var object) =
   checkFields target, key
   for name, field in target.fieldPairs:
     if name == key:
-      var val: type(field)
-      parse(p, val)
-      field = val
+      parse(p, field)
       return
 
 proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T, isEnv = false) =
