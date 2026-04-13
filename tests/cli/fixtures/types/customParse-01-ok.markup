@@ -1,0 +1,4 @@
+warning input file does not exist: input.nim
+ignoring unknown key: unknown-key
+input=input.nim,output=new.nim
+(nums: @[1, 2, 3], names: @["Jane"])
