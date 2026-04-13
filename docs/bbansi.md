@@ -67,7 +67,7 @@ Multiple styles can be combined in a single tag:
 [bold italic underline]important[/]
 ```
 
-## Core Procs
+## Rendering to string
 
 Parse markup into a `BbString`:
 
