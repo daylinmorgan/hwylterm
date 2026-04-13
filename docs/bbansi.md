@@ -20,18 +20,16 @@ Wrap text in `[style]...[/style]` tags:
 
 ### Text styles
 
-These work regardless of color terminal support:
-
 | Markup | Abbreviation | Effect |
 |---|---|---|
-| `[bold]` | `[b]` | **bold** |
-| `[italic]` | `[i]` | *italic* |
-| `[underline]` | `[u]` | underline |
-| `[faint]` | | dim/faint |
-| `[blink]` | | blinking |
-| `[reverse]` | | reverse video |
-| `[strike]` | | ~~strikethrough~~ |
-| `[conceal]` | | hidden |
+| `bold` | `b` | **bold** |
+| `italic` | `i` | *italic* |
+| `underline` | `u` | underline |
+| `faint` | | dim/faint |
+| `blink` | | blinking |
+| `reverse` | | reverse video |
+| `strike` | | ~~strikethrough~~ |
+| `conceal` | | hidden |
 
 ### Colors
 
@@ -104,8 +102,8 @@ hecho $bbfmt"[bold]hello {name}[/]"
 
 | Input | Output |
 |---|---|
-| `[[` | literal `[` |
-| `\\` | literal `\\` |
+| `[[` | ``[`` |
+| `\\` | ``\`` |
 
 Use `bbEscape` to programmatically escape a string before embedding it in markup:
 
