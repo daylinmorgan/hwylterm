@@ -29,9 +29,7 @@ proc parse(p: var OptParser, target: var object) =
     return
   for name, field in target.fieldPairs:
     if name == key:
-      var val: type(field)
-      parse(p, val)
-      field = val
+      parse(p, field)
       return
 
 hwylCli:
