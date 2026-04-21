@@ -84,10 +84,15 @@ type
     settings*: HashSet[HwylCliStyleSetting] = defaultStyleSettings
 
   HwylCliLengths = object
-    subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, typeRepr*, defaultVal*: int
+    positional*, positionalDesc*, subcmd*, subcmdDesc*, shortArg*, longArg*, descArg*, typeRepr*, defaultVal*: int
+
+  HwylPosArg = tuple[
+    name, desc: string, required: bool
+  ]
 
   HwylCliHelp* = object
     header*, footer*, description*, usage*: string
+    positionals*: seq[HwylPosArg]
     subcmds*: seq[HwylSubCmdHelp]
     flags*: seq[HwylFlagHelp]
     styles*: HwylCliStyles
@@ -178,6 +183,7 @@ func newHwylCliHelp*(
   header = "",
   footer = "",
   description = "",
+  positionals: openArray[HwylPosArg] = @[],
   subcmds: openArray[HwylSubCmdHelp] = @[],
   flags: openArray[HwylFlagHelp] = @[],
   styles = HwylCliStyles(),
@@ -186,6 +192,7 @@ func newHwylCliHelp*(
   result.header = header.dedent().strip(leading=false)
   result.footer = footer.dedent().strip(leading=false)
   result.description = dedent(description).strip(leading=false)
+  result.positionals = @positionals
   if Aliases in styles.settings:
     # TODO: subcmds should use long help?
     result.subcmds =
@@ -214,6 +221,9 @@ func newHwylCliHelp*(
     result.lengths.subcmd = max(result.lengths.subcmd, s.name.len)
     result.lengths.subcmdDesc = max(result.lengths.subcmdDesc, s.desc.len)
 
+  for p in result.positionals:
+    result.lengths.positional = max(result.lengths.positional, p.name.len)
+    result.lengths.positionalDesc = max(result.lengths.positionalDesc, p.desc.len)
 
 func renderShort(cli: HwylCLiHelp, f: HwylFlagHelp): string =
   if f.short != "":
@@ -293,8 +303,9 @@ func render*(cli: HwylCliHelp, f: HwylFlagHelp): string =
 func render*(cli: HwylCliHelp, subcmd: HwylSubCmdHelp): string =
   result.add "  "
   result.add subcmd.name.alignLeft(cli.lengths.subcmd).bbMarkup(cli.styles.subcmd)
-  result.add " "
-  result.add subcmd.desc.alignLeft(cli.lengths.subcmdDesc)
+  if subcmd.desc.len > 0:
+    result.add "  "
+    result.add subcmd.desc.alignLeft(cli.lengths.subcmdDesc)
 
 func renderFlags(cli: HwylCliHelp, flags: seq[HwylFlagHelp]): string =
   flags.mapIt(render(cli, it)).join("\n")
@@ -330,13 +341,27 @@ proc render*(cli: HwylCliHelp, flags: seq[HwylFlagHelp]): string =
       result.add ":\n"
       result.add renderFlags(cli, flags)
 
+
+func render*(cli: HwylCliHelp, pos: HwylPosArg): string =
+  result.add "  "
+  result.add pos.name.alignLeft(cli.lengths.positional).bbMarkup(cli.styles.args)
+  if pos.desc.len > 0:
+    result.add "  "
+    result.add pos.desc.alignLeft(cli.lengths.positionalDesc)
+
+proc render*(cli: HwylCliHelp, positionals: seq[HwylPosArg]): string =
+  result.add "arguments".bbMarkup(cli.styles.header)
+  result.add ":\n"
+  result.add positionals.mapIt(render(cli, it)).join("\n")
+
 template render*(cli: HwylCliHelp): string =
   var parts: seq[string]
-
   if cli.header != "":
     parts.add cli.header
   if cli.usage != "":
     parts.add "usage".bbMarkup(cli.styles.header) & ":\n" & indent(cli.usage, 2 )
+  if cli.positionals.len > 0:
+    parts.add render(cli, cli.positionals)
   if cli.description != "":
     parts.add cli.description
   if cli.subcmds.len > 0:
@@ -441,6 +466,7 @@ type
 
   CliArg = object
     name: string
+    help: NimNode
     ident: NimNode
     typeNode: NimNode
 
@@ -1187,8 +1213,10 @@ func parseCliArg(c: CliCfg, node: NimNode): CliArg =
   ## ```
   ## input seq[string]
   ## ```
+  ##
   ## ```
   ## other:
+  ##   ? "a positional argument"
   ##   T string
   ##   ident notOther
   ## ```
@@ -1209,18 +1237,24 @@ func parseCliArg(c: CliCfg, node: NimNode): CliArg =
         if n[1].len == 2:
           result.typeNode = n[1][1]
         val = n[1][0]
-      # else: bad(n, id)
-      else: c.err n, "unexpected node for positional '$1'" & id
+      of nnkPrefix:
+        val = n[1]
+      else: c.err n, "unexpected node for positional '$1': $2" % [result.name, $n.kind]
 
       case id:
       of "T": result.typeNode = val
       of "ident": result.ident = val
+      of "?","help": result.help = val
       else: c.err n, "unknown positional parameter for $1: $2" % [result.name, id]
 
   of nnkIdent, nnkBracketExpr:
     result.typeNode = node[1]
   else:
     c.err node, "as positional"
+
+  if result.typeNode.isNil:
+    c.err node, "no type detected for positional '$1'" % result.name
+
   if result.ident == nil:
     result.ident = ident(result.name)
 
@@ -1368,7 +1402,6 @@ func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
   # but works with `newSeq[T]()`
   # could replace "defaultVal" with newSeq[T]()
   # under the hood when parsing type/val
-
   result = nnkTupleConstr.newTree(
     short,
     newLit(f.long),
@@ -1442,6 +1475,20 @@ func hwylDefaultUsage*(
       result.add argStr.bbMarkUp(styles.args)
   result.add " [[flags]"
 
+
+func positionalsArray(cfg: CliCfg): NimNode =
+  result = newTree(nnkBracket)
+  for p in cfg.args:
+    let name = newLit(
+        if p.isSeq: p.name & "..."
+        else: p.name
+    )
+    result.add nnkTupleConstr.newTree(
+      name,
+      p.help or newLit"",
+      ident"false" # not actually used yet...
+    )
+
 func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
   let
     description = cfg.help.description or newLit""
@@ -1449,6 +1496,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
     footer = cfg.help.footer or newLit""
     helpFlags = cfg.flagsArray()
     subcmds = cfg.subCmdsArray()
+    positionals = cfg.positionalsArray()
     styles = cfg.help.styles or (quote do: newHwylCliStyles())
     usage  = cfg.help.usage or defaultUsage(cfg, styles)
 
@@ -1462,6 +1510,7 @@ func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
           header = `header`,
           footer = `footer`,
           description = `description`,
+          positionals = `positionals`,
           subcmds = `subcmds`,
           flags = `helpFlags`,
           styles = `styles`,
@@ -1778,7 +1827,7 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
         tooManyArgsError(result, `args`)
       elif result.len < `args`.len:
         notEnoughArgsError(result, `args`)
-    for i, namedArg in cfg.args.mapIt(it.name.ident):
+    for i, namedArg in cfg.args.mapIt(it.ident or it.name.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
