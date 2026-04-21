@@ -17,7 +17,7 @@ proc status(s: string) =
 
 proc compileFailingModule*(module: string): string =
   let srcModule = pathToSrc / "errors" / (module & ".nim")
-  let cmd = "nim c -o:/dev/null $1" % [srcModule]
+  let cmd = "nim c -o:/dev/null -d:testing $1" % [srcModule]
   let (output, code) = execCmdEx(cmd)
   if code == 0:
     echo "cmd: ", cmd, "\noutput:", output

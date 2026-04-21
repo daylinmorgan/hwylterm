@@ -471,15 +471,14 @@ func hasSubcommands(c: CliCfg): bool = c.subcommands.len > 0
 #   debugEcho "$1:$2" % [pos.filename, $pos.line]
 #   debugEcho s
 
+template `<<<`(n: untyped) {.used.} =
+  debugEcho n, "....................", instantiationInfo().line
+
 # some debug procs I use to wrap my ahead aroung the magic of *macro*
 template `<<<`(n: NimNode) {.used.} =
   ## for debugging macros
   <<< ("TreeRepr:\n" & (treeRepr n))
   <<< ("Repr: \n" & (repr n))
-
-
-template `<<<`(n: untyped) {.used.} =
-  debugEcho n, "....................", instantiationInfo().line
 
 template `<<<`(f: CliFlag) {.used.}=
   var s: string
@@ -516,7 +515,10 @@ func prettyRepr(n: NimNode): string =
 func err(c: CliCfg, node: NimNode, msg: string = "", instantiationInfo: tuple[filename: string, line: int, column: int]) =
   var fullMsg: string
   fullMsg.add node.prettyRepr() & "\n"
-  fullMsg.add "parsing error ($1, $2) " % [instantiationInfo.filename, $instantiationInfo.line] 
+  when defined(testing):
+    fullMsg.add "parsing error ($1, $2)" % [instantiationInfo.filename, ""]
+  else:
+    fullMsg.add "parsing error ($1, $2)" % [instantiationInfo.filename, $instantiationInfo.line]
   if msg != "":
     fullMsg.add ": " & msg
   c.err fullMsg

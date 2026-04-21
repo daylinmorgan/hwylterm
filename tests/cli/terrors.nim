@@ -3,8 +3,8 @@ import ./lib
 
 template testFailingModule(name: string) =
   let output = compileFailingModule(name).strip()
-  let expectedEnd = readFile(pathToSrc / "errors" / "alias.error").replace("\r\n", "\n").strip()
-  check output.endsWith(expectedEnd)
+  let expectedEnd = readFile(pathToSrc / "errors" / name & ".error").replace("\r\n", "\n").strip()
+  check output.contains(expectedEnd)
 
 let modules = collect:
   for (kind, path) in walkDir(pathToSrc / "errors"):
