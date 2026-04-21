@@ -3,8 +3,8 @@ some code that runs first
   [1mgen only[0m [1;3msubcmd[0m [flags]
 
 [1;38;5;6msubcommands[0m:
-  [1mone     [0m 
-  [1mtwo     [0m 
+  [1mone     [0m
+  [1mtwo     [0m
 
 [1;38;5;6mflags[0m:
  [38;5;3m-h[0m [38;5;5m--help[0m  print help

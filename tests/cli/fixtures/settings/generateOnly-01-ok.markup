@@ -3,8 +3,8 @@ some code that runs first
   [bold]gen only[/bold] [bold italic]subcmd[/bold italic] [[flags]
 
 [bold cyan]subcommands[/bold cyan]:
-  [bold]one     [/bold] 
-  [bold]two     [/bold] 
+  [bold]one     [/bold]
+  [bold]two     [/bold]
 
 [bold cyan]flags[/bold cyan]:
  [yellow]-h[/yellow] [magenta]--help[/magenta]  print help

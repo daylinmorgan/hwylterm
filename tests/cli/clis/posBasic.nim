@@ -3,11 +3,11 @@ import std/[strformat]
 import hwylterm, hwylterm/hwylcli
 
 hwylCli:
-  name "posLast"
+  name "posBasic"
   positionals:
-    first:
+    input:
       T string
-      ident notFirst
-    rest seq[string]
+      ? "the \"input\""
+      ident i
   run:
-    echo fmt"{notFirst=} {rest=}"
+    echo fmt"input={i}"

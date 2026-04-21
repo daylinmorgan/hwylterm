@@ -9,7 +9,7 @@ const fixturePath = pathToSrc / "fixtures"
 
 for (kind,path) in walkDir(fixturePath):
   if kind != pcDir: continue
-  suite "fixtures-" & path.splitPath.tail:
+  suite "cli-" & path.splitPath.tail:
     for fixture in fixtures(path):
       test fixture
 

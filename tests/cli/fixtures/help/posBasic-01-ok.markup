@@ -1,0 +1,8 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]posBasic[/bold] [bold italic]input[/bold italic] [[flags]
+
+[bold cyan]arguments[/bold cyan]:
+  [bold italic]input[/bold italic]  the "input"
+
+[bold cyan]flags[/bold cyan]:
+ [yellow]-h[/yellow] [magenta]--help[/magenta]  print help

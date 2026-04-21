@@ -1,0 +1,7 @@
+failed to generate 'posNoType' cli:
+│ 
+│ input do:
+│   ?"the \"input\""
+│ 
+╰────────────────────
+parsing error (hwylcli.nim, ): no type detected for positional 'input'
