@@ -35,7 +35,9 @@ when isMainModule:
     name "bbansi"
     settings ShowHelp
     positionals:
-      args seq[string]
+      args:
+        T seq[string]
+        ? "bb markup strings"
     help:
       description """
     bbansi "[[yellow] yellow text!"
