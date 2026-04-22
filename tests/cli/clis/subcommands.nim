@@ -5,6 +5,7 @@ import hwylterm, hwylterm/hwylcli
 hwylCli:
   name "subcommands"
   subcommands:
+    [help]
     [a]
     ... "a subcommand with positionals"
     positionals:

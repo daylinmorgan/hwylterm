@@ -1,0 +1,7 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]subcommands dd-dd[/bold] [[flags]
+
+subcommand with hyphen
+
+[bold cyan]flags[/bold cyan]:
+ [yellow]-h[/yellow] [magenta]--help[/magenta]  print help

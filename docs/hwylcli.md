@@ -372,6 +372,25 @@ hwylCli:
         echo "inside sub 'b a'"
 ```
 
+### Builtin Subcommands
+
+A builtin help subcommand can be added by including the help header in the subcommands definition.
+
+```nim
+import hwylterm, hwylterm/hwylcli
+
+hwylcli:
+  name "subcommans"
+  subcommand:
+    [help]
+    [a]
+    ... "command a"
+
+    [b]
+    ... "commmand b"
+
+```
+
 ### Hooks
 
 `preSub` and `postSub` run before/after any subcommand at that level:

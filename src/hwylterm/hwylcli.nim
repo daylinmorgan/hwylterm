@@ -1089,9 +1089,63 @@ func parseCliAlias(cfg: var CliCfg, node: NimNode) =
       cfg.alias.incl s
     else: cfg.unexpectedKind n
 
-func checkSubcommands(c: CliCfg) =
+
+func hwylCliImpl(cfg: CliCfg): NimNode
+
+func genHelpSubcommandRun(cfg: CliCfg): NimNode =
+  result = nnkStmtList.newTree()
+
+  let subcmd = ident"commands"
+  let subcommands = cfg.subcommands.filterIt(it.name != (cfg.name & " help"))
+  let subcmdOptions = subcommands.mapIt(it.subName.bbMarkup("b")).join(", ").bb
+
+  var subCommandCase = nnkCaseStmt.newTree()
+  if NoNormalize notin cfg.settings:
+    subCommandCase.add(quote do: optionNormalize(`subcmd`))
+  else:
+    subCommandCase.add(quote do: `subcmd`)
+
+  for sub in cfg.subcommands.filterIt(it.name != (cfg.name & " help")):
+    let printHelpName = ident("print" & sub.name.replace(" ", "") & "Help")
+
+    var branch = nnkOfBranch.newTree()
+    branch.add newLit(optionNormalize(sub.subName))
+    for a in sub.alias:
+      branch.add newLit(optionNormalize(a))
+    branch.add quote do:
+      `printHelpName`()
+
+    subcommandCase.add branch
+
+  subcommandCase.add nnkElse.newTree(
+    quote do:
+      hwylCliError(
+        "unknown subcommand: " &
+        `subcmd`.bb("b") &
+        " expected one of: " &
+        `subcmdOptions`
+      )
+  )
+
+  result.add subCommandCase
+
+func checkHelpSubcommand(c: var CliCfg, cmd: var CliCfg) =
+  cmd.help.description = cmd.help.description or newLit"show this help or the help of the given subcommand(s)"
+  if cmd.args.len == 0:
+    cmd.args.add CliArg(
+      name: "command",
+      help: newLit"show help for the subcommand",
+      typeNode: ident"string",
+      ident: ident"commands"
+    )
+  if cmd.run == nil:
+    cmd.run = genHelpSubcommandRun(c)
+
+func checkSubcommands(c: var CliCfg) =
   var aliases: Table[string, seq[string]]
-  for sub in c.subcommands:
+  for sub in c.subcommands.mitems:
+    if sub.name == c.name & " help":
+      checkHelpSubcommand c, sub
     for a in sub.alias:
       if aliases.hasKeyOrPut(a, @[sub.name]):
         aliases[a].add sub.name
@@ -1120,6 +1174,8 @@ func checkFlags(c: CliCfg) =
       c.err "conflicting long flags for: " & f.name & " and " & conflict.name
     else:
       long[f.long] = f
+
+
 
 func postPropagate(c: var CliCfg) =
   ## verify the cli is valid
@@ -1336,7 +1392,7 @@ func parseCliBody(body: NimNode, name = "", root = false, settings = initHashSet
   if root:
     propagate(result)
 
-  postPropagate result
+  postPropagate result # handle inside postPropagate?
 
 func isBool(f: CliFlag | BuiltinFlag): bool =
   f.typeNode == ident"bool"
@@ -1489,8 +1545,12 @@ func positionalsArray(cfg: CliCfg): NimNode =
       ident"false" # not actually used yet...
     )
 
-func generateCliHelpProc(cfg: CliCfg, printHelpName: NimNode): NimNode =
+func printHelpName(cfg: CliCfg): NimNode =
+  ident("print" & cfg.name.replace(" ","") & "Help")
+
+func generateCliHelpProcImpl(cfg: CliCfg): NimNode =
   let
+    printHelpName = cfg.printHelpName
     description = cfg.help.description or newLit""
     header = cfg.help.header or newLit""
     footer = cfg.help.footer or newLit""
@@ -1676,7 +1736,7 @@ proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T, 
   else:
     parse(p, target)
 
-func shortLongCaseStmt(cfg: CliCfg, printHelpName: NimNode, version: NimNode): NimNode =
+func shortLongCaseStmt(cfg: CliCfg): NimNode =
   var caseStmt = nnkCaseStmt.newTree()
   if NoNormalize notin cfg.settings:
     caseStmt.add nnkCall.newTree(ident"optionNormalize", ident"hwylKey")
@@ -1920,7 +1980,6 @@ func addPostParseHook(cfg: CliCfg, body: NimNode) =
   elif cfg.args.len > 0:
     genPosArgHandler cfg, body
 
-func hwylCliImpl(cfg: CliCfg): NimNode
 
 func genSubcommandHandler(cfg: CliCfg): NimNode =
   let subcmd = ident"subcmd"
@@ -1969,11 +2028,23 @@ func positionalArgsOfBranch(cfg: CliCfg): NimNode =
     parseArgs(p, result)
 
 
+func genPrintHelpProcs(cfg: CliCfg): NimNode =
+  result = newStmtList()
+  let
+    name = cfg.name.replace(" ", "")
+    printHelpName = ident("print" & name & "Help")
+    printHelpProc = generateCliHelpProcImpl(cfg)
+
+  result.add quote do:
+    `printHelpProc`
+
+  for sub in cfg.subcommands:
+    result.add genPrintHelpProcs(sub)
+
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
     version = cfg.version or newLit("")
     name = cfg.name.replace(" ", "")
-    printHelpName = ident("print" & name & "Help")
     parserProcName = ident("parse" & name)
     posArgs = ident"posArgs"
     optParser = ident("p")
@@ -1981,8 +2052,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     flagSet = ident"flagSet"
     nArgs = ident"nargs"
     (longNoVal, shortNoVal) = cfg.getNoVals()
-    printHelpProc = generateCliHelpProc(cfg, printHelpName)
-    varBlock= setVars(cfg)
+    varBlock = setVars(cfg)
 
   var
     parserBody = nnkStmtList.newTree()
@@ -2029,12 +2099,12 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         positionalArgsOfBranch(cfg),
         nnkOfBranch.newTree(
           ident("cmdShortOption"), ident("cmdLongOption"),
-          shortLongCaseStmt(cfg, printHelpName, version)
+          shortLongCaseStmt(cfg)
         )
       )
     )
   )
-
+  let printHelpName = cfg.printHelpName
   if ShowHelp in cfg.settings and (cfg.args.len > 0 or cfg.subcommands.len > 0):
     parserBody.add quote do:
       if `cmdLine`.len == 0:
@@ -2059,9 +2129,10 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
 
   result = newTree(nnkStmtList)
 
+  if cfg.root:
+    result.add genPrintHelpProcs(cfg)
+
   result.add quote do:
-    # block:
-      `printHelpProc`
       `varBlock`
       proc `parserProcName`(`cmdLine`: openArray[string] = commandLineParams()): seq[string] =
         `parserBody`

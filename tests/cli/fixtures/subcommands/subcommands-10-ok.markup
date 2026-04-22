@@ -1,0 +1,7 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]subcommands ccccc[/bold] [[flags]
+
+a subcommand with an alias
+
+[bold cyan]flags[/bold cyan]:
+ [yellow]-h[/yellow] [magenta]--help[/magenta]  print help

@@ -1,0 +1,10 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]subcommands help[/bold] [bold italic]command[/bold italic] [[flags]
+
+[bold cyan]arguments[/bold cyan]:
+  [bold italic]command[/bold italic]  show help for the subcommand
+
+show this help or the help of the given subcommand(s)
+
+[bold cyan]flags[/bold cyan]:
+ [yellow]-h[/yellow] [magenta]--help[/magenta]  print help
