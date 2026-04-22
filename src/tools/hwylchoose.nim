@@ -9,6 +9,8 @@
   ```
 ]##
 
+{.define: hwylVersionNimble.}
+
 import std/[enumerate, os, sequtils, sets, strutils, terminal]
 import ../hwylterm
 import ../hwylterm/[chooser, hwylcli]
