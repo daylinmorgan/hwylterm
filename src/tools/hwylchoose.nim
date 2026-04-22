@@ -15,6 +15,7 @@ import std/[enumerate, os, sequtils, sets, strutils, terminal]
 import ../hwylterm
 import ../hwylterm/[chooser, hwylcli]
 
+
 when isMainModule:
   hwylcli:
     name "hwylchoose"

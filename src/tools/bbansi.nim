@@ -16,7 +16,7 @@ proc debugBb(bbs: BbString): string {.used.} =
     echo ")"
 
 when isMainModule:
-  const version = staticExec "git describe --tags --always --dirty=-dev"
+  const version = inferVersionFromNimble()
 
   proc showTestCard() =
     for style in [
