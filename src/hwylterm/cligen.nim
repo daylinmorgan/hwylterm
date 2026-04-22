@@ -13,7 +13,7 @@
 
 ]##
 
-import std/[tables]
+import std/tables
 import ./bbansi
 
 template tryImport(x, body) =

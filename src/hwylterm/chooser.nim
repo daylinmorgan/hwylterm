@@ -11,7 +11,7 @@
   .. include:: ./docs/chooser.md
 ]##
 
-import std/[enumerate, os, strutils, sequtils, sets, terminal]
+import std/[enumerate, os, sequtils, sets, strutils, terminal]
 import ./bbansi
 import ./vendor/illwill
 

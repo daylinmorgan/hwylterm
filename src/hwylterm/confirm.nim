@@ -1,6 +1,6 @@
 ## .. include:: ./docs/confirm.md
 
-import std/[strutils]
+import std/strutils
 import ./bbansi
 
 proc confirm*(

@@ -7,7 +7,7 @@
 {.push raises: [].}
 
 import std/[macros, os, sequtils, strformat, strscans, strutils, terminal]
-import ./bbansi/[styles, colors, wrapwords]
+import ./bbansi/[colors, styles, wrapwords]
 export wrapwords
 
 type

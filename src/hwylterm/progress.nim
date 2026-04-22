@@ -1,6 +1,6 @@
 ## .. include:: ./docs/progress.md
 
-import std/[math, terminal, strutils, strformat, sequtils]
+import std/[math, sequtils, strformat, strutils, terminal]
 import ./[bbansi, spin]
 
 type
@@ -116,7 +116,7 @@ iterator progress*[T](items: openArray[T]): T =
     yield i
 
 when isMainModule:
-  import std/[os]
+  import std/os
   # for i in progress((1..100).toSeq()):
   #   sleep 200
 

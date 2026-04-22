@@ -36,12 +36,11 @@
 ]##
 
 import std/[
-  algorithm,
-  macros, os, sequtils,
-  sets, strutils, strformat, tables, sugar,
+  algorithm, appdirs, macros, os, parsecfg, paths,
+  sequtils, sets, strformat, strutils, sugar, tables
 ]
 import ./[bbansi, parseopt3]
-export parseopt3, sets, bbansi
+export bbansi, parseopt3, sets
 
 
 type
@@ -1036,9 +1035,6 @@ func parseHiddenFlags(c: var CliCfg, node: NimNode) =
   else: assert false
 
 
-import std/parsecfg
-import std/paths
-import std/appdirs
 
 proc searchForNimbleFile(dir: string): seq[string] =
   when defined(debughwylVerisioNimble):
@@ -1075,6 +1071,13 @@ proc getGitHash*(): string =
   (result, code) = gorgeEx("git rev-parse HEAD")
   if code != 0:
     error "failed to get current commit hash " & result
+
+proc getGitDescribe*(): string =
+  ## use git to obtain a version respresentation
+  var code: int
+  (result, code) = gorgeEx"git describe --tags --always --dirty=-dev"
+  if code != 0:
+    error "failed to get current tag/commit info" & result
 
 const hwylVersion* {.strdefine, used.} = ""
 

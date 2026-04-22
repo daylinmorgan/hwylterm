@@ -3,8 +3,8 @@
 ## wrapper around std/logging to provide a fancy console logger
 
 import std/[logging, strutils]
-export logging
 import ./bbansi
+export logging
 
 var
   handlers {.threadvar.}: seq[Logger]

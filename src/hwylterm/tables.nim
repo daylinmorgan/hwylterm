@@ -1,6 +1,6 @@
 ## .. include:: ./docs/tables.md
 
-import std/[macros, sequtils, strformat, sets, tables]
+import std/[macros, sequtils, sets, strformat, tables]
 import ./bbansi
 export bbansi
 
