@@ -247,7 +247,7 @@ hwylCli:
       echo input
 ```
 
-## Version flag
+## Versioning
 
 ```nim
 import hwylterm, hwylterm/hwylcli
@@ -259,7 +259,14 @@ hwylCli:
     echo "running"
 ```
 
-Adds `-V`/`--version` which prints the version string and exits.
+Specifying a version will adds the `-V`/`--version` flag which prints the version string and exits.
+It's also possible to set the version for the CLI using define switches:
+
+| switch | description |
+|---|---|
+|hwylVersion_| strdefine |
+|hwylVersionNimble_| searches up from directory returned by `getProjectPath` attempting to extract version from a nimble file |
+
 
 ## Positional arguments
 
@@ -374,7 +381,7 @@ hwylCli:
 
 ### Builtin Subcommands
 
-A builtin help subcommand can be added by including the help header in the subcommands definition.
+A builtin help subcommand or version subcommand can be added by including the help header in the subcommands definition.
 
 ```nim
 import hwylterm, hwylterm/hwylcli
@@ -385,11 +392,11 @@ hwylcli:
     [help]
     [a]
     ... "command a"
-
     [b]
     ... "commmand b"
-
+    [version]
 ```
+
 
 ### Hooks
 

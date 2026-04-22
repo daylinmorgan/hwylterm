@@ -4,8 +4,10 @@ import hwylterm, hwylterm/hwylcli
 
 hwylCli:
   name "subcommands"
+  V "0.0.0"
   subcommands:
     [help]
+    [version]
     [a]
     ... "a subcommand with positionals"
     positionals:

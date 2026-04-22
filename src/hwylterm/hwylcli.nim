@@ -415,15 +415,17 @@ proc `$`*[T](_: typedesc[SomeSet[T]]): string =
 
 type
   CliSetting* = enum
-    IgnoreParent  ## Don't propagate parent settings to subcommands
-    GenerateOnly, ## Don't attach root `runProc()` node
-    NoHelpFlag,   ## Remove the builtin help flag
-    ShowHelp,     ## If cmdline empty show help
-    LongHelp,     ## Show more info with --help than -h
-    NoNormalize,  ## Don't normalize flags and commands
-    HideDefault,  ## Don't show default values
-    InferShort    ## Autodefine short flags
-    InferEnv      ## Autodefine env vars for flags
+    IgnoreParent   ## Don't propagate parent settings to subcommands
+    GenerateOnly,  ## Don't attach root `runProc()` node
+    NoHelpFlag,    ## Don't add the builtin help flag
+    NoVersionFlag, ## Don't add builtin version flag
+    ShowHelp,      ## If cmdline empty show help
+    LongHelp,      ## Show more info with --help than -h
+    NoNormalize,   ## Don't normalize flags and commands
+    HideDefault,   ## Don't show default values
+    InferShort     ## Autodefine short flags
+    InferEnv       ## Autodefine env vars for flags
+
 
   CliFlagSetting* = enum
     HideDefault,   ## Don't show default values
@@ -1033,6 +1035,61 @@ func parseHiddenFlags(c: var CliCfg, node: NimNode) =
       c.hidden.add n.strVal
   else: assert false
 
+
+import std/parsecfg
+import std/paths
+import std/appdirs
+
+proc searchForNimbleFile(dir: string): seq[string] =
+  when defined(debughwylVerisioNimble):
+    echo "searching: ", dir
+  for kind, path in walkDir(dir):
+    if kind in {pcDir, pcLinkToDir}: continue
+    if path.endsWith(".nimble"):
+      result.add path
+
+proc findNimbleFile(): string =
+  var candidates: seq[string]
+  var search = getProjectPath()
+  while candidates.len == 0 and Path(search) != appdirs.getHomeDir():
+    candidates.add searchForNimbleFile(search)
+    search = search.splitPath.head
+
+  case candidates.len
+  of 0:
+    hint "failed to determine hwylVersionNimble: found no nimble file"
+  of 1:
+    return candidates[0]
+  else:
+    hint "failed to determine hwylVersionNimble:\n" & "found multiple nimble files: " & candidates.join(", ")
+
+proc inferVersionFromNimble*(): string =
+  let nimbleFile = findNimbleFile()
+  if nimbleFile.fileExists:
+    hint "extracting version from nimble file: " &  nimbleFile
+    let nimbleCfg = loadConfig(nimbleFile)
+    return nimbleCfg.getSectionValue("", "version")
+
+proc getGitHash*(): string =
+  var code: int
+  (result, code) = gorgeEx("git rev-parse HEAD")
+  if code != 0:
+    error "failed to get current commit hash " & result
+
+const hwylVersion* {.strdefine, used.} = ""
+
+proc getHwylVersionVal(): string =
+  when defined(hwylVersion):
+    result = hwylVersion
+  when defined(hwylVersionNimble):
+    let version = inferVersionFromNimble()
+    if version != "":
+      result = version
+    elif result == "":
+      error "failed to set version from nimble file, must set fallback value with -d:hwylVersion"
+
+const hwylVersionVal = getHwylVersionVal()
+
 func addBuiltinFlags(c: var CliCfg) =
   # duplicated with below :/
   let shorts = c.flags.mapIt(it.short).toHashSet()
@@ -1064,13 +1121,13 @@ func addBuiltinFlags(c: var CliCfg) =
       node: helpNode
     )
 
-  if c.version != nil:
-    let version = c.version
+  if c.version != nil or hwylVersionVal != "" and NoVersionFlag notin c.settings:
+    let version = if hwylVersionVal != "":  newLit(hwylVersionVal) else: c.version
     let versionNode = quote do:
       hecho `version`; quit 0
 
     c.builtinFlags.add BuiltinFlag(
-      name:"version",
+      name: "version",
       long: "version",
       help: newLit("print version"),
       short: if 'V' notin shorts: 'V' else: '\x00',
@@ -1141,11 +1198,24 @@ func checkHelpSubcommand(c: var CliCfg, cmd: var CliCfg) =
   if cmd.run == nil:
     cmd.run = genHelpSubcommandRun(c)
 
+
+func checkVersionSubcommand(c: var CliCfg, cmd: var CliCfg) =
+  cmd.help.description = cmd.help.description or newLit"print version"
+  if cmd.run == nil:
+    if c.version == nil and hwylVersionVal == "":
+      c.err "can not generate version subcommand, version must be defined using version setting or -d:hwylVersion"
+
+    let version = if hwylVersionVal != "":  newLit(hwylVersionVal) else: c.version
+    cmd.run = quote do:
+      hecho `version`; quit 0
+
 func checkSubcommands(c: var CliCfg) =
   var aliases: Table[string, seq[string]]
   for sub in c.subcommands.mitems:
     if sub.name == c.name & " help":
       checkHelpSubcommand c, sub
+    elif sub.name == c.name & " version":
+      checkVersionSubcommand(c, sub)
     for a in sub.alias:
       if aliases.hasKeyOrPut(a, @[sub.name]):
         aliases[a].add sub.name
@@ -2030,10 +2100,7 @@ func positionalArgsOfBranch(cfg: CliCfg): NimNode =
 
 func genPrintHelpProcs(cfg: CliCfg): NimNode =
   result = newStmtList()
-  let
-    name = cfg.name.replace(" ", "")
-    printHelpName = ident("print" & name & "Help")
-    printHelpProc = generateCliHelpProcImpl(cfg)
+  let printHelpProc = generateCliHelpProcImpl(cfg)
 
   result.add quote do:
     `printHelpProc`
@@ -2043,7 +2110,6 @@ func genPrintHelpProcs(cfg: CliCfg): NimNode =
 
 func hwylCliImpl(cfg: CliCfg): NimNode =
   let
-    version = cfg.version or newLit("")
     name = cfg.name.replace(" ", "")
     parserProcName = ident("parse" & name)
     posArgs = ident"posArgs"

@@ -1,0 +1,6 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]version[/bold] [[flags]
+
+[bold cyan]flags[/bold cyan]:
+ [yellow]-h[/yellow] [magenta]--help   [/magenta]  print help
+ [yellow]-V[/yellow] [magenta]--version[/magenta]  print version
