@@ -7,6 +7,9 @@ task develop, "install cligen for development":
 task setupTests, "pre-compile test bins":
   exec "nim r tests/cli/setup"
 
+task test, "run tests":
+  exec "nim r -f tests/tester"
+
 when defined(docs):
   --index:on
   --warning:"LanguageXNotSupported:off"
