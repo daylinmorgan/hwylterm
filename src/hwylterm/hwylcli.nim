@@ -1124,7 +1124,7 @@ func addBuiltinFlags(c: var CliCfg) =
       node: helpNode
     )
 
-  if c.version != nil or hwylVersionVal != "" and NoVersionFlag notin c.settings:
+  if (c.version != nil or hwylVersionVal != "") and NoVersionFlag notin c.settings:
     let version = if hwylVersionVal != "":  newLit(hwylVersionVal) else: c.version
     let versionNode = quote do:
       hecho `version`; quit 0
