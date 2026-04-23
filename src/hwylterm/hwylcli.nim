@@ -1174,8 +1174,7 @@ func genHelpSubcommandRun(cfg: CliCfg): NimNode =
   result.add quote do:
     if `subcmd`.len == 0:
       `printHelpName`(`longHelp`); quit 0
-  let subcommands = cfg.subcommands.filterIt(it.subName != "help")
-  let subcmdOptions = subcommands.mapIt(it.subName.bbMarkup("b")).join(", ").bb
+  let subcmdOptions = cfg.subcommands.mapIt(it.subName.bbMarkup("b")).join(", ").bb
 
   var subCommandCase = nnkCaseStmt.newTree()
   subcommandCase.add (
@@ -1184,7 +1183,7 @@ func genHelpSubcommandRun(cfg: CliCfg): NimNode =
     else: subcmd
   )
 
-  for sub in subcommands:
+  for sub in cfg.subcommands:
     let printHelpName = sub.printHelpName
 
     var branch = nnkOfBranch.newTree()
