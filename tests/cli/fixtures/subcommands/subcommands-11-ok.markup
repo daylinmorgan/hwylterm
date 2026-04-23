@@ -1,0 +1,14 @@
+[bold cyan]usage[/bold cyan]:
+  [bold]subcommands[/bold] [bold italic]subcmd[/bold italic] [[flags]
+
+[bold cyan]subcommands[/bold cyan]:
+  [bold]help     [/bold]  show this help or the help of the given subcommand(s)
+  [bold]version  [/bold]  print version                                        
+  [bold]a        [/bold]  a subcommand with positionals                        
+  [bold]b        [/bold]  a subcommand with flags                              
+  [bold]ccccc (c)[/bold]  a subcommand with an alias                           
+  [bold]dd-dd    [/bold]  subcommand with hyphen                               
+
+[bold cyan]flags[/bold cyan]:
+ [yellow]-h[/yellow] [magenta]--help   [/magenta]  print help
+ [yellow]-V[/yellow] [magenta]--version[/magenta]  print version

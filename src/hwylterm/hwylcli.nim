@@ -419,6 +419,7 @@ type
     NoHelpFlag,    ## Don't add the builtin help flag
     NoVersionFlag, ## Don't add builtin version flag
     ShowHelp,      ## If cmdline empty show help
+    SkipPosCheck   ## Don't check if not enough positionals were provided
     LongHelp,      ## Show more info with --help than -h
     NoNormalize,   ## Don't normalize flags and commands
     HideDefault,   ## Don't show default values
@@ -1035,7 +1036,6 @@ func parseHiddenFlags(c: var CliCfg, node: NimNode) =
   else: assert false
 
 
-
 proc searchForNimbleFile(dir: string): seq[string] =
   when defined(debughwylVerisioNimble):
     echo "searching: ", dir
@@ -1149,32 +1149,38 @@ func parseCliAlias(cfg: var CliCfg, node: NimNode) =
       cfg.alias.incl s
     else: cfg.unexpectedKind n
 
+func printHelpName(cfg: CliCfg): NimNode =
+  ident("print" & cfg.name.replace(" ","") & "Help")
 
 func hwylCliImpl(cfg: CliCfg): NimNode
 
 func genHelpSubcommandRun(cfg: CliCfg): NimNode =
-  result = nnkStmtList.newTree()
-
+  result = newStmtList()
   let subcmd = ident"commands"
-  let subcommands = cfg.subcommands.filterIt(it.name != (cfg.name & " help"))
+  let printHelpName = cfg.printHelpName
+  let longHelp = LongHelp in cfg.settings
+  result.add quote do:
+    if `subcmd`.len == 0:
+      `printHelpName`(`longHelp`); quit 0
+  let subcommands = cfg.subcommands.filterIt(it.subName != "help")
   let subcmdOptions = subcommands.mapIt(it.subName.bbMarkup("b")).join(", ").bb
 
   var subCommandCase = nnkCaseStmt.newTree()
-  if NoNormalize notin cfg.settings:
-    subCommandCase.add(quote do: optionNormalize(`subcmd`))
-  else:
-    subCommandCase.add(quote do: `subcmd`)
+  subcommandCase.add (
+    if NoNormalize notin cfg.settings:
+      quote do: optionNormalize(`subcmd`)
+    else: subcmd
+  )
 
-  for sub in cfg.subcommands.filterIt(it.name != (cfg.name & " help")):
-    let printHelpName = ident("print" & sub.name.replace(" ", "") & "Help")
+  for sub in subcommands:
+    let printHelpName = sub.printHelpName
 
     var branch = nnkOfBranch.newTree()
     branch.add newLit(optionNormalize(sub.subName))
     for a in sub.alias:
       branch.add newLit(optionNormalize(a))
     branch.add quote do:
-      `printHelpName`()
-
+      `printHelpName`(`longHelp`)
     subcommandCase.add branch
 
   subcommandCase.add nnkElse.newTree(
@@ -1191,6 +1197,7 @@ func genHelpSubcommandRun(cfg: CliCfg): NimNode =
 
 func checkHelpSubcommand(c: var CliCfg, cmd: var CliCfg) =
   cmd.help.description = cmd.help.description or newLit"show this help or the help of the given subcommand(s)"
+  cmd.settings.incl SkipPosCheck
   if cmd.args.len == 0:
     cmd.args.add CliArg(
       name: "command",
@@ -1618,9 +1625,6 @@ func positionalsArray(cfg: CliCfg): NimNode =
       ident"false" # not actually used yet...
     )
 
-func printHelpName(cfg: CliCfg): NimNode =
-  ident("print" & cfg.name.replace(" ","") & "Help")
-
 func generateCliHelpProcImpl(cfg: CliCfg): NimNode =
   let
     printHelpName = cfg.printHelpName
@@ -1949,25 +1953,48 @@ proc notEnoughArgsError(actual, expected: seq[string]) =
     expected[actual.len..^1].mapIt(it.bb("b")).join(", ")
   )
 
+func `?`(cfg: CliCfg, setting: CliSetting): bool {.inline.} =
+  setting in cfg.settings
+
+func `?!`(cfg: CliCfg, setting: CliSetting): bool {.inline.}=
+  setting notin cfg.settings
+
+
+func fillArgs(r: var seq[string], count: Natural) =
+  ## pad the args array when SkipPosCheck is active to move past parsing stage
+  if r.len < count:
+    r.add "".repeat(count - r.len)
+
 func genPosArgHandler(cfg: CliCfg, body: NimNode) =
   ## generate code to handle positional arguments
-  let maKind = cfg.getMultiArgKind()
-  let args = cfg.args.mapIt(it.name)
+  let
+    maKind = cfg.getMultiArgKind()
+    args = cfg.args.mapIt(it.name)
+    skipCheck = cfg?SkipPosCheck
+    nArgs = args.len
+
   case maKind:
   of NoMulti:
     body.add quote do:
-      if result.len > `args`.len:
+      if result.len > `nargs`:
         tooManyArgsError(result, `args`)
-      elif result.len < `args`.len:
-        notEnoughArgsError(result, `args`)
+      if not `skipCheck`:
+        if result.len < `nargs`:
+          notEnoughArgsError(result, `args`)
+      else:
+        fillArgs(result, `nargs`)
+
     for i, namedArg in cfg.args.mapIt(it.ident or it.name.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
   of First:
     body.add quote do:
-      if result.len < `args`.len:
-        notEnoughArgsError(result, `args`)
+      if not `skipCheck`:
+        if result.len < `nargs`:
+          notEnoughArgsError(result, `args`)
+      else:
+        fillArgs(result, `nargs`)
 
     for i, namedArg in cfg.args[1..^1].reversed().mapIt(it.ident):
       body.add quote do:
@@ -1975,24 +2002,27 @@ func genPosArgHandler(cfg: CliCfg, body: NimNode) =
 
     let firstArg = cfg.args[0].ident
     body.add quote do:
-      parseArgs(result[0..^(`args`.len)], `firstArg`)
+      parseArgs(result[0..^(`nargs`)], `firstArg`)
 
   of Last:
     body.add quote do:
-      if result.len < (`args`.len - 1):
-        notEnoughArgsError(result, `args`)
+      if not `skipCheck`:
+        if result.len < (`nargs` - 1):
+          notEnoughArgsError(result, `args`)
+      else:
+        fillArgs(result, `nargs`)
+
     for i, namedArg in cfg.args[0..^2].mapIt(it.ident):
       body.add quote do:
         parseArgs(result[`i`], `namedArg`)
 
     let lastArg = cfg.args[^1].ident
     body.add quote do:
-      if result.len > `args`.len - 1:
-        parseArgs(result[(`args`.len-1).. ^1],`lastArg`)
+      if result.len > `nargs` - 1:
+        parseArgs(result[(`nargs` - 1).. ^1],`lastArg`)
 
   body.add quote do:
     result = @[]
-
 
 func addPostParseHook(cfg: CliCfg, body: NimNode) =
   ## generate block to set defaults and check for required flags

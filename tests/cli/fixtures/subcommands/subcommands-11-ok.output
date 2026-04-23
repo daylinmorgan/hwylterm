@@ -1,0 +1,14 @@
+[1;38;5;6musage[0m:
+  [1msubcommands[0m [1;3msubcmd[0m [flags]
+
+[1;38;5;6msubcommands[0m:
+  [1mhelp     [0m  show this help or the help of the given subcommand(s)
+  [1mversion  [0m  print version                                        
+  [1ma        [0m  a subcommand with positionals                        
+  [1mb        [0m  a subcommand with flags                              
+  [1mccccc (c)[0m  a subcommand with an alias                           
+  [1mdd-dd    [0m  subcommand with hyphen                               
+
+[1;38;5;6mflags[0m:
+ [38;5;3m-h[0m [38;5;5m--help   [0m  print help
+ [38;5;3m-V[0m [38;5;5m--version[0m  print version
