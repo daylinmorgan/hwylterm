@@ -494,6 +494,18 @@ type
 
 func hasSubcommands(c: CliCfg): bool = c.subcommands.len > 0
 
+func `?`(c: CliCfg, setting: CliSetting): bool {.inline.} =
+  (setting in c.settings)
+
+func `?`(f: CliFlag | BuiltinFlag, setting: CliFlagSetting): bool {.inline.} =
+  (setting in f.settings)
+
+func `?!`(c: CliCfg, setting: CliSetting): bool {.inline.} =
+  (setting notin c.settings)
+
+func `?!`(f: CliFlag | BuiltinFlag, setting: CliFlagSetting): bool {.inline.} =
+  (setting notin f.settings)
+
 # template `<<<`(s: string) {.used.} =
 #   let pos = instantiationInfo()
 #   debugEcho "$1:$2" % [pos.filename, $pos.line]
@@ -818,7 +830,7 @@ func inferShortFlags(cfg: var CliCfg) =
   var candidates = cfg.flags.mapIt(it.long[0]).toHashSet() - taken
   for f in cfg.flags.mitems:
 
-    if f.short != '\x00' or NoShort in f.settings: continue
+    if f.short != '\x00' or (f?NoShort): continue
     let c = f.long[0]
     if c in candidates:
       f.short = c
@@ -834,7 +846,7 @@ func makeEnvVar(c: CliCfg, f: CliFlag): string =
 
 func inferEnvFlags(c: var CliCfg) =
   for f in c.flags.mitems:
-    if f.env == nil and NoEnv notin f.settings:
+    if f.env == nil and (f?!NoEnv):
       f.env = newLit(makeEnvVar(c, f))
 
 func postParse(c: var CliCfg) =
@@ -1101,15 +1113,15 @@ func addBuiltinFlags(c: var CliCfg) =
     name = c.name.replace(" ", "")
     printHelpName = ident("print" & name & "Help")
 
-  if NoHelpFlag notin c.settings:
+  if c?!NoHelpFlag:
     let helpDesc =
-      if LongHelp in c.settings:
+      if c?LongHelp:
         newLit("print help  [faint](see more with --help)[/]")
       else:
         newLit("print help")
 
     let helpNode =
-      if LongHelp in c.settings:
+      if c?LongHelp:
         quote do:
           `printHelpName`(hwylKey == "help"); quit 0
       else:
@@ -1124,7 +1136,7 @@ func addBuiltinFlags(c: var CliCfg) =
       node: helpNode
     )
 
-  if (c.version != nil or hwylVersionVal != "") and NoVersionFlag notin c.settings:
+  if (c.version != nil or hwylVersionVal != "") and (c?!NoVersionFlag):
     let version = if hwylVersionVal != "":  newLit(hwylVersionVal) else: c.version
     let versionNode = quote do:
       hecho `version`; quit 0
@@ -1158,7 +1170,7 @@ func genHelpSubcommandRun(cfg: CliCfg): NimNode =
   result = newStmtList()
   let subcmd = ident"commands"
   let printHelpName = cfg.printHelpName
-  let longHelp = LongHelp in cfg.settings
+  let longHelp = cfg?LongHelp
   result.add quote do:
     if `subcmd`.len == 0:
       `printHelpName`(`longHelp`); quit 0
@@ -1167,7 +1179,7 @@ func genHelpSubcommandRun(cfg: CliCfg): NimNode =
 
   var subCommandCase = nnkCaseStmt.newTree()
   subcommandCase.add (
-    if NoNormalize notin cfg.settings:
+    if cfg?!NoNormalize:
       quote do: optionNormalize(`subcmd`)
     else: subcmd
   )
@@ -1263,9 +1275,9 @@ func postPropagate(c: var CliCfg) =
   checkFlags c
   checkSubcommands c
 
-  if InferShort in c.settings:
+  if c?InferShort:
     inferShortFlags c
-  if InferEnv in c.settings:
+  if c?InferEnv:
     inferEnvFlags c
 
 func propagate(c: var CliCfg) =
@@ -1481,7 +1493,7 @@ func isCount(f: CliFlag): bool =
   f.typeNode == ident"Count"
 
 func isRequiredFlag(cfg: CliCfg, f: CliFlag): bool =
-  result = (Required in f.settings and f.defaultVal == nil)
+  result = (f?Required) and f.defaultVal == nil
   if result and f.isBool:
     cfg.err "boolean flag `$1` can't be a required flag " % [f.long]
 
@@ -1495,8 +1507,7 @@ func flagToTuple(c: CliCfg, f: BuiltinFlag): NimNode =
     help = f.help
 
     defaultVal =
-      if (HideDefault in f.settings) or
-        (HideDefault in c.settings):
+      if (f?HideDefault) or (c?HideDefault):
         newLit""
       else:
         f.defaultVal or newLit""
@@ -1518,9 +1529,7 @@ func flagToTuple(c: CliCfg, f: CliFlag): NimNode =
       else: newLit""
 
     defaultVal =
-      if (HideDefault in f.settings) or
-        (HideDefault in c.settings) or
-        f.defaultVal == nil:
+      if (f?HideDefault) or (c?HideDefault) or f.defaultVal == nil:
         newLit""
       else:
         let val = f.defaultVal
@@ -1815,7 +1824,7 @@ proc parseKeyVal[T](p: var OptParser, key: string, val: string,  target: var T, 
 
 func shortLongCaseStmt(cfg: CliCfg): NimNode =
   var caseStmt = nnkCaseStmt.newTree()
-  if NoNormalize notin cfg.settings:
+  if cfg?!NoNormalize:
     caseStmt.add nnkCall.newTree(ident"optionNormalize", ident"hwylKey")
   else:
     caseStmt.add ident"hwylKey"
@@ -1834,7 +1843,7 @@ func shortLongCaseStmt(cfg: CliCfg): NimNode =
     var branch = nnkOfBranch.newTree()
     if f.long != "":
       branch.add newLit(
-        if NoNormalize notin cfg.settings: optionNormalize(f.long)
+        if cfg?!NoNormalize: optionNormalize(f.long)
         else: f.long
       )
     if f.short != '\x00': branch.add(newLit($f.short))
@@ -1952,13 +1961,6 @@ proc notEnoughArgsError(actual, expected: seq[string]) =
     "missing positional arg(s): " &
     expected[actual.len..^1].mapIt(it.bb("b")).join(", ")
   )
-
-func `?`(cfg: CliCfg, setting: CliSetting): bool {.inline.} =
-  setting in cfg.settings
-
-func `?!`(cfg: CliCfg, setting: CliSetting): bool {.inline.}=
-  setting notin cfg.settings
-
 
 func fillArgs(r: var seq[string], count: Natural) =
   ## pad the args array when SkipPosCheck is active to move past parsing stage
@@ -2092,7 +2094,7 @@ func genSubcommandHandler(cfg: CliCfg): NimNode =
   result = nnkStmtList.newTree()
 
   var subCommandCase = nnkCaseStmt.newTree()
-  if NoNormalize notin cfg.settings:
+  if cfg?!NoNormalize:
     subCommandCase.add(quote do: optionNormalize(`subcmd`))
   else:
     subCommandCase.add(quote do: `subcmd`)
@@ -2204,7 +2206,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
     )
   )
   let printHelpName = cfg.printHelpName
-  if ShowHelp in cfg.settings and (cfg.args.len > 0 or cfg.subcommands.len > 0):
+  if (cfg?ShowHelp) and (cfg.args.len > 0 or cfg.subcommands.len > 0):
     parserBody.add quote do:
       if `cmdLine`.len == 0:
         `printHelpName`(); quit 1
@@ -2241,7 +2243,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode =
         `runBody`
 
   if cfg.root:
-    if GenerateOnly notin cfg.settings:
+    if cfg?!GenerateOnly:
       result.add quote do:
         `runProcName`()
   else:
