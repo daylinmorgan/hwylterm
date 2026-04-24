@@ -359,10 +359,10 @@ template render*(cli: HwylCliHelp): string =
     parts.add cli.header
   if cli.usage != "":
     parts.add "usage".bbMarkup(cli.styles.header) & ":\n" & indent(cli.usage, 2 )
-  if cli.positionals.len > 0:
-    parts.add render(cli, cli.positionals)
   if cli.description != "":
     parts.add cli.description
+  if cli.positionals.len > 0:
+    parts.add render(cli, cli.positionals)
   if cli.subcmds.len > 0:
     parts.add "subcommands".bbMarkup(cli.styles.header) & ":\n" & cli.subcmds.mapIt(render(cli,it)).join("\n")
   if cli.flags.len > 0:
@@ -1168,7 +1168,7 @@ func hwylCliImpl(cfg: CliCfg): NimNode
 
 func genHelpSubcommandRun(cfg: CliCfg): NimNode =
   result = newStmtList()
-  let subcmd = ident"commands"
+  let subcmd = ident"command"
   let printHelpName = cfg.printHelpName
   let longHelp = cfg?LongHelp
   result.add quote do:
@@ -1212,9 +1212,9 @@ func checkHelpSubcommand(c: var CliCfg, cmd: var CliCfg) =
   if cmd.args.len == 0:
     cmd.args.add CliArg(
       name: "command",
-      help: newLit"show help for the subcommand",
+      help: newLit"show help for this subcommand",
       typeNode: ident"string",
-      ident: ident"commands"
+      ident: ident"command"
     )
   if cmd.run == nil:
     cmd.run = genHelpSubcommandRun(c)
